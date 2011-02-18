@@ -3,11 +3,22 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using umbraco.interfaces;
+using System.Collections;
+using System.Reflection;
+using umbraco.cms.businesslogic.web;
+using umbraco.cms.businesslogic.propertytype;
+using umbraco.cms.businesslogic.property;
+using umbraco.BusinessLogic;
+using umbraco.DataLayer;
+using umbraco.cms.businesslogic;
+
 
 namespace umbraco.MacroEngines
 {
     public class DynamicNode : DynamicObject
     {
+        private DynamicDictionary _properties;
+
         private readonly INode n;
         public DynamicNode(INode n)
         {
@@ -16,13 +27,40 @@ namespace umbraco.MacroEngines
             else
                 throw new ArgumentNullException("n", "A node must be provided to make a dynamic instance");
         }
+        public DynamicNode(int NodeId)
+        {
+            this.n = new NodeFactory.Node(NodeId);
+        }
+        public DynamicNode(string NodeId)
+        {
+            int iNodeId = 0;
+            if (int.TryParse(NodeId, out iNodeId))
+            {
+                this.n = new NodeFactory.Node(iNodeId);
+            }
+        }
+        public DynamicNode(object NodeId)
+        {
+            int iNodeId = 0;
+            if (int.TryParse(string.Format("{0}", NodeId), out iNodeId))
+            {
+                this.n = new NodeFactory.Node(iNodeId);
+            }
+        }
+        public DynamicNode()
+        {
+            //Empty constructor for a special case with Generic Methods
+        }
+        public void InitializeProperties(Dictionary<string, object> dict)
+        {
+            _properties = new DynamicDictionary(dict);
+        }
 
-        public IEnumerable<DynamicNode> GetChildrenAsList
+        public DynamicNodeList GetChildrenAsList
         {
             get
             {
-                return from nn in n.ChildrenAsList
-                       select new DynamicNode(nn);
+                return new DynamicNodeList(n.ChildrenAsList);
             }
         }
 
@@ -37,46 +75,159 @@ namespace umbraco.MacroEngines
                 return true;
             }
 
-            var data = n.GetProperty(name);
-            // check for nicer support of Pascal Casing EVEN if alias is camelCasing:
-            if (data == null && name.Substring(0,1).ToUpper() == name.Substring(0,1))
+            if (n != null)
             {
-                data = n.GetProperty(name.Substring(0, 1).ToLower() + name.Substring((1)));
+                var data = n.GetProperty(name);
+                // check for nicer support of Pascal Casing EVEN if alias is camelCasing:
+                if (data == null && name.Substring(0, 1).ToUpper() == name.Substring(0, 1))
+                {
+                    data = n.GetProperty(name.Substring(0, 1).ToLower() + name.Substring((1)));
+                }
+
+                if (data != null)
+                {
+                    result = data.Value;
+                    //special casing for true/false properties
+                    //int/decimal are handled by ConvertPropertyValueByDataType
+                    //fallback is stringT
+
+                    Guid dataType = ContentType.GetDataType(n.NodeTypeAlias, data.Alias);
+
+                    //convert the string value to a known type
+                    return ConvertPropertyValueByDataType(ref result, name, dataType);
+
+                }
+
+                //check if the alias is that of a child type
+                var typeChildren = n.ChildrenAsList
+                    .Where(x => MakePluralName(x.NodeTypeAlias) == name || x.NodeTypeAlias == name);
+                if (typeChildren.Any())
+                {
+                    result = new DynamicNodeList(typeChildren);
+                    return true;
+                }
+
+                try
+                {
+                    result = n.GetType().InvokeMember(binder.Name,
+                                                      System.Reflection.BindingFlags.GetProperty |
+                                                      System.Reflection.BindingFlags.Instance |
+                                                      System.Reflection.BindingFlags.Public |
+                                                      System.Reflection.BindingFlags.NonPublic,
+                                                      null,
+                                                      n,
+                                                      null);
+                    return true;
+                }
+                catch
+                {
+                    result = null;
+                    return false;
+                }
             }
 
-            if (data != null)
+
+            result = null;
+            return false;
+        }
+
+        private bool ConvertPropertyValueByDataType(ref object result, string name, Guid dataType)
+        {
+            //the resulting property is a string, but to support some of the nice linq stuff in .Where
+            //we should really check some more types
+            umbraco.editorControls.yesno.YesNoDataType yesnoType = new editorControls.yesno.YesNoDataType();
+
+            //boolean
+            if (dataType == yesnoType.Id)
             {
-                result = data.Value;
+                bool parseResult;
+                if (result.ToString() == "") result = "0";
+                if (Boolean.TryParse(result.ToString().Replace("1", "true").Replace("0", "false"), out parseResult))
+                {
+                    result = parseResult;
+                }
                 return true;
             }
 
-            //check if the alias is that of a child type
-            var typeChildren = n.ChildrenAsList
-                .Where(x => MakePluralName(x.NodeTypeAlias) == name || x.NodeTypeAlias == name);
-            if (typeChildren.Any())
+            //integer
+            int iResult = 0;
+            if (int.TryParse(string.Format("{0}", result), out iResult))
             {
-                result = typeChildren
-                    .Select(x => new DynamicNode(x));
+                result = iResult;
                 return true;
             }
 
-            try
+            //decimal
+            decimal dResult = 0;
+            if (decimal.TryParse(string.Format("{0}", result), out dResult))
             {
-                result = n.GetType().InvokeMember(binder.Name,
-                                                  System.Reflection.BindingFlags.GetProperty |
-                                                  System.Reflection.BindingFlags.Instance |
-                                                  System.Reflection.BindingFlags.Public |
-                                                  System.Reflection.BindingFlags.NonPublic,
-                                                  null,
-                                                  n,
-                                                  null);
+                result = dResult;
                 return true;
-            } 
-            catch
+            }
+
+            if (string.Equals("true", string.Format("{0}", result), StringComparison.CurrentCultureIgnoreCase))
             {
-                result = null;
+                result = true;
+                return true;
+            }
+            if (string.Equals("false", string.Format("{0}", result), StringComparison.CurrentCultureIgnoreCase))
+            {
+                result = false;
                 return false;
             }
+
+            return true;
+        }
+
+        public DynamicMedia Media(string propertyAlias)
+        {
+            if (n != null)
+            {
+                IProperty prop = n.GetProperty(propertyAlias);
+                if (prop != null)
+                {
+                    int mediaNodeId;
+                    if (int.TryParse(prop.Value, out mediaNodeId))
+                    {
+                        return new DynamicMedia(mediaNodeId);
+                    }
+                }
+                return null;
+            }
+            return null;
+        }
+        public string Media(string propertyAlias, string mediaPropertyAlias)
+        {
+            if (n != null)
+            {
+                IProperty prop = n.GetProperty(propertyAlias);
+                if (prop == null && propertyAlias.Substring(0, 1).ToUpper() == propertyAlias.Substring(0, 1))
+                {
+                    prop = n.GetProperty(propertyAlias.Substring(0, 1).ToLower() + propertyAlias.Substring((1)));
+                }
+                if (prop != null)
+                {
+                    int mediaNodeId;
+                    if (int.TryParse(prop.Value, out mediaNodeId))
+                    {
+                        umbraco.cms.businesslogic.media.Media media = new cms.businesslogic.media.Media(mediaNodeId);
+                        if (media != null)
+                        {
+                            Property mprop = media.getProperty(mediaPropertyAlias);
+                            // check for nicer support of Pascal Casing EVEN if alias is camelCasing:
+                            if (prop == null && mediaPropertyAlias.Substring(0, 1).ToUpper() == mediaPropertyAlias.Substring(0, 1))
+                            {
+                                mprop = media.getProperty(mediaPropertyAlias.Substring(0, 1).ToLower() + mediaPropertyAlias.Substring((1)));
+                            }
+                            if (mprop != null)
+                            {
+                                return string.Format("{0}", mprop.Value);
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         //this is from SqlMetal and just makes it a bit of fun to allow pluralisation
@@ -120,14 +271,32 @@ namespace umbraco.MacroEngines
             }
             return false;
         }
-
+        public DynamicNode AncestorOrSelf()
+        {
+            return AncestorOrSelf(node => node.Level == 1);
+        }
         public DynamicNode AncestorOrSelf(Func<DynamicNode, bool> func)
         {
             var node = this;
             while (node != null)
             {
                 if (func(node)) return node;
-                node = node.Parent;
+                DynamicNode parent = node.Parent;
+                if (parent != null)
+                {
+                    if (this != parent)
+                    {
+                        node = parent;
+                    }
+                    else
+                    {
+                        return node;
+                    }
+                }
+                else
+                {
+                    return node;
+                }
             }
 
             return node;
@@ -135,62 +304,100 @@ namespace umbraco.MacroEngines
 
         public DynamicNode Parent
         {
-            get { return new DynamicNode(n.Parent); }
+            get
+            {
+                if (n == null)
+                {
+                    return null;
+                }
+                if (n.Parent != null)
+                {
+                    return new DynamicNode(n.Parent);
+                }
+                return this;
+            }
         }
-
+        public DynamicNode NodeById(int Id)
+        {
+            return new DynamicNode(Id);
+        }
+        public DynamicNode NodeById(string Id)
+        {
+            return new DynamicNode(Id);
+        }
+        public DynamicNode NodeById(object Id)
+        {
+            return new DynamicNode(Id);
+        }
+        public DynamicMedia MediaById(int Id)
+        {
+            return new DynamicMedia(Id);
+        }
+        public DynamicMedia MediaById(string Id)
+        {
+            return new DynamicMedia(Id);
+        }
+        public DynamicMedia MediaById(object Id)
+        {
+            return new DynamicMedia(Id);
+        }
         public int Id
         {
-            get { return n.Id; }
+            get { if (n == null) return 0; return n.Id; }
         }
 
         public int template
         {
-            get { return n.template; }
+            get { if (n == null) return 0; return n.template; }
         }
 
         public int SortOrder
         {
-            get { return n.SortOrder; }
+            get { if (n == null) return 0; return n.SortOrder; }
         }
 
         public string Name
         {
-            get { return n.Name; }
+            get { if (n == null) return null; return n.Name; }
         }
-
+        public bool Visible
+        {
+            get;
+            set;
+        }
         public string Url
         {
-            get { return n.Url; }
+            get { if (n == null) return null; return n.Url; }
         }
 
         public string UrlName
         {
-            get { return n.UrlName; }
+            get { if (n == null) return null; return n.UrlName; }
         }
 
         public string NodeTypeAlias
         {
-            get { return n.NodeTypeAlias; }
+            get { if (n == null) return null; return n.NodeTypeAlias; }
         }
 
         public string WriterName
         {
-            get { return n.WriterName; }
+            get { if (n == null) return null; return n.WriterName; }
         }
 
         public string CreatorName
         {
-            get { return n.CreatorName; }
+            get { if (n == null) return null; return n.CreatorName; }
         }
 
         public int WriterID
         {
-            get { return n.WriterID; }
+            get { if (n == null) return 0; return n.WriterID; }
         }
 
         public int CreatorID
         {
-            get { return n.CreatorID; }
+            get { if (n == null) return 0; return n.CreatorID; }
         }
 
         public string Path
@@ -200,52 +407,67 @@ namespace umbraco.MacroEngines
 
         public DateTime CreateDate
         {
-            get { return n.CreateDate; }
+            get { if (n == null) return DateTime.MinValue; return n.CreateDate; }
         }
 
         public DateTime UpdateDate
         {
-            get { return n.UpdateDate; }
+            get { if (n == null) return DateTime.MinValue; return n.UpdateDate; }
         }
 
         public Guid Version
         {
-            get { return n.Version; }
+            get { if (n == null) return Guid.Empty; return n.Version; }
         }
 
         public string NiceUrl
         {
-            get { return n.NiceUrl; }
+            get { if (n == null) return null; return n.NiceUrl; }
         }
 
         public int Level
         {
-            get { return n.Level; }
+            get { if (n == null) return 0; return n.Level; }
         }
 
         public List<IProperty> PropertiesAsList
         {
-            get { return n.PropertiesAsList; }
+            get { if (n == null) return null; return n.PropertiesAsList; }
         }
 
         public List<INode> ChildrenAsList
         {
-            get { return n.ChildrenAsList; }
+            get { if (n == null) return null; return n.ChildrenAsList; }
         }
 
         public IProperty GetProperty(string alias)
         {
+            if (n == null) return null;
             return n.GetProperty(alias);
         }
 
         public System.Data.DataTable ChildrenAsTable()
         {
+            if (n == null) return null;
             return n.ChildrenAsTable();
         }
 
         public System.Data.DataTable ChildrenAsTable(string nodeTypeAliasFilter)
         {
+            if (n == null) return null;
             return n.ChildrenAsTable(nodeTypeAliasFilter);
+        }
+
+        public DynamicDictionary Parameters
+        {
+            get
+            {
+                return _properties;
+            }
+            set
+            {
+                _properties = value;
+            }
         }
     }
 }
