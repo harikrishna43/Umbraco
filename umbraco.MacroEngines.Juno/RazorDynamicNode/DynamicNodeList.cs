@@ -14,7 +14,7 @@ namespace umbraco.MacroEngines
 {
     public class DynamicNodeList : DynamicObject, IEnumerable
     {
-        public List<DynamicNode> Items { get; set; }
+        public List<DynamicNode> Items;
 
         public DynamicNodeList()
         {
@@ -26,6 +26,13 @@ namespace umbraco.MacroEngines
             list.ForEach(node => node.ownerList = this);
             Items = list;
         }
+        public DynamicNodeList(IEnumerable<DynamicBackingItem> items)
+        {
+            List<DynamicNode> list = items.ToList().ConvertAll(n => new DynamicNode(n));
+            list.ForEach(node => node.ownerList = this);
+            Items = list;
+        }
+
         public DynamicNodeList(IEnumerable<INode> items)
         {
             List<DynamicNode> list = items.Select(x => new DynamicNode(x)).ToList();
@@ -48,6 +55,34 @@ namespace umbraco.MacroEngines
                 result = new DynamicNodeList(this.OrderBy<DynamicNode>(args.First().ToString()).ToList());
                 return true;
             }
+            if (name == "InGroupsOf")
+            {
+                int groupSize = 0;
+                if (int.TryParse(args.First().ToString(), out groupSize))
+                {
+                    result = this.InGroupsOf<DynamicNode>(groupSize);
+                    return true;
+                }
+                result = new DynamicNull();
+                return true;
+            }
+            if (name == "GroupedInto")
+            {
+                int groupCount = 0;
+                if (int.TryParse(args.First().ToString(), out groupCount))
+                {
+                    result = this.GroupedInto<DynamicNode>(groupCount);
+                    return true;
+                }
+                result = new DynamicNull();
+                return true;
+            }
+            if (name == "GroupBy")
+            {
+                result = this.GroupBy<DynamicNode>(args.First().ToString());
+                return true;
+            }
+
             if (name == "Pluck" || name == "Select")
             {
                 string predicate = args.First().ToString();
@@ -217,6 +252,40 @@ namespace umbraco.MacroEngines
         {
             return ((IQueryable<T>)Items.AsQueryable()).OrderBy(key);
         }
+        public DynamicGrouping GroupBy<T>(string key)
+        {
+            DynamicGrouping group = new DynamicGrouping(this, key);
+            return group;
+        }
+        public DynamicGrouping GroupedInto<T>(int groupCount)
+        {
+            int groupSize = (int)Math.Ceiling(((decimal)Items.Count / groupCount));
+            return new DynamicGrouping(
+               this
+               .Items
+               .Select((node, index) => new KeyValuePair<int, DynamicNode>(index, node))
+               .GroupBy(kv => (object)(kv.Key / groupSize))
+               .Select(item => new Grouping<object, DynamicNode>()
+               {
+                   Key = item.Key,
+                   Elements = item.Select(inner => inner.Value)
+               }));
+        }
+        public DynamicGrouping InGroupsOf<T>(int groupSize)
+        {
+            return new DynamicGrouping(
+                this
+                .Items
+                .Select((node, index) => new KeyValuePair<int, DynamicNode>(index, node))
+                .GroupBy(kv => (object)(kv.Key / groupSize))
+                .Select(item => new Grouping<object, DynamicNode>()
+                {
+                    Key = item.Key,
+                    Elements = item.Select(inner => inner.Value)
+                }));
+
+        }
+
         public IQueryable Select(string predicate, params object[] values)
         {
             return DynamicQueryable.Select(Items.AsQueryable(), predicate, values);
