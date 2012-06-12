@@ -1721,10 +1721,12 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
+    <Content Include="App_Data\Umbraco.sdf" />
     <Content Include="config\splashes\booting.aspx" />
     <Content Include="config\splashes\noNodes.aspx" />
     <Content Include="umbraco\controls\Tree\CustomTreeService.asmx" />
     <Content Include="umbraco\images\delete.gif" />
+    <Content Include="umbraco\images\editor\doc.gif" />
     <Content Include="umbraco\images\editor\documentType.gif" />
     <Content Include="umbraco\images\information.png" />
     <Content Include="umbraco\Trees\RelationTypes\EditRelationType.aspx" />
@@ -3316,7 +3318,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Code\" />
-    <Folder Include="App_Data\" />
     <Folder Include="css\" />
     <Folder Include="data\previews\" />
     <Folder Include="data\preview\" />
