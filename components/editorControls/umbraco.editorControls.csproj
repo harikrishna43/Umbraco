@@ -102,7 +102,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ClientDependency.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ClientDependency.Core, Version=1.5.0.0, Culture=neutral, PublicKeyToken=7a99a55a05d191a8, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\foreign dlls\ClientDependency.Core.dll</HintPath>
     </Reference>
@@ -133,9 +133,6 @@
     <Reference Include="System.Windows.Forms">
       <Name>System.Windows.Forms</Name>
     </Reference>
-    <Reference Include="System.Xml">
-      <Name>System.XML</Name>
-    </Reference>
     <ProjectReference Include="..\..\umbraco\businesslogic\umbraco.businesslogic.csproj">
       <Name>umbraco.businesslogic</Name>
       <Project>{E469A9CE-1BEC-423F-AC44-713CD72457EA}</Project>
@@ -159,15 +156,24 @@
       <Project>{651E1350-91B6-44B7-BD60-7207006D7003}</Project>
       <Name>umbraco.presentation</Name>
     </ProjectReference>
+    <ProjectReference Include="..\macroRenderings\umbraco.macroRenderings.csproj">
+      <Project>{52AB8F1F-FB76-4E8C-885F-0747B6CE71EC}</Project>
+      <Name>umbraco.macroRenderings</Name>
+    </ProjectReference>
     <ProjectReference Include="..\umbraco.controls\umbraco.controls.csproj">
       <Project>{6EDD2061-82F2-461B-BB6E-879245A832DE}</Project>
       <Name>umbraco.controls</Name>
     </ProjectReference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\LinqToUmbraco\src\umbraco.Linq\Solution Items\SolutionInfo.cs">
       <Link>SolutionInfo.cs</Link>
     </Compile>
+    <Compile Include="AbstractJsonPrevalueEditor.cs" />
+    <Compile Include="AbstractOptions.cs" />
+    <Compile Include="AbstractPrevalueEditor.cs" />
     <Compile Include="AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -187,6 +193,8 @@
     <Compile Include="colorpicker\ColorPickerDataType.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="CsvToXmlData.cs" />
+    <Compile Include="DataTypeGuids.cs" />
     <Compile Include="datefieldmultiple\DataTypeDatefieldMultiple.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -278,6 +286,23 @@
     <Compile Include="memberpicker\MemberPickerDataType.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MultiNodeTreePicker\BaseTreeExtensions.cs" />
+    <Compile Include="MultiNodeTreePicker\FilteredContentTree.cs" />
+    <Compile Include="MultiNodeTreePicker\FilteredMediaTree.cs" />
+    <Compile Include="MultiNodeTreePicker\HttpCookieExtensions.cs" />
+    <Compile Include="MultiNodeTreePicker\MNTPResources.Designer.cs" />
+    <Compile Include="MultiNodeTreePicker\MNTP_DataEditor.cs" />
+    <Compile Include="MultiNodeTreePicker\MNTP_DataType.cs" />
+    <Compile Include="MultiNodeTreePicker\MNTP_PrevalueEditor.cs" />
+    <Compile Include="MultiNodeTreePicker\NodeSelectionType.cs" />
+    <Compile Include="MultiNodeTreePicker\SelectedItemsTemplate.cs" />
+    <Compile Include="MultiNodeTreePicker\XmlTreeNodeExtensions.cs" />
+    <Compile Include="MultiNodeTreePicker\XPathExpressionType.cs" />
+    <Compile Include="MultiNodeTreePicker\XPathFilterType.cs" />
+    <Compile Include="MultipleTextstring\MultipleTextstringControl.cs" />
+    <Compile Include="MultipleTextstring\MultipleTextstringDataType.cs" />
+    <Compile Include="MultipleTextstring\MultipleTextstringOptions.cs" />
+    <Compile Include="MultipleTextstring\MultipleTextstringPrevalueEditor.cs" />
     <Compile Include="numberfield\DataInteger.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -293,6 +318,12 @@
     <Compile Include="pagepicker\PagePickerDataType.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="PickerRelations\PickerRelationsDataEditor.cs" />
+    <Compile Include="PickerRelations\PickerRelationsDataType.cs" />
+    <Compile Include="PickerRelations\PickerRelationsEventHandler.cs" />
+    <Compile Include="PickerRelations\PickerRelationsOptions.cs" />
+    <Compile Include="PickerRelations\PickerRelationsPreValueEditor.cs" />
+    <Compile Include="PrevalueEditorExtensions.cs" />
     <Compile Include="radiobuttonlist\radiobox.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -304,6 +335,7 @@
     <Compile Include="relatedlinks\RelatedLinksDataEditor.cs" />
     <Compile Include="relatedlinks\RelatedLinksDataType.cs" />
     <Compile Include="relatedlinks\RelatedLinksPrevalueEditor.cs" />
+    <Compile Include="ResourceExtensions.cs" />
     <Compile Include="SettingControls\CheckBox.cs" />
     <Compile Include="SettingControls\CheckBoxList.cs" />
     <Compile Include="SettingControls\DropDownList.cs" />
@@ -331,6 +363,10 @@
     <Compile Include="simpleEditor\simpleEditorDataType.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Slider\SliderControl.cs" />
+    <Compile Include="Slider\SliderDataType.cs" />
+    <Compile Include="Slider\SliderOptions.cs" />
+    <Compile Include="Slider\SliderPrevalueEditor.cs" />
     <Compile Include="tags\DataEditor.cs" />
     <Compile Include="tags\DataType.cs" />
     <Compile Include="tags\library.cs" />
@@ -376,6 +412,15 @@
     <Compile Include="userControlWrapper\usercontrolDataEditor.cs" />
     <Compile Include="userControlWrapper\usercontrolDataType.cs" />
     <Compile Include="userControlWrapper\usercontrolPrevalueEditor.cs" />
+    <Compile Include="XmlData.cs" />
+    <Compile Include="XPathCheckBoxList\XPathCheckBoxListDataEditor.cs" />
+    <Compile Include="XPathCheckBoxList\XPathCheckBoxListDataType.cs" />
+    <Compile Include="XPathCheckBoxList\XPathCheckBoxListOptions.cs" />
+    <Compile Include="XPathCheckBoxList\XPathCheckBoxListPreValueEditor.cs" />
+    <Compile Include="XPathDropDownList\XPathDropDownListDataEditor.cs" />
+    <Compile Include="XPathDropDownList\XPathDropDownListDataType.cs" />
+    <Compile Include="XPathDropDownList\XPathDropDownListOptions.cs" />
+    <Compile Include="XPathDropDownList\XPathDropDownListPreValueEditor.cs" />
     <Compile Include="yesno\yesNo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -390,6 +435,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>MediaChooserScripts.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <EmbeddedResource Include="MultiNodeTreePicker\MNTPResources.resx" />
     <EmbeddedResource Include="textfield\textFieldDataEditor.resx">
       <DependentUpon>textFieldDataEditor.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -423,6 +469,11 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="MultiNodeTreePicker\MultiNodePickerScripts.js" />
+    <EmbeddedResource Include="MultiNodeTreePicker\MultiNodePickerStyles.css" />
+    <EmbeddedResource Include="MultipleTextstring\MultipleTextstring.css" />
+    <EmbeddedResource Include="MultipleTextstring\MultipleTextstring.js" />
+    <EmbeddedResource Include="PrevalueEditor.css" />
     <EmbeddedResource Include="KeyValuePrevalueEditor.js" />
     <EmbeddedResource Include="KeyValuePrevalueEditor.css" />
     <Content Include="mediapicker\MediaPicker.js" />

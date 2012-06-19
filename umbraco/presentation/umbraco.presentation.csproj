@@ -87,11 +87,11 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ClientDependency.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ClientDependency.Core, Version=1.5.0.0, Culture=neutral, PublicKeyToken=7a99a55a05d191a8, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\foreign dlls\ClientDependency.Core.dll</HintPath>
     </Reference>
-    <Reference Include="CookComputing.XmlRpcV2, Version=2.2.0.4, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="CookComputing.XmlRpcV2, Version=2.5.0.0, Culture=neutral, PublicKeyToken=a7d6e17aa302004d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\foreign dlls\CookComputing.XmlRpcV2.dll</HintPath>
     </Reference>
@@ -514,8 +514,17 @@
       <DependentUpon>ProgressBar.ascx</DependentUpon>
     </Compile>
     <Compile Include="umbraco\controls\SaveClickEventArgs.cs" />
+    <Compile Include="umbraco\controls\Tree\CustomTreeControl.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="umbraco\controls\Tree\CustomTreeService.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="umbraco\controls\Tree\JTreeContextMenu.cs" />
     <Compile Include="umbraco\controls\Tree\JTreeContextMenuItem.cs" />
+    <Compile Include="umbraco\controls\Tree\NodeInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="umbraco\controls\Tree\TreeControl.ascx.cs">
       <DependentUpon>TreeControl.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -1406,8 +1415,40 @@
     </Compile>
     <Compile Include="umbraco\Trees\MediaRecycleBin.cs" />
     <Compile Include="umbraco\Trees\NodeActionsEventArgs.cs" />
+    <Compile Include="umbraco\Trees\RelationTypes\EditRelationType.aspx.cs">
+      <DependentUpon>EditRelationType.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="umbraco\Trees\RelationTypes\EditRelationType.aspx.designer.cs">
+      <DependentUpon>EditRelationType.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\Trees\RelationTypes\NewRelationType.aspx.cs">
+      <DependentUpon>NewRelationType.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="umbraco\Trees\RelationTypes\NewRelationType.aspx.designer.cs">
+      <DependentUpon>NewRelationType.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\Trees\RelationTypes\ReadOnlyRelation.cs" />
+    <Compile Include="umbraco\Trees\RelationTypes\RegisterRelationTypeTree.cs" />
+    <Compile Include="umbraco\Trees\RelationTypes\RelationTypesWebService.asmx.cs">
+      <DependentUpon>RelationTypesWebService.asmx</DependentUpon>
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="umbraco\Trees\RelationTypes\RelationTypeTree.cs" />
+    <Compile Include="umbraco\Trees\RelationTypes\TreeMenu\ActionDeleteRelationType.cs" />
+    <Compile Include="umbraco\Trees\RelationTypes\TreeMenu\ActionNewRelationType.cs" />
     <Compile Include="umbraco\Trees\TreeEventArgs.cs" />
     <Compile Include="umbraco\Trees\TreeRequestParams.cs" />
+    <Compile Include="umbraco\uQuery\ContentExtensions.cs" />
+    <Compile Include="umbraco\uQuery\ContentTypeExtensions.cs" />
+    <Compile Include="umbraco\uQuery\DocumentExtensions.cs" />
+    <Compile Include="umbraco\uQuery\MediaExtensions.cs" />
+    <Compile Include="umbraco\uQuery\MemberExtensions.cs" />
+    <Compile Include="umbraco\uQuery\NodeExtensions.cs" />
+    <Compile Include="umbraco\uQuery\PreValueExtensions.cs" />
+    <Compile Include="umbraco\uQuery\RelationTypeExtensions.cs" />
+    <Compile Include="umbraco\uQuery\UmbracoObjectTypeExtensions.cs" />
     <Compile Include="umbraco\webservices\MacroContainerService.asmx.cs">
       <DependentUpon>MacroContainerService.asmx</DependentUpon>
       <SubType>Component</SubType>
@@ -1649,14 +1690,53 @@
     <Compile Include="umbraco_client\tinymce3\plugins\spellchecker\SpellChecker.cs" />
     <Compile Include="umbraco_client\tinymce3\plugins\spellchecker\SpellCheckerInput.cs" />
     <Compile Include="umbraco_client\tinymce3\plugins\spellchecker\SpellCheckerResult.cs" />
+    <Compile Include="umbraco\uQuery\uQuery.cs" />
+    <Compile Include="umbraco\uQuery\uQuery-DataTypes.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-Dictionary.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-Document.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-Media.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-Members.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-Nodes.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-PreValues.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
+    <Compile Include="umbraco\uQuery\uQuery-UmbracoObjectType.cs">
+      <DependentUpon>uQuery.cs</DependentUpon>
+    </Compile>
     <Compile Include="viewstateMoverModule.cs" />
     <Compile Include="Web References\org.umbraco.update\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
+    <Content Include="App_Data\Umbraco.sdf" />
     <Content Include="config\splashes\booting.aspx" />
     <Content Include="config\splashes\noNodes.aspx" />
+    <Content Include="umbraco\controls\Tree\CustomTreeService.asmx" />
+    <Content Include="umbraco\images\delete.gif" />
+    <Content Include="umbraco\images\editor\doc.gif" />
+    <Content Include="umbraco\images\editor\documentType.gif" />
+    <Content Include="umbraco\images\information.png" />
+    <Content Include="umbraco\Trees\RelationTypes\EditRelationType.aspx" />
+    <Content Include="umbraco\Trees\RelationTypes\Images\Bidirectional.png" />
+    <Content Include="umbraco\Trees\RelationTypes\Images\ParentToChild.png" />
+    <Content Include="umbraco\Trees\RelationTypes\Images\Refresh.gif" />
+    <Content Include="umbraco\Trees\RelationTypes\NewRelationType.aspx" />
+    <Content Include="umbraco\Trees\RelationTypes\RelationTypesWebService.asmx" />
+    <Content Include="umbraco\Trees\RelationTypes\TreeMenu\ActionDeleteRelationType.js" />
+    <Content Include="umbraco\Trees\RelationTypes\TreeMenu\ActionNewRelationType.js" />
     <Content Include="umbraco_client\tinymce3\plugins\media\moxieplayer.swf" />
     <Content Include="umbraco_client\tinymce3\themes\umbraco\img\flash.gif" />
     <Content Include="umbraco_client\tinymce3\themes\umbraco\img\iframe.gif" />
@@ -1666,6 +1746,7 @@
     <Content Include="umbraco_client\tinymce3\themes\umbraco\img\trans.gif" />
     <Content Include="umbraco_client\tinymce3\themes\umbraco\img\video.gif" />
     <Content Include="umbraco_client\tinymce3\themes\umbraco\img\windowsmedia.gif" />
+    <Content Include="web.config.Blueberry.xslt" />
     <Content Include="web.config.ssaodsk01.xslt" />
     <Content Include="umbraco\dashboard\DesktopMediaUploader.ascx" />
     <Content Include="umbraco\dashboard\images\dmu-badge.jpg" />
@@ -3237,7 +3318,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Code\" />
-    <Folder Include="App_Data\" />
     <Folder Include="css\" />
     <Folder Include="data\previews\" />
     <Folder Include="data\preview\" />

@@ -12,6 +12,8 @@ using umbraco.BusinessLogic;
 using umbraco.IO;
 using System.Web;
 using umbraco.cms.businesslogic.web;
+using Tuple = System.Tuple;
+using umbraco.DataLayer.SqlHelpers.MySql;
 
 namespace umbraco.cms.businesslogic.template
 {
@@ -159,6 +161,41 @@ namespace umbraco.cms.businesslogic.template
             return masterpageContent;
         }
 
+        public new string Path
+        {
+            get
+            {
+                List<int> path = new List<int>();
+                Template working = this;
+                while (working != null)
+                {
+                    path.Add(working.Id);
+                    try
+                    {
+                        if (working.MasterTemplate != 0)
+                        {
+                            working = new Template(working.MasterTemplate);
+                        }
+                        else
+                        {
+                            working = null;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        working = null;
+                    }
+                }
+                path.Add(-1);
+                path.Reverse();
+                string sPath = string.Join(",", path.ConvertAll(item => item.ToString()).ToArray());
+                return sPath;
+            }
+            set
+            {
+                base.Path = value;
+            }
+        }
 
         public string Alias
         {
@@ -291,8 +328,39 @@ namespace umbraco.cms.businesslogic.template
             }
         }
 
-
-
+        public IEnumerable<DocumentType> GetDocumentTypes()
+        {
+            return DocumentType.GetAllAsList().Where(x => x.allowedTemplates.Select(t => t.Id).Contains(this.Id));
+        }
+        public IEnumerable<System.Tuple<int, string>> GetContent()
+        {
+            List<System.Tuple<int, string>> list = new List<System.Tuple<int, string>>();
+            bool mySQL = (SqlHelper.GetType() == typeof(MySqlHelper));
+            string sql = string.Empty;
+            if (!mySQL)
+            {
+                sql = "Select top (100) nodeid, text from cmsDocument where published = 1 and templateId = " + this.Id;
+            }
+            else
+            {
+                sql = "Select nodeid, text from cmsDocument where published = 1 and templateId = " + this.Id + " limit 0,100";
+            }
+            using (IRecordsReader dr = SqlHelper.ExecuteReader(sql))
+            {
+                int i = 0;
+                while (dr.Read())
+                {
+                    list.Add(new System.Tuple<int, string>(dr.GetInt("nodeid"), dr.GetString("text")));
+                    i++;
+                    if (i >= 100)
+                    {
+                        break;
+                    }
+                }
+                dr.Close();
+            }
+            return list;
+        }
         public static Template MakeNew(string Name, BusinessLogic.User u, Template master)
         {
 

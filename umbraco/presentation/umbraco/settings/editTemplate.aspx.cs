@@ -11,6 +11,7 @@ using umbraco.cms.presentation.Trees;
 using umbraco.DataLayer;
 using umbraco.IO;
 using umbraco.uicontrols;
+using System.Linq;
 
 namespace umbraco.cms.presentation.settings
 {
@@ -73,13 +74,43 @@ namespace umbraco.cms.presentation.settings
 
                 ClientTools
                     .SetActiveTreeType(TreeDefinitionCollection.Instance.FindTree<loadTemplates>().Tree.Alias)
-                    .SyncTree(_template.Id.ToString(), false);
+                    .SyncTree("-1,init," + _template.Path.Replace("-1,", ""), false);
 
                 LoadScriptingTemplates();
                 LoadMacros();
+                LoadDocTypes();
+                LoadContent();
             }
         }
 
+        protected void splitButtonDocumentTypesRepeater_ItemDataBound(object sender, RepeaterItemEventArgs e)
+        {
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            {
+                Tuple<int, string> item = e.Item.DataItem as Tuple<int, string>;
+                if (item != null)
+                {
+                    Literal uxName = e.Item.FindControl("uxName") as Literal;
+                    PlaceHolder uxLink = e.Item.FindControl("uxLink") as PlaceHolder;
+                    uxName.Text = item.Item2;
+                    uxLink.Controls.Add(new LiteralControl(umbraco.cms.helpers.DeepLink.GetAnchor(helpers.DeepLinkType.DocumentType, item.Item1.ToString(), true)));
+                }
+            }
+        }
+        protected void splitButtonContentRepeater_ItemDataBound(object sender, RepeaterItemEventArgs e)
+        {
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            {
+                Tuple<int, string> item = e.Item.DataItem as Tuple<int, string>;
+                if (item != null)
+                {
+                    Literal uxName = e.Item.FindControl("uxName") as Literal;
+                    PlaceHolder uxLink = e.Item.FindControl("uxLink") as PlaceHolder;
+                    uxName.Text = item.Item2;
+                    uxLink.Controls.Add(new LiteralControl(umbraco.cms.helpers.DeepLink.GetAnchor(helpers.DeepLinkType.Content, item.Item1.ToString(), true)));
+                }
+            }
+        }
 
         protected override void OnInit(EventArgs e)
         {
@@ -129,7 +160,6 @@ namespace umbraco.cms.presentation.settings
 
             Panel1.Menu.NewElement("div", "splitButtonMacroPlaceHolder", "sbPlaceHolder", 40);
 
-
             if (UmbracoSettings.UseAspNetMasterPages)
             {
                 Panel1.Menu.InsertSplitter();
@@ -169,6 +199,11 @@ namespace umbraco.cms.presentation.settings
                                               "','canvas')";
             }
 
+            Panel1.Menu.InsertSplitter();
+            Panel1.Menu.NewElement("div", "splitButtonDocTypePlaceHolder", "sbPlaceHolder", 40);
+
+            Panel1.Menu.InsertSplitter();
+            Panel1.Menu.NewElement("div", "splitButtonContentPlaceHolder", "sbPlaceHolder", 40);
 
             // Help
             Panel1.Menu.InsertSplitter();
@@ -220,6 +255,20 @@ namespace umbraco.cms.presentation.settings
             macroRenderings.Close();
         }
 
+        private void LoadDocTypes()
+        {
+            var data = _template.GetDocumentTypes();
+            splitButtonDocumentTypesRepeater.DataSource = data;
+            splitButtonDocumentTypesRepeater.DataBind();
+            uxNoDocumentTypes.Visible = !data.Any();
+        }
+        private void LoadContent()
+        {
+            var data = _template.GetContent();
+            splitButtonContentRepeater.DataSource = data;
+            splitButtonContentRepeater.DataBind();
+            uxNoContent.Visible = !data.Any();
+        }
         public string DoesMacroHaveSettings(string macroId)
         {
             if (
