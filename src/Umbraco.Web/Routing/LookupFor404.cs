@@ -16,7 +16,7 @@ namespace Umbraco.Web.Routing
 
         public bool LookupDocument(DocumentRequest docRequest)
         {
-            docRequest.Node = HandlePageNotFound(docRequest);
+			docRequest.Node = HandlePageNotFound(docRequest);
             return docRequest.HasNode;
         }
 
@@ -26,12 +26,12 @@ namespace Umbraco.Web.Routing
         // temporary!!
 		XmlNode HandlePageNotFound(DocumentRequest docRequest)
         {
-			HttpContext.Current.Trace.Write("NotFoundHandler", string.Format("Running for url='{0}'.", docRequest.Path));
+			HttpContext.Current.Trace.Write("NotFoundHandler", string.Format("Running for url='{0}'.", docRequest.Uri.AbsolutePath));
             XmlNode currentPage = null;
 
             foreach (var handler in GetNotFoundHandlers())
             {
-				if (handler.Execute(docRequest.Path) && handler.redirectID > 0)
+				if (handler.Execute(docRequest.Uri.AbsolutePath) && handler.redirectID > 0)
                 {
                     //currentPage = umbracoContent.GetElementById(handler.redirectID.ToString());
 					currentPage = docRequest.RoutingContext.ContentStore.GetNodeById(handler.redirectID);
