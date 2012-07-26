@@ -45,6 +45,14 @@
       <Link>Properties\SolutionInfo.cs</Link>
     </Compile>
     <Compile Include="ApplicationContext.cs" />
+    <Compile Include="Resolving\ManyWeightedResolved.cs" />
+    <Compile Include="Resolving\ManyWeightedResolverBase.cs" />
+    <Compile Include="Resolving\Resolution.cs" />
+    <Compile Include="Resolving\ResolutionWeightAttribute.cs" />
+    <Compile Include="Resolving\ResolverBase.cs" />
+    <Compile Include="Resolving\SingleResolved.cs" />
+    <Compile Include="Resolving\SingleResolverBase.cs" />
+    <Compile Include="TypeExtensions.cs" />
     <Compile Include="ReadLock.cs" />
     <Compile Include="UpgradeableReadLock.cs" />
     <Compile Include="DelegateEqualityComparer.cs" />
