@@ -77,6 +77,7 @@
     <Compile Include="..\SolutionInfo.cs">
       <Link>Properties\SolutionInfo.cs</Link>
     </Compile>
+    <Compile Include="PluginManagerExtensions.cs" />
     <Compile Include="RazorCore\BaseContext.cs" />
     <Compile Include="RazorDataTypeModels\HtmlStringDataTypeModel.cs" />
     <Compile Include="RazorDataTypeModels\IntegerDataTypeModel.cs" />
@@ -124,6 +125,10 @@
     <Compile Include="RazorCore\RazorMacroEngine.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Umbraco.Core\Umbraco.Core.csproj">
+      <Project>{31785BC3-256C-4613-B2F5-A1B0BDDED8C1}</Project>
+      <Name>Umbraco.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\umbraco.editorControls\umbraco.editorControls.csproj">
       <Project>{255F5DF1-4E43-4758-AC05-7A0B68EB021B}</Project>
       <Name>umbraco.editorControls</Name>

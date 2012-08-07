@@ -163,6 +163,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\WebPages\System.Web.Helpers.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web.Mvc, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Web.Razor, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\WebPages\System.Web.Razor.dll</HintPath>
@@ -237,12 +238,47 @@
     <Compile Include="..\SolutionInfo.cs">
       <Link>Properties\SolutionInfo.cs</Link>
     </Compile>
+    <Compile Include="ContentStore.cs" />
+    <Compile Include="Mvc\Constants.cs" />
+    <Compile Include="Mvc\FilteredControllerFactoriesResolver.cs" />
+    <Compile Include="Mvc\IFilteredControllerFactory.cs" />
+    <Compile Include="Mvc\MasterControllerFactory.cs" />
+    <Compile Include="Mvc\RenderActionInvoker.cs" />
+    <Compile Include="Mvc\RenderControllerFactory.cs" />
+    <Compile Include="Mvc\RenderModel.cs" />
+    <Compile Include="Mvc\RenderModelBinder.cs" />
+    <Compile Include="Mvc\RenderMvcController.cs" />
+    <Compile Include="Mvc\RenderRouteHandler.cs" />
+    <Compile Include="Mvc\RenderViewEngine.cs" />
+    <Compile Include="Mvc\RenderViewPage.cs" />
+    <Compile Include="Mvc\RouteDefinition.cs" />
+    <Compile Include="WebBootManager.cs" />
+    <Compile Include="LegacyRequestInitializer.cs" />
+    <Compile Include="Mvc\ControllerExtensions.cs" />
+    <Compile Include="Routing\DefaultLastChanceLookup.cs" />
+    <Compile Include="Routing\IDocumentLastChanceLookup.cs" />
+    <Compile Include="Routing\LastChanceLookupResolver.cs" />
+    <Compile Include="Routing\LookupByAlias.cs" />
     <Compile Include="Media\ThumbnailProviders\AbstractThumbnailProvider.cs" />
     <Compile Include="Media\ThumbnailProviders\MediaTypeIconThumbnailProvider.cs" />
     <Compile Include="Media\ThumbnailProviders\FileExtensionIconThumbnailProvider.cs" />
     <Compile Include="Media\ThumbnailProviders\ImageThumbnailProvider.cs" />
-    <Compile Include="Media\ThumbnailProviders\ThumbnailProviderManager.cs" />
+    <Compile Include="Media\ThumbnailProviders\ThumbnailProvidersResolver.cs" />
     <Compile Include="UI\Controls\FolderBrowser.cs" />
+    <Compile Include="Routing\LookupById.cs" />
+    <Compile Include="Routing\LookupByNiceUrl.cs" />
+    <Compile Include="Routing\LookupByNiceUrlAndTemplate.cs" />
+    <Compile Include="Routing\LookupByProfile.cs" />
+    <Compile Include="Routing\NiceUrlProvider.cs" />
+    <Compile Include="PluginManagerExtensions.cs" />
+    <Compile Include="Routing\DefaultDomainHelper.cs" />
+    <Compile Include="Routing\DocumentLookupsResolver.cs" />
+    <Compile Include="Routing\DocumentRequest.cs" />
+    <Compile Include="Routing\IDocumentLookup.cs" />
+    <Compile Include="Routing\IRoutesCache.cs" />
+    <Compile Include="Routing\DefaultRoutesCache.cs" />
+    <Compile Include="Routing\RoutesCacheResolver.cs" />
+    <Compile Include="Routing\RoutingContext.cs" />
     <Compile Include="umbraco.presentation\EnsureSystemPathsApplicationStartupHandler.cs" />
     <Compile Include="umbraco.presentation\install\steps\database.ascx.cs">
       <DependentUpon>database.ascx</DependentUpon>
@@ -1748,6 +1784,10 @@
     <Compile Include="umbraco.presentation\umbraco\plugins\tinymce3\SpellCheckerInput.cs" />
     <Compile Include="umbraco.presentation\umbraco\plugins\tinymce3\SpellCheckerResult.cs" />
     <Compile Include="umbraco.presentation\viewstateMoverModule.cs" />
+    <Compile Include="UmbracoApplication.cs" />
+    <Compile Include="UmbracoContext.cs" />
+    <Compile Include="UmbracoModule.cs" />
+    <Compile Include="UriUtility.cs" />
     <Compile Include="Web References\org.umbraco.update\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -1796,9 +1836,13 @@
     <Content Include="umbraco.presentation\umbraco\dialogs\Preview.aspx" />
     <Content Include="umbraco.presentation\umbraco\controls\passwordChanger.ascx" />
     <Content Include="umbraco.presentation\umbraco\controls\ProgressBar.ascx" />
-    <Content Include="umbraco.presentation\umbraco\controls\ContentTypeControlNew.ascx" />
+    <Content Include="umbraco.presentation\umbraco\controls\ContentTypeControlNew.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\controls\GenericProperties\GenericProperty.ascx" />
-    <Content Include="umbraco.presentation\umbraco\create\DLRScripting.ascx" />
+    <Content Include="umbraco.presentation\umbraco\create\DLRScripting.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\controls\Images\ImageViewer.ascx" />
     <Content Include="umbraco.presentation\umbraco\controls\Images\ImageViewerUpdater.asmx" />
     <Content Include="umbraco.presentation\umbraco\controls\Images\UploadMediaImage.ascx" />

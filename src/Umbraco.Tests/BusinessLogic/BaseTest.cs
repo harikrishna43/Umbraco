@@ -10,7 +10,7 @@ using GlobalSettings = umbraco.GlobalSettings;
 
 namespace Umbraco.Tests.BusinessLogic
 {
-    [TestFixture]
+	[TestFixture, RequiresSTA]
     public abstract class BaseTest
     {
         /// <summary>
@@ -20,6 +20,7 @@ namespace Umbraco.Tests.BusinessLogic
         public void Dispose()
         {
             ClearDatabase();
+			ConfigurationManager.AppSettings.Set("umbracoDbDSN", "");
         }
 
         /// <summary>
@@ -45,6 +46,8 @@ namespace Umbraco.Tests.BusinessLogic
         private void InitializeDatabase()
         {
             ConfigurationManager.AppSettings.Set("umbracoDbDSN", @"datalayer=SQLCE4Umbraco.SqlCEHelper,SQLCE4Umbraco;data source=|DataDirectory|\Umbraco.sdf");
+
+			ClearDatabase();
 
             var dataHelper = DataLayerHelper.CreateSqlHelper(GlobalSettings.DbDSN);
             var installer = dataHelper.Utility.CreateInstaller();
