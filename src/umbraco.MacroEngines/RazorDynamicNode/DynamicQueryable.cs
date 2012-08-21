@@ -1595,7 +1595,9 @@ namespace System.Linq.Dynamic
                     {
                         //accessing a property off an already resolved DynamicNode TryGetMember call
                         //e.g. uBlogsyPostDate.Date
-                        MethodInfo ReflectPropertyValue = this.GetType().GetMethod("ReflectPropertyValue", BindingFlags.NonPublic | BindingFlags.Static);
+						//SD: Removed the NonPublic accessor here because this will never work in medium trust, wondering why it is NonPublic vs Public ? Have changed to Public.
+						//MethodInfo ReflectPropertyValue = this.GetType().GetMethod("ReflectPropertyValue", BindingFlags.NonPublic | BindingFlags.Static);
+						MethodInfo ReflectPropertyValue = this.GetType().GetMethod("ReflectPropertyValue", BindingFlags.Public | BindingFlags.Static);
                         ParameterExpression convertDynamicNullToBooleanFalse = Expression.Parameter(typeof(bool), "convertDynamicNullToBooleanFalse");
                         ParameterExpression result = Expression.Parameter(typeof(object), "result");
                         ParameterExpression idParam = Expression.Parameter(typeof(string), "id");
@@ -2939,27 +2941,5 @@ namespace System.Linq.Dynamic
         public const string OpenBracketExpected = "'[' expected";
         public const string CloseBracketOrCommaExpected = "']' or ',' expected";
         public const string IdentifierExpected = "Identifier expected";
-    }
-
-    public static class PredicateBuilder
-    {
-        public static Expression<Func<T, bool>> True<T>() { return f => true; }
-        public static Expression<Func<T, bool>> False<T>() { return f => false; }
-
-        public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> expr1,
-                                                            Expression<Func<T, bool>> expr2)
-        {
-            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters.Cast<Expression>());
-            return Expression.Lambda<Func<T, bool>>
-                  (Expression.OrElse(expr1.Body, invokedExpr), expr1.Parameters);
-        }
-
-        public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> expr1,
-                                                             Expression<Func<T, bool>> expr2)
-        {
-            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters.Cast<Expression>());
-            return Expression.Lambda<Func<T, bool>>
-                  (Expression.AndAlso(expr1.Body, invokedExpr), expr1.Parameters);
-        }
     }
 }

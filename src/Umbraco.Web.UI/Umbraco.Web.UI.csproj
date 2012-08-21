@@ -5,7 +5,7 @@
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{4C4C194C-B5E4-4991-8F87-4373E24CC19F}</ProjectGuid>
-    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <ProjectTypeGuids>{E53F8FEA-EAE0-44A6-8774-FFD645390401};{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ApplicationIcon>
@@ -112,6 +112,9 @@
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.83.1.0, Culture=neutral, PublicKeyToken=1b03e6acf1164f73">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.9.4.1, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -255,6 +258,7 @@
     <Compile Include="..\SolutionInfo.cs">
       <Link>Properties\SolutionInfo.cs</Link>
     </Compile>
+    <Content Include="App_Code\TestClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Content Include="config\splashes\booting.aspx" />
     <Content Include="config\splashes\noNodes.aspx" />
@@ -264,12 +268,15 @@
     <None Include="config\ClientDependency.Release.config">
       <DependentUpon>ClientDependency.config</DependentUpon>
     </None>
+		<None Include="config\log4net.Release.config">
+      <DependentUpon>log4net.config</DependentUpon>
+		</None>
     <Content Include="config\FileSystemProviders.config">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="config\FileSystemProviders.Release.config">
+		<None Include="config\FileSystemProviders.Release.config">
       <DependentUpon>FileSystemProviders.config</DependentUpon>
-    </Content>
+    </None>
     <None Include="config\xsltExtensions.Release.config">
       <DependentUpon>xsltExtensions.config</DependentUpon>
     </None>
@@ -277,7 +284,6 @@
       <DependentUpon>UrlRewriting.config</DependentUpon>
     </None>
     <None Include="config\umbracoSettings.Release.config">
-      <SubType>Designer</SubType>
       <DependentUpon>umbracoSettings.config</DependentUpon>
     </None>
     <None Include="config\trees.Release.config">
@@ -313,9 +319,11 @@
     <None Include="config\Dashboard.Release.config">
       <DependentUpon>Dashboard.config</DependentUpon>
     </None>
+    <Content Include="packages.config" />
     <None Include="umbraco\config\create\UI.Release.xml">
       <DependentUpon>UI.xml</DependentUpon>
     </None>
+    <Content Include="Global.asax" />
     <Content Include="umbraco\config\lang\he.xml" />
     <Content Include="umbraco\config\lang\ja.xml" />
     <Content Include="umbraco\config\lang\pl.xml" />
@@ -1305,6 +1313,7 @@
       <DependentUpon>applications.config</DependentUpon>
       <SubType>Designer</SubType>
     </None>
+    <Content Include="Views\Home.cshtml" />
     <None Include="web.Template.Debug.config">
       <DependentUpon>Web.Template.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1737,11 +1746,11 @@
     <Content Include="config\metablogConfig.config" />
     <Content Include="config\restExtensions.config" />
     <Content Include="config\tinyMceConfig.config" />
-    <Content Include="config\umbracoSettings.config">
-      <SubType>Designer</SubType>
-    </Content>
+		<Content Include="config\umbracoSettings.config"/>
     <Content Include="config\xsltExtensions.config" />
     <Content Include="config\UrlRewriting.config" />
+		<Content Include="config\log4net.config" />
+		<Content Include="config\FileSystemProviders.config" />
     <Content Include="web.config">
       <SubType>Designer</SubType>
     </Content>
@@ -1817,7 +1826,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="App_Code\" />
     <Folder Include="App_Data\" />
     <Folder Include="css\" />
     <Folder Include="macroScripts\" />
@@ -1850,7 +1858,7 @@ xcopy "$(ProjectDir)"..\..\lib\SQLCE4\x86\*.* "$(TargetDir)x86\" /Y /F /E /D</Po
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>61637</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:61637/</IISUrl>
+          <IISUrl>http://localhost:61638/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
