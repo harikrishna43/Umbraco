@@ -7,6 +7,7 @@ using System.Web.Caching;
 using System.Xml;
 
 using System.Collections.Generic;
+using Umbraco.Core.Logging;
 
 
 namespace Umbraco.Core.Configuration
@@ -72,7 +73,7 @@ namespace Umbraco.Core.Configuration
                 }
                 catch (Exception e)
                 {
-					Trace.TraceError("Error reading umbracoSettings file: " + e.ToString() + ". ERROR: " + e.Message);
+					LogHelper.Error<UmbracoSettings>("Error reading umbracoSettings file: " + e.ToString(), e);
                 }
                 settingsReader.Close();
                 return temp;
