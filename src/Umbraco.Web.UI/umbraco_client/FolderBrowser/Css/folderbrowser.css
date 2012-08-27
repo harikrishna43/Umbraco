@@ -61,10 +61,13 @@
     padding: 2px 0 2px 20px;
 }
 
-.upload-panel .queued li span.label {
+.upload-panel .queued li .label {
     display: inline-block;
-    width: 150px;
-    overflow: hidden;
+    width: 145px;
+    margin: 0 5px 0 0;
+    border: solid 1px #e0e0e0;
+    height: 1.5em;
+    vertical-align: middle;
 }
 
 .upload-panel .queued li span.progress {
@@ -73,6 +76,7 @@
     border: solid 1px #e0e0e0;
     overflow: hidden;
     height: 1.5em;
+    vertical-align: middle;
 }
 
 .upload-panel .queued li span.progress span {
@@ -82,8 +86,23 @@
     height: 1.5em;
 }
 
+.upload-panel .queued li span.progress span.canceled,
+.upload-panel .queued li span.progress span.error {
+    background: #f33;
+}
+
 .upload-panel .queued li img {
     margin-left: 5px;
+    vertical-align: middle;
+}
+
+.upload-panel .buttons {
+    text-align: right;
+}
+
+.upload-panel .buttons span {
+    display: block;
+    float: left;
 }
 
 .umbFolderBrowser .breadcrumb {
@@ -112,6 +131,19 @@
     margin-right: 5px;
 }
 
+.umbFolderBrowser .thumb-sizer {
+    position: absolute;
+    top: 18px;
+    right: 270px;
+    border-right: solid 1px #ccc;
+    padding-right: 15px;
+}
+
+.umbFolderBrowser .thumb-sizer input,
+.umbFolderBrowser .thumb-sizer img {
+    vertical-align: baseline;
+}
+
 .umbFolderBrowser .filter {
     position: absolute;
     top: 15px;
@@ -123,13 +155,22 @@
     width: 200px;
 }
 
+.umbFolderBrowser .throbber {
+    margin: 0 20px;
+}
+
 .umbFolderBrowser .items {
     margin: 5px 15px;
     padding: 0;
 }
 
 .umbFolderBrowser .items li {
-    display: block;
+    display: inline-block;
+}
+
+.umbFolderBrowser .items li div {
+    display: inline-block;
+    position: relative;
     list-style: none;
     margin: 5px;
     padding: 0;
@@ -142,6 +183,17 @@
     -moz-box-shadow: 2px 2px 2px #e0e0e0;
     -webkit-box-shadow: 2px 2px 2px #e0e0e0;
     box-shadow: 2px 2px 2px #e0e0e0;
+    cursor: pointer;
+}
+
+.umbFolderBrowser .items.medium li div {
+    width: 95px;
+    height: 125px;
+}
+
+.umbFolderBrowser .items.small li div {
+    width: 70px;
+    height: 100px;
 }
 
 .umbFolderBrowser .img {
@@ -151,6 +203,16 @@
     width: 100px;
     height: 100px;
     margin: 10px;
+}
+
+.umbFolderBrowser .items.medium .img {
+    width: 75px;
+    height: 75px;
+}
+
+.umbFolderBrowser .items.small .img {
+    width: 50px;
+    height: 50px;
 }
 
 .umbFolderBrowser .img:before {
@@ -167,4 +229,47 @@
     vertical-align: middle;
     max-width: 100px;
     max-height: 100px;
+}
+
+.umbFolderBrowser .items.medium .img img {
+    max-width: 75px;
+    max-height: 75px;
+}
+
+.umbFolderBrowser .items.small .img img {
+    max-width: 50px;
+    max-height: 50px;
+}
+
+.umbFolderBrowser li span {
+    display: block;
+    white-space: nowrap;
+    margin: 0 5px;
+    overflow: hidden;
+}
+
+.umbFolderBrowser .items li.selected div {
+    background: #D5EFFC;
+	border-color: #99DEFD;
+}
+
+.umbFolderBrowser .items li.selected .img {
+    background: #99DEFD;
+}
+
+.umbFolderBrowser .items.ui-sortable-dragging li.selected {
+    display: none !important;
+}
+
+.umbFolderBrowser .items.ui-sortable-dragging li.ui-sortable-helper,
+.umbFolderBrowser .items.ui-sortable-dragging li.ui-sortable-placeholder {
+    display: inline-block !important;
+}
+
+.umbFolderBrowser .items li.ui-sortable-helper div {
+    border: dotted 5px #99DEFD;
+}
+
+.umbFolderBrowser .items li.ui-sortable-helper span {
+    display: none !important;
 }

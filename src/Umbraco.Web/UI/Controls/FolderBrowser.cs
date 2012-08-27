@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Web;
+using System.Web.Security;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using ClientDependency.Core;
 using umbraco.BasePages;
+using umbraco.BusinessLogic;
 using umbraco.IO;
 using umbraco.cms.businesslogic.media;
 
@@ -109,12 +112,25 @@ namespace Umbraco.Web.UI.Controls
             }
             sb.Append("</ul>");
 
+            // Create size changer
+            sb.Append("<div class='thumb-sizer'>" +
+                      "<input type='radio' name='thumb_size' value='small' data-bind='checked: thumbSize' />" +
+                      "<img src='images/thumbs_smll.png' alt='Small thumbnails' />" +
+                      "<input type='radio' name='thumb_size' value='medium' data-bind='checked: thumbSize' />" +
+                      "<img src='images/thumbs_med.png' alt='Medium thumbnails' />" +
+                      "<input type='radio' name='thumb_size' value='large' data-bind='checked: thumbSize' />" +
+                      "<img src='images/thumbs_lrg.png' alt='Large thumbnails' />" +
+                      "</div>");
+
             // Create the filter input
             sb.Append("<div class='filter'>Filter: <input type='text' data-bind=\"value: filterTerm, valueUpdate: 'afterkeydown'\" /></div>");
 
+            // Create throbber to display whilst loading items
+            sb.Append("<img src='images/throbber.gif' alt='' class='throbber' data-bind=\"visible: filtered().length == 0\" />");
+
             // Create thumbnails container
-            sb.Append("<ul class='items' data-bind='foreach: items'>" +
-                      "<li data-bind=\"attr: { 'data-id': Id }\"><a data-bind='attr: { href: EditUrl }'><span class='img'><img data-bind='attr: { src: ThumbnailUrl }' /></span><span data-bind='text: Name'></span></a></li>" +
+            sb.Append("<ul class='items' data-bind='foreach: filtered'>" +
+                      "<li data-bind=\"attr: { 'data-id': Id, 'data-order': $index() }, css: { selected: selected() }, event: { mousedown: toggleSelected, contextmenu: toggleSelected, dblclick: edit }\"><div><span class='img'><img data-bind='attr: { src: ThumbnailUrl }' /></span><span data-bind='text: Name'></span></div></li>" +
                       "</ul>");
 
             panel.Controls.Add(new LiteralControl(sb.ToString()));
