@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Umbraco.Core.Logging;
-using Umbraco.Core.Resolving;
+using Umbraco.Core.ObjectResolution;
+using Umbraco.Core.PropertyEditors;
 
 namespace Umbraco.Core
 {
@@ -17,19 +18,30 @@ namespace Umbraco.Core
 	{
 
 		private DisposableTimer _timer;
+		private bool _isInitialized = false;
+		private bool _isStarted = false;
+		private bool _isComplete = false;
+
+		protected ApplicationContext ApplicationContext { get; private set; }
 
 		public virtual IBootManager Initialize()
 		{
+			if (_isInitialized)
+				throw new InvalidOperationException("The boot manager has already been initialized");
+
 			LogHelper.Info<CoreBootManager>("Umbraco application starting");
 			_timer = DisposableTimer.Start(x => LogHelper.Info<CoreBootManager>("Umbraco application startup complete" + " (took " + x + "ms)"));
 
 			//create the ApplicationContext
-			ApplicationContext.Current = new ApplicationContext()
+			ApplicationContext = ApplicationContext.Current = new ApplicationContext()
 			{
 				IsReady = true	// fixme
 			};
 
 			InitializeResolvers();
+
+			_isInitialized = true;
+
 			return this;
 		}
 
@@ -40,10 +52,16 @@ namespace Umbraco.Core
 		/// <returns></returns>
 		public virtual IBootManager Startup(Action<ApplicationContext> afterStartup)
 		{
+			if (_isStarted)
+				throw new InvalidOperationException("The boot manager has already been initialized");
+
 			if (afterStartup != null)
 			{
 				afterStartup(ApplicationContext.Current);	
-			}			
+			}
+
+			_isStarted = true;
+
 			return this;
 		}
 
@@ -54,6 +72,9 @@ namespace Umbraco.Core
 		/// <returns></returns>
 		public virtual IBootManager Complete(Action<ApplicationContext> afterComplete)
 		{
+			if (_isComplete)
+				throw new InvalidOperationException("The boot manager has already been completed");
+
 			//freeze resolution to not allow Resolvers to be modified
 			Resolution.Freeze();
 
@@ -64,7 +85,9 @@ namespace Umbraco.Core
 			{
 				afterComplete(ApplicationContext.Current);	
 			}
-			
+
+			_isComplete = true;
+
 			return this;
 		}
 
@@ -87,6 +110,14 @@ namespace Umbraco.Core
 
 			ActionsResolver.Current = new ActionsResolver(
 				PluginManager.Current.ResolveActions());
+
+			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
+				new []
+					{
+						typeof(DatePickerPropertyEditorValueConverter),
+						typeof(TinyMcePropertyEditorValueConverter),
+						typeof(YesNoPropertyEditorValueConverter)
+					});
 		}
 	}
 }

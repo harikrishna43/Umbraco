@@ -3,6 +3,7 @@ using System.Text;
 using System.Web;
 
 using Umbraco.Core;
+using umbraco;
 
 namespace Umbraco.Web
 {
@@ -17,7 +18,7 @@ namespace Umbraco.Web
             _appVirtualPath = HttpRuntime.AppDomainAppVirtualPath ?? "/";
             _appVirtualPathPrefix = _appVirtualPath;
             if (_appVirtualPathPrefix == "/")
-                _appVirtualPathPrefix = string.Empty;
+                _appVirtualPathPrefix = String.Empty;
         }
 
 		// will be "/" or "/foo"
@@ -44,7 +45,54 @@ namespace Umbraco.Web
             return url;
         }
 
-        #region ResolveUrl
+		// fixme - what about vdir?
+		// path = path.Substring(UriUtility.AppVirtualPathPrefix.Length); // remove virtual directory
+
+    	public static Uri UriFromUmbraco(Uri uri)
+    	{
+    		var path = uri.GetSafeAbsolutePath();
+    		if (path == "/")
+    			return uri;
+
+    		if (!GlobalSettings.UseDirectoryUrls)
+    			path += ".aspx";
+    		else if (UmbracoSettings.AddTrailingSlash)
+    			path += "/";
+
+    		return uri.Rewrite(path);
+    	}
+
+		/// <summary>
+		/// Converts a Uri to a path based URI that is lower cased
+		/// </summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+    	public static Uri UriToUmbraco(Uri uri)
+    	{
+    		var path = uri.GetSafeAbsolutePath();
+
+    		path = path.ToLower();
+
+			//we need to check if the path is /default.aspx because this will occur when using a 
+			//web server pre IIS 7 when requesting the root document
+			//if this is the case we need to change it to '/'
+			if (path.StartsWith("/default.aspx", StringComparison.InvariantCultureIgnoreCase))
+			{
+				path = "/" + path.Substring("/default.aspx".Length, path.Length - "/default.aspx".Length);
+			}
+    		if (path != "/")
+    			path = path.TrimEnd('/');
+
+			//if any part of the path contains .aspx, replace it with nothing.
+			//sometimes .aspx is not at the end since we might have /home/sub1.aspx/customtemplate
+			path = path.Replace(".aspx", "");
+			//if (path.EndsWith(".aspx"))
+			//    path = path.Substring(0, path.Length - ".aspx".Length);
+
+    		return uri.Rewrite(path);
+    	}
+
+    	#region ResolveUrl
 
         // http://www.codeproject.com/Articles/53460/ResolveUrl-in-ASP-NET-The-Perfect-Solution
         // note
@@ -123,7 +171,7 @@ namespace Umbraco.Web
 
 		public static string StartWithScheme(string uri, string scheme)
 		{
-			return HasScheme(uri) ? uri : string.Format("{0}://{1}", scheme ?? Uri.UriSchemeHttp, uri);
+			return HasScheme(uri) ? uri : String.Format("{0}://{1}", scheme ?? Uri.UriSchemeHttp, uri);
 		}
 
 		public static string EndPathWithSlash(string uri)
@@ -157,5 +205,30 @@ namespace Umbraco.Web
 		}
 
 		#endregion
+
+    	/// <summary>
+    	/// Returns an faull url with the host, port, etc...
+    	/// </summary>
+    	/// <param name="absolutePath">An absolute path (i.e. starts with a '/' )</param>
+    	/// <param name="httpContext"> </param>
+    	/// <returns></returns>
+    	/// <remarks>
+    	/// Based on http://stackoverflow.com/questions/3681052/get-absolute-url-from-relative-path-refactored-method
+    	/// </remarks>
+    	internal static Uri ToFullUrl(string absolutePath, HttpContextBase httpContext)
+		{
+    		if (httpContext == null) throw new ArgumentNullException("httpContext");
+    		if (String.IsNullOrEmpty(absolutePath))
+				throw new ArgumentNullException("absolutePath");
+			
+			if (!absolutePath.StartsWith("/"))
+				throw new FormatException("The absolutePath specified does not start with a '/'");
+			
+
+			var url = httpContext.Request.Url;
+			var port = url.Port != 80 ? (":" + url.Port) : String.Empty;
+
+    		return new Uri(String.Format("{0}://{1}{2}{3}", url.Scheme, url.Host, port, absolutePath));
+		}
     }
 }

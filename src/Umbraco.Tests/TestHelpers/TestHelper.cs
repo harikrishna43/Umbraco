@@ -1,7 +1,11 @@
 using System;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
+using SqlCE4Umbraco;
 using log4net.Config;
+using umbraco.DataLayer;
+using GlobalSettings = umbraco.GlobalSettings;
 
 namespace Umbraco.Tests.TestHelpers
 {
@@ -10,6 +14,35 @@ namespace Umbraco.Tests.TestHelpers
 	/// </summary>
 	public static class TestHelper
 	{
+
+		/// <summary>
+		/// Clears an initialized database
+		/// </summary>
+		public static void ClearDatabase()
+		{
+			var dataHelper = DataLayerHelper.CreateSqlHelper(GlobalSettings.DbDSN) as SqlCEHelper;
+			if (dataHelper == null)
+				throw new InvalidOperationException("The sql helper for unit tests must be of type SqlCEHelper, check the ensure the connection string used for this test is set to use SQLCE");
+			dataHelper.ClearDatabase();
+		}
+
+		/// <summary>
+		/// Initializes a new database
+		/// </summary>
+		public static void InitializeDatabase()
+		{
+			ConfigurationManager.AppSettings.Set("umbracoDbDSN", @"datalayer=SQLCE4Umbraco.SqlCEHelper,SQLCE4Umbraco;data source=|DataDirectory|\Umbraco.sdf");
+
+			ClearDatabase();
+
+			var dataHelper = DataLayerHelper.CreateSqlHelper(GlobalSettings.DbDSN);
+			var installer = dataHelper.Utility.CreateInstaller();
+			if (installer.CanConnect)
+			{
+				installer.Install();
+			}
+		}
+
 		/// <summary>
 		/// Gets the current assembly directory.
 		/// </summary>

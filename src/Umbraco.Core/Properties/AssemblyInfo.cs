@@ -18,6 +18,8 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("130a6b5c-50e7-4df3-a0dd-e9e7eb0b7c5c")]
 
+//[assembly: System.Security.SecurityRules(System.Security.SecurityRuleSet.Level1)]
+
 [assembly: InternalsVisibleTo("umbraco")]
 [assembly: InternalsVisibleTo("Umbraco.Tests")]
 [assembly: InternalsVisibleTo("businesslogic")]
@@ -25,3 +27,9 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("umbraco.editorControls")]
 [assembly: InternalsVisibleTo("umbraco.MacroEngines")]
 
+[assembly: InternalsVisibleTo("umbraco.editorControls")]
+[assembly: InternalsVisibleTo("umbraco.webservices")]
+[assembly: InternalsVisibleTo("Umbraco.Tests")]
+[assembly: InternalsVisibleTo("Umbraco.Core")]
+
+[assembly: InternalsVisibleTo("Our.Umbraco.AmazonS3FileSystem")]

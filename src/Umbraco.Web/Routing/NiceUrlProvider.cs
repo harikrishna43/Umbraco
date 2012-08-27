@@ -20,16 +20,16 @@ namespace Umbraco.Web.Routing
 		/// <summary>
 		/// Initializes a new instance of the <see cref="NiceUrlProvider"/> class.
 		/// </summary>
-		/// <param name="contentStore">The content store.</param>
+		/// <param name="publishedContentStore">The content store.</param>
 		/// <param name="umbracoContext">The Umbraco context.</param>
-		public NiceUrlProvider(ContentStore contentStore, UmbracoContext umbracoContext)
+		public NiceUrlProvider(IPublishedContentStore publishedContentStore, UmbracoContext umbracoContext)
         {
             _umbracoContext = umbracoContext;
-            _contentStore = contentStore;
+			_publishedContentStore = publishedContentStore;
         }
 
         private readonly UmbracoContext _umbracoContext;
-        private readonly ContentStore _contentStore;
+		private readonly IPublishedContentStore _publishedContentStore;
 
         // note: this could be a parameter...
         const string UrlNameProperty = "@urlName";
@@ -65,17 +65,28 @@ namespace Umbraco.Web.Routing
 				? null
 				: _umbracoContext.RoutesCache.GetRoute(nodeId);
 
-            if (route != null)
+            if (!string.IsNullOrEmpty(route))
             {
 				// route is <id>/<path> eg "-1/", "-1/foo", "123/", "123/foo/bar"...
                 int pos = route.IndexOf('/');
                 path = route.Substring(pos);
-				int id = int.Parse(route.Substring(0, pos)); // will be -1 or 1234
-				domainUri = id > 0 ? DomainUriAtNode(id, current) : null;
+
+				//TODO: Fix this! When I view a node on the front-end (for example the root) it 
+				// caches the route as '/'
+				// then when i view that node in the back office, this used to throw an exception 
+				// because there was not '-1' prefixing it.
+				// If i reset the app pool, then go look at the node in the back office, it caches it as '-1/'
+				// so there are inconsistencies on how these routes are cached!
+
+				int id = int.Parse(route.Substring(0, pos));// will be -1 or 1234
+
+				domainUri = id > 0 ? DomainUriAtNode(id, current) : null;	
+
+				
 			}
 			else
 			{
-				var node = _contentStore.GetNodeById(nodeId);
+				var node = _publishedContentStore.GetDocumentById(_umbracoContext, nodeId);
 				if (node == null)
 					return "#"; // legacy wrote to the log here...
 
@@ -84,9 +95,9 @@ namespace Umbraco.Web.Routing
 				domainUri = DomainUriAtNode(id, current);
 				while (domainUri == null && id > 0)
 				{
-					pathParts.Add(_contentStore.GetNodeProperty(node, UrlNameProperty));
-					node = _contentStore.GetNodeParent(node);
-					id = int.Parse(_contentStore.GetNodeProperty(node, "@id")); // will be -1 or 1234
+					pathParts.Add(_publishedContentStore.GetDocumentProperty(_umbracoContext, node, UrlNameProperty));
+					node = node.Parent; // set to parent node
+					id = int.Parse(_publishedContentStore.GetDocumentProperty(_umbracoContext, node, "@id")); // will be -1 or 1234
 					domainUri = id > 0 ? DomainUriAtNode(id, current) : null;
 	            }
 
@@ -135,7 +146,7 @@ namespace Umbraco.Web.Routing
 			}
 			else
 			{
-				var node = _contentStore.GetNodeById(nodeId);
+				var node = _publishedContentStore.GetDocumentById(_umbracoContext, nodeId);
 				if (node == null)
 					return new string[] { "#" }; // legacy wrote to the log here...
 
@@ -144,9 +155,9 @@ namespace Umbraco.Web.Routing
 				domainUris = DomainUrisAtNode(id, current);
 				while (!domainUris.Any() && id > 0)
 				{
-					pathParts.Add(_contentStore.GetNodeProperty(node, UrlNameProperty));
-					node = _contentStore.GetNodeParent(node);
-					id = int.Parse(_contentStore.GetNodeProperty(node, "@id")); // will be -1 or 1234
+					pathParts.Add(_publishedContentStore.GetDocumentProperty(_umbracoContext, node, UrlNameProperty));
+					node = node.Parent; //set to parent node
+					id = int.Parse(_publishedContentStore.GetDocumentProperty(_umbracoContext, node, "@id")); // will be -1 or 1234
 					domainUris = id > 0 ? DomainUrisAtNode(id, current) : new Uri[] { };
 				}
 
@@ -184,7 +195,7 @@ namespace Umbraco.Web.Routing
 					uri = new Uri(domainUri.GetLeftPart(UriPartial.Path).TrimEnd('/') + path); // absolute
 			}
 
-			return UriFromUmbraco(uri);
+			return UriUtility.UriFromUmbraco(uri);
 		}
 
 		IEnumerable<Uri> AssembleUrls(IEnumerable<Uri> domainUris, string path, Uri current)
@@ -207,7 +218,7 @@ namespace Umbraco.Web.Routing
 				return null;
 
 			// apply filter on domains defined on that node
-			var domainAndUri = Domains.DomainMatch(Domain.GetDomainsById(nodeId), current, true);
+			var domainAndUri = DomainHelper.DomainMatch(Domain.GetDomainsById(nodeId), current, true);
 			return domainAndUri == null ? null : domainAndUri.Uri;
 		}
 
@@ -217,44 +228,10 @@ namespace Umbraco.Web.Routing
 			if (nodeId <= 0)
 				return new Uri[] { };
 
-			var domainAndUris = Domains.DomainMatches(Domain.GetDomainsById(nodeId), current);
+			var domainAndUris = DomainHelper.DomainMatches(Domain.GetDomainsById(nodeId), current);
 			return domainAndUris.Select(d => d.Uri);
 		}
 
 		#endregion
-
-		#region Map public urls to/from umbraco urls
-
-		// fixme - what about vdir?
-		// path = path.Substring(UriUtility.AppVirtualPathPrefix.Length); // remove virtual directory
-
-		public static Uri UriFromUmbraco(Uri uri)
-		{
-			var path = uri.GetSafeAbsolutePath();
-			if (path == "/")
-				return uri;
-
-			if (!global::umbraco.GlobalSettings.UseDirectoryUrls)
-				path += ".aspx";
-			else if (global::umbraco.UmbracoSettings.AddTrailingSlash)
-				path += "/";
-
-			return uri.Rewrite(path);
-		}
-
-		public static Uri UriToUmbraco(Uri uri)
-		{
-			var path = uri.GetSafeAbsolutePath();
-
-			path = path.ToLower();
-			if (path != "/")
-				path = path.TrimEnd('/');
-			if (path.EndsWith(".aspx"))
-				path = path.Substring(0, path.Length - ".aspx".Length);
-
-			return uri.Rewrite(path);
-		}
-
-		#endregion
-	}
+    }
 }

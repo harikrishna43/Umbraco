@@ -12,7 +12,6 @@ using System.Xml.XPath;
 
 
 using umbraco.BusinessLogic;
-using umbraco.businesslogic;
 using umbraco.cms.businesslogic;
 using umbraco.cms.businesslogic.media;
 using umbraco.cms.businesslogic.member;
@@ -355,7 +354,7 @@ namespace umbraco
         /// <returns>String with a friendly url from a node</returns>
         public static string NiceUrl(int nodeID)
         {
-			var niceUrlsProvider = Umbraco.Web.UmbracoContext.Current.DocumentRequest.RoutingContext.NiceUrlProvider;
+			var niceUrlsProvider = Umbraco.Web.UmbracoContext.Current.RoutingContext.NiceUrlProvider;
 			return niceUrlsProvider.GetNiceUrl(nodeID);
         }
 
@@ -378,7 +377,7 @@ namespace umbraco
         /// <returns>String with a friendly url with full domain from a node</returns>
         public static string NiceUrlWithDomain(int nodeID)
         {
-			var niceUrlsProvider = Umbraco.Web.UmbracoContext.Current.DocumentRequest.RoutingContext.NiceUrlProvider;
+			var niceUrlsProvider = Umbraco.Web.UmbracoContext.Current.RoutingContext.NiceUrlProvider;
 			return niceUrlsProvider.GetNiceUrl(nodeID, Umbraco.Web.UmbracoContext.Current.UmbracoUrl, true);
         }
 
@@ -1074,54 +1073,56 @@ namespace umbraco
         /// <returns>The rendered template as a string</returns>
         public static string RenderTemplate(int PageId, int TemplateId)
         {
-            try
+            if (UmbracoSettings.UseAspNetMasterPages)
             {
-                if (UmbracoSettings.UseAspNetMasterPages)
+                if (!umbraco.presentation.UmbracoContext.Current.LiveEditingContext.Enabled)
                 {
                     System.Collections.Generic.Dictionary<object, object> items = getCurrentContextItems();
+                    HttpContext.Current.Items["altTemplate"] = null;
 
-                    if (!umbraco.presentation.UmbracoContext.Current.LiveEditingContext.Enabled)
+                    HttpContext Context = HttpContext.Current;
+                    StringBuilder queryString = new StringBuilder();
+                    const string ONE_QS_PARAM = "&{0}={1}";
+                    foreach (object key in Context.Request.QueryString.Keys)
                     {
-                        HttpContext Context = HttpContext.Current;
-                        StringBuilder queryString = new StringBuilder();
-                        const string ONE_QS_PARAM = "&{0}={1}";
-                        foreach (object key in Context.Request.QueryString.Keys)
-                        {
-                            if (!key.ToString().ToLower().Equals("umbpageid") && !key.ToString().ToLower().Equals("alttemplate"))
-                                queryString.Append(string.Format(ONE_QS_PARAM, key, Context.Request.QueryString[key.ToString()]));
-                        }
-                        StringWriter sw = new StringWriter();
+                        if (!key.ToString().ToLower().Equals("umbpageid") && !key.ToString().ToLower().Equals("alttemplate"))
+                            queryString.Append(string.Format(ONE_QS_PARAM, key, Context.Request.QueryString[key.ToString()]));
+                    }
+                    StringWriter sw = new StringWriter();
 
-
+                    try
+                    {
                         Context.Server.Execute(
                             string.Format("~/default.aspx?umbPageID={0}&alttemplate={1}{2}",
                             PageId, new template(TemplateId).TemplateAlias, queryString), sw);
 
-                        // update the local page items again
-                        updateLocalContextItems(items, Context);
-
-                        return sw.ToString();
                     }
-                    else
+                    catch (Exception ee)
                     {
-                        return "RenderTemplate not supported in Canvas";
+                        sw.Write("<!-- Error generating macroContent: '{0}' -->", ee);
                     }
+
+                    // update the local page items again
+                    updateLocalContextItems(items, Context);
+
+                    return sw.ToString();
+
                 }
                 else
                 {
-                    page p = new page(((IHasXmlNode)GetXmlNodeById(PageId.ToString()).Current).GetNode());
-                    p.RenderPage(TemplateId);
-                    Control c = p.PageContentControl;
-                    StringWriter sw = new StringWriter();
-                    HtmlTextWriter hw = new HtmlTextWriter(sw);
-                    c.RenderControl(hw);
-
-                    return sw.ToString();
+                    return "RenderTemplate not supported in Canvas";
                 }
             }
-            catch (Exception ee)
+            else
             {
-                return string.Format("<!-- Error generating macroContent: '{0}' -->", ee);
+                page p = new page(((IHasXmlNode)GetXmlNodeById(PageId.ToString()).Current).GetNode());
+                p.RenderPage(TemplateId);
+                Control c = p.PageContentControl;
+                StringWriter sw = new StringWriter();
+                HtmlTextWriter hw = new HtmlTextWriter(sw);
+                c.RenderControl(hw);
+
+                return sw.ToString();
             }
         }
 
@@ -1154,43 +1155,46 @@ namespace umbraco
         /// <returns>The rendered template as a string.</returns>
         public static string RenderTemplate(int PageId)
         {
-            try
+            if (UmbracoSettings.UseAspNetMasterPages)
             {
-                if (UmbracoSettings.UseAspNetMasterPages)
+                if (!umbraco.presentation.UmbracoContext.Current.LiveEditingContext.Enabled)
                 {
-                    if (!umbraco.presentation.UmbracoContext.Current.LiveEditingContext.Enabled)
-                    {
-                        HttpContext Context = HttpContext.Current;
-                        StringBuilder queryString = new StringBuilder();
-                        const string ONE_QS_PARAM = "&{0}={1}";
-                        foreach (object key in Context.Request.QueryString.Keys)
-                        {
-                            if (!key.ToString().ToLower().Equals("umbpageid"))
-                                queryString.Append(string.Format(ONE_QS_PARAM, key, Context.Request.QueryString[key.ToString()]));
-                        }
-                        StringWriter sw = new StringWriter();
+                    System.Collections.Generic.Dictionary<object, object> items = getCurrentContextItems();
+                    HttpContext.Current.Items["altTemplate"] = null;
 
-                        Context.Server.Execute(
-                            string.Format("/default.aspx?umbPageID={0}{1}",
-                            PageId, queryString), sw);
-
-                        return sw.ToString();
-                    }
-                    else
+                    HttpContext Context = HttpContext.Current;
+                    StringBuilder queryString = new StringBuilder();
+                    const string ONE_QS_PARAM = "&{0}={1}";
+                    foreach (object key in Context.Request.QueryString.Keys)
                     {
-                        return "RenderTemplate not supported in Canvas";
+                        if (!key.ToString().ToLower().Equals("umbpageid") && !key.ToString().ToLower().Equals("alttemplate"))
+                            queryString.Append(string.Format(ONE_QS_PARAM, key, Context.Request.QueryString[key.ToString()]));
                     }
+                    StringWriter sw = new StringWriter();
+                    try
+                    {
+                        Context.Server.Execute(string.Format("/default.aspx?umbPageID={0}{1}", PageId, queryString), sw);
+                    }
+                    catch (Exception ee)
+                    {
+                        sw.Write("<!-- Error generating macroContent: '{0}' -->", ee);
+                    }
+   
+                    // update the local page items again
+                    updateLocalContextItems(items, Context);
+
+                    return sw.ToString();
                 }
                 else
                 {
-                    return
-                        RenderTemplate(PageId,
-                                       new page(((IHasXmlNode)GetXmlNodeById(PageId.ToString()).Current).GetNode()).Template);
+                    return "RenderTemplate not supported in Canvas";
                 }
             }
-            catch (Exception ee)
+            else
             {
-                return string.Format("<!-- Error generating macroContent: '{0}' -->", ee);
+                return
+                    RenderTemplate(PageId,
+                                    new page(((IHasXmlNode)GetXmlNodeById(PageId.ToString()).Current).GetNode()).Template);
             }
         }
 
@@ -2161,56 +2165,5 @@ namespace umbraco
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// Special class made to listen to save events on objects where umbraco.library caches some of their objects
-    /// </summary>
-    public class LibraryCacheRefresher : ApplicationStartupHandler
-    {
-        public LibraryCacheRefresher()
-        {
-            if (UmbracoSettings.UmbracoLibraryCacheDuration > 0)
-            {
-                Member.AfterSave += new Member.SaveEventHandler(Member_AfterSave);
-                Member.BeforeDelete += new Member.DeleteEventHandler(Member_BeforeDelete);
-                Media.AfterSave += new Media.SaveEventHandler(Media_AfterSave);
-                Media.BeforeDelete += new Media.DeleteEventHandler(Media_BeforeDelete);
-            }
-
-			// now handled directly by the IRoutesCache implementation
-			//content.AfterUpdateDocumentCache += new content.DocumentCacheEventHandler(content_AfterUpdateDocumentCache);
-			//content.AfterRefreshContent += new content.RefreshContentEventHandler(content_AfterRefreshContent);
-        }
-
-		//void content_AfterRefreshContent(Document sender, RefreshContentEventArgs e)
-		//{
-		//    library.ClearNiceUrlCache();
-		//}
-
-		//void content_AfterUpdateDocumentCache(Document sender, DocumentCacheEventArgs e)
-		//{
-		//    library.ClearNiceUrlCache();
-		//}
-
-        void Member_BeforeDelete(Member sender, DeleteEventArgs e)
-        {
-            library.ClearLibraryCacheForMember(sender.Id);
-        }
-
-        void Media_BeforeDelete(Media sender, DeleteEventArgs e)
-        {
-            library.ClearLibraryCacheForMedia(sender.Id);
-        }
-
-        void Media_AfterSave(Media sender, SaveEventArgs e)
-        {
-            library.ClearLibraryCacheForMedia(sender.Id);
-        }
-
-        void Member_AfterSave(Member sender, SaveEventArgs e)
-        {
-            library.ClearLibraryCacheForMember(sender.Id);
-        }
     }
 }

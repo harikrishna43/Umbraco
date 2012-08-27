@@ -331,6 +331,7 @@
                 .error(function (jqXhr, textStatus, errorThrown)
                 {
                     data.status = 'error';
+                    data.message = errorThrown;
                     self.opts.onDone(data);
                 })
                 .complete(function (jqXhr, textStatus)
@@ -349,19 +350,30 @@
             var data = $item.data('data');
 
             self._startDummyProgress(data);
-            
+
             $form.submit();
 
             $iframe.load(function ()
             {
-                // Read content returned
-                var response = $(this).contents().find('body').html();
-
-                //TODO: Check the response
-                
-                // Stop dummy progress
-                //TODO: Set success flag based upon response?
                 self._stopDummyProgress(data, true);
+                
+                // Read content returned
+                var rawResponse;
+
+                if (this.contentDocument) {
+                    rawResponse = this.contentDocument.body.innerHTML;
+                } else {
+                    rawResponse = this.contentWindow.document.body.innerHTML;
+                }
+
+                var response = $.parseJSON(rawResponse);
+
+                if(response.success) {
+                    data.status = 'success';
+                } else {
+                    data.status = 'error';
+                    data.message = 'An error occured whilst uploading.';
+                }
 
                 self.opts.onDone(data);
 
@@ -460,7 +472,6 @@
         {
             var self = this;
             var $item = $("#fu-item-" + self.uploaderId + "-" + itemId);
-            console.log("#fu-item-" + self.uploaderId + "-" + itemId);
             var data = $item.data('data');
 
             // If the item to cancel is in progress, abort the upload

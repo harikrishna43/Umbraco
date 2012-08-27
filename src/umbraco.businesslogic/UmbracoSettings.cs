@@ -27,8 +27,6 @@ namespace umbraco
             get { return Umbraco.Core.Configuration.UmbracoSettings.UmbracoSettingsXmlDoc; }
         }
 
-    	private static string _path;
-
 		/// <summary>
 		/// Gets/sets the settings file path, the setter can be used in unit tests
 		/// </summary>
@@ -37,19 +35,6 @@ namespace umbraco
     		get { return Umbraco.Core.Configuration.UmbracoSettings.SettingsFilePath; }
 			set { Umbraco.Core.Configuration.UmbracoSettings.SettingsFilePath = value; }
     	}
-
-    	private const string Filename = Umbraco.Core.Configuration.UmbracoSettings.Filename;
-
-    	private static XmlDocument EnsureSettingsDocument()
-    	{
-    		return Umbraco.Core.Configuration.UmbracoSettings.EnsureSettingsDocument();
-    	}
-
-        private static void save()
-        {
-			Umbraco.Core.Configuration.UmbracoSettings.Save();
-        }
-
 
         /// <summary>
         /// Selects a xml node in the umbraco settings config file.
@@ -186,15 +171,6 @@ namespace umbraco
         public static bool UseDomainPrefixes
         {
 			get { return Umbraco.Core.Configuration.UmbracoSettings.UseDomainPrefixes; }
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether umbraco shouldn't add X-Umbraco-Version to the http header.
-        /// </summary>
-        /// <value><c>true</c> if umbraco will not add header; otherwise, <c>false</c>.</value>
-        public static bool RemoveUmbracoVersionHeader
-        {
-			get { return Umbraco.Core.Configuration.UmbracoSettings.RemoveUmbracoVersionHeader; }
         }
 
         /// <summary>

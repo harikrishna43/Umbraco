@@ -13,6 +13,25 @@ namespace Umbraco.Core
 	public static class TypeExtensions
 	{
 
+		public static object GetDefaultValue(this Type t)
+		{
+			return t.IsValueType
+			       	? Activator.CreateInstance(t)
+			       	: null;
+		}
+        internal static MethodInfo GetGenericMethod(this Type type, string name, params Type[] parameterTypes)
+        {
+            var methods = type.GetMethods().Where(method => method.Name == name);
+
+            foreach (var method in methods)
+            {
+                if (method.HasParameters(parameterTypes))
+                    return method;
+            }
+
+            return null;
+        }
+
 		/// <summary>
 		/// Checks if the type is an anonymous type
 		/// </summary>
@@ -50,6 +69,42 @@ namespace Umbraco.Core
 		/// Determines whether the specified type is enumerable.
 		/// </summary>
 		/// <param name="type">The type.</param>
+        internal static bool HasParameters(this MethodInfo method, params Type[] parameterTypes)
+        {
+            var methodParameters = method.GetParameters().Select(parameter => parameter.ParameterType).ToArray();
+
+            if (methodParameters.Length != parameterTypes.Length)
+                return false;
+
+            for (int i = 0; i < methodParameters.Length; i++)
+                if (methodParameters[i].ToString() != parameterTypes[i].ToString())
+                    return false;
+
+            return true;
+        }
+
+        public static IEnumerable<Type> AllInterfaces(this Type target)
+        {
+            foreach (var IF in target.GetInterfaces())
+            {
+                yield return IF;
+                foreach (var childIF in IF.AllInterfaces())
+                {
+                    yield return childIF;
+                }
+            }
+        }
+
+        public static IEnumerable<MethodInfo> AllMethods(this Type target)
+        {
+            var allTypes = target.AllInterfaces().ToList();
+            allTypes.Add(target);
+
+            return from type in allTypes
+                   from method in type.GetMethods()
+                   select method;
+        }
+ 
 		/// <returns>
 		///   <c>true</c> if the specified type is enumerable; otherwise, <c>false</c>.
 		/// </returns>
@@ -164,27 +219,27 @@ namespace Umbraco.Core
 			return TypeHelper.IsTypeAssignableFrom<T>(actualType);
 		}
 
-		public static string GetCacheKeyFromParameters(this MemberInfo info)
-		{
-			var methodInfo = info as MethodInfo;
-			if (methodInfo != null)
-				return GetCacheKeyFromParameters(methodInfo.GetParameters());
-			return string.Empty;
-		}
+		//internal static string GetCacheKeyFromParameters(this MemberInfo info)
+		//{
+		//    var methodInfo = info as MethodInfo;
+		//    if (methodInfo != null)
+		//        return GetCacheKeyFromParameters(methodInfo.GetParameters());
+		//    return string.Empty;
+		//}
 
-		public static string GetCacheKeyFromParameters(IEnumerable<ParameterInfo> parameters)
-		{
-			var sb = new StringBuilder();
-			sb.Append("(");
-			foreach (var parameter in parameters)
-			{
-				sb.Append(parameter.ParameterType);
-				sb.Append(" ");
-				sb.Append(parameter.Name);
-				sb.Append(",");
-			}
-			sb.Append(")");
-			return sb.ToString();
-		}
+		//internal static string GetCacheKeyFromParameters(IEnumerable<ParameterInfo> parameters)
+		//{
+		//    var sb = new StringBuilder();
+		//    sb.Append("(");
+		//    foreach (var parameter in parameters)
+		//    {
+		//        sb.Append(parameter.ParameterType);
+		//        sb.Append(" ");
+		//        sb.Append(parameter.Name);
+		//        sb.Append(",");
+		//    }
+		//    sb.Append(")");
+		//    return sb.ToString();
+		//}
 	}
 }
