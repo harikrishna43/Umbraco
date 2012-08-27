@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.Script.Serialization;
 using Umbraco.Core;
 using Umbraco.Web.Media.ThumbnailProviders;
@@ -18,7 +19,7 @@ namespace Umbraco.Web.WebServices
     public class FolderBrowserService
     {
         [RestExtensionMethod(returnXml = false)]
-        public static string GetChildNodes(int parentId, string filterTerm)
+        public static string GetChildren(int parentId)
         {
             var parentMedia = new global::umbraco.cms.businesslogic.media.Media(parentId);
             var currentUser = User.GetCurrent();
@@ -35,9 +36,7 @@ namespace Umbraco.Web.WebServices
             // Get children and filter
             //TODO: Only fetch files, not containers
             //TODO: Cache responses to speed up susequent searches
-            foreach (var child in parentMedia.Children.Where(x => string.IsNullOrEmpty(filterTerm) ||
-                x.Text.InvariantContains(filterTerm) ||
-                Tag.GetTags(x.Id).Any(y => y.TagCaption.InvariantContains(filterTerm))))
+            foreach (var child in parentMedia.Children)
             {
                 var fileProp = child.getProperty("umbracoFile") ?? 
                     child.GenericProperties.FirstOrDefault(x =>
@@ -45,29 +44,44 @@ namespace Umbraco.Web.WebServices
 
                 var fileUrl = fileProp != null ? fileProp.Value.ToString() : "";
                 var thumbUrl = ThumbnailProvidersResolver.Current.GetThumbnailUrl(fileUrl);
-                
-                data.Add(new
+                var item = new
                 {
                     Id = child.Id,
                     Path = child.Path,
                     Name = child.Text,
+                    Tags = string.Join(",", Tag.GetTags(child.Id).Select(x => x.TagCaption)),
                     MediaTypeAlias = child.ContentType.Alias,
                     EditUrl = string.Format("editMedia.aspx?id={0}", child.Id),
                     FileUrl = fileUrl,
-                    ThumbnailUrl = !string.IsNullOrEmpty(thumbUrl) 
-                        ? thumbUrl 
+                    ThumbnailUrl = !string.IsNullOrEmpty(thumbUrl)
+                        ? thumbUrl
                         : IOHelper.ResolveUrl(SystemDirectories.Umbraco + "/images/thumbnails/" + child.ContentType.Thumbnail)
-                });
+                };
+
+                data.Add(item);
             }
 
             return new JavaScriptSerializer().Serialize(data);
         }
 
         [RestExtensionMethod(returnXml = false)]
-        public static string Upload(int parentId)
+        public static string Delete(string nodeIds)
         {
-            return new JavaScriptSerializer().Serialize(new {
-                success = true 
+            var nodeIdParts = nodeIds.Split(',');
+
+            foreach (var nodeIdPart in nodeIdParts.Where(x => !string.IsNullOrEmpty(x)))
+            {
+                var nodeId = 0;
+                if (!Int32.TryParse(nodeIdPart, out nodeId)) 
+                    continue;
+                
+                var node = new global::umbraco.cms.businesslogic.media.Media(nodeId);
+                node.delete(("," + node.Path + ",").Contains(",-21,"));
+            }
+
+            return new JavaScriptSerializer().Serialize(new
+            {
+                success = true
             });
         }
     }

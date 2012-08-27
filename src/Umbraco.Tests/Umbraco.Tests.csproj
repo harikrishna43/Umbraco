@@ -31,7 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+    <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="nunit.framework">
@@ -58,16 +58,33 @@
     <Compile Include="BusinessLogic\ApplicationTreeTest.cs" />
     <Compile Include="BusinessLogic\BaseTest.cs" />
     <Compile Include="CacheRefresherFactoryTests.cs" />
-    <Compile Include="ContentStoreTests.cs" />
+    <Compile Include="DynamicDocumentTests.cs" />
+    <Compile Include="PublishContentStoreTests.cs" />
     <Compile Include="DataTypeFactoryTests.cs" />
+    <Compile Include="DocumentLookups\BaseRoutingTest.cs" />
+    <Compile Include="DocumentLookups\LookupByAliasTests.cs" />
+    <Compile Include="DocumentLookups\LookupByIdTests.cs" />
+    <Compile Include="DocumentLookups\LookupByNiceUrlAndTemplateTests.cs" />
+    <Compile Include="DocumentLookups\LookupByNiceUrlTests.cs" />
+    <Compile Include="DocumentLookups\RenderRouteHandlerTests.cs" />
+    <Compile Include="DocumentLookups\RouteTestExtensions.cs" />
+    <Compile Include="Stubs\TestControllerFactory.cs" />
+    <Compile Include="TestHelpers\BaseWebTest.cs" />
+    <Compile Include="UriUtilityTests.cs" />
     <Compile Include="MacroFieldEditorsResolverTests.cs" />
     <Compile Include="MacroEngineFactoryTests.cs" />
+    <Compile Include="ManyObjectResolverTests.cs" />
     <Compile Include="MediaFactoryTests.cs" />
     <Compile Include="PackageActionsResolverTests.cs" />
     <Compile Include="PluginManagerExtensions.cs" />
     <Compile Include="PluginManagerTests.cs" />
+    <Compile Include="Stubs\FakeLastChanceLookup.cs" />
+    <Compile Include="Stubs\FakeRoutesCache.cs" />
     <Compile Include="TestHelpers\TestHelper.cs" />
     <Compile Include="EnumerableExtensionsTests.cs" />
+    <Compile Include="IO\AbstractFileSystemTests.cs" />
+    <Compile Include="IO\FileSystemProviderManagerTests.cs" />
+    <Compile Include="IO\PhysicalFileSystemTests.cs" />
     <Compile Include="PartialTrust\AbstractPartialTrustFixture.cs" />
     <Compile Include="PartialTrust\IPartialTrustFixture.cs" />
     <Compile Include="PartialTrust\PartialTrustFixtureFixture.cs" />
@@ -79,8 +96,10 @@
     <Compile Include="StringExtensionsTests.cs" />
     <Compile Include="TestHelpers\FakeHttpContextFactory.cs" />
     <Compile Include="TypeFinderTests.cs" />
+    <Compile Include="UmbracoModuleTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
     <None Include="unit-test-log4net.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Web;
 using System.Xml;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
 using umbraco.IO;
 using umbraco.interfaces;
 
@@ -14,7 +16,6 @@ namespace Umbraco.Web.Routing
 	/// </summary>
     internal class DefaultLastChanceLookup : IDocumentLastChanceLookup
     {
-		static TraceSource _trace = new TraceSource("DefaultLastChanceLookup");
 
 		/// <summary>
 		/// Tries to find and assign an Umbraco document to a <c>DocumentRequest</c>.
@@ -31,22 +32,25 @@ namespace Umbraco.Web.Routing
 
 		//FIXME: this is temporary and should be obsoleted
 
-		XmlNode HandlePageNotFound(DocumentRequest docRequest)
+		IDocument HandlePageNotFound(DocumentRequest docRequest)
         {
-			HttpContext.Current.Trace.Write("NotFoundHandler", string.Format("Running for url='{0}'.", docRequest.Uri.AbsolutePath));
-            XmlNode currentPage = null;
+			LogHelper.Debug<DefaultLastChanceLookup>("Running for url='{0}'.", () => docRequest.Uri.AbsolutePath);
+			
+			//XmlNode currentPage = null;
+			IDocument currentPage = null;
 
             foreach (var handler in GetNotFoundHandlers())
             {
 				if (handler.Execute(docRequest.Uri.AbsolutePath) && handler.redirectID > 0)
                 {
                     //currentPage = umbracoContent.GetElementById(handler.redirectID.ToString());
-					currentPage = docRequest.RoutingContext.ContentStore.GetNodeById(handler.redirectID);
+					currentPage = docRequest.RoutingContext.PublishedContentStore.GetDocumentById(
+						docRequest.RoutingContext.UmbracoContext,
+						handler.redirectID);
 
                     // FIXME - could it be null?
 
-                    HttpContext.Current.Trace.Write("NotFoundHandler",
-                                                    string.Format("Handler '{0}' found node with id={1}.", handler.GetType().FullName, handler.redirectID));
+					LogHelper.Debug<DefaultLastChanceLookup>("Handler '{0}' found node with id={1}.", () => handler.GetType().FullName, () => handler.redirectID);                    
 
                     //// check for caching
                     //if (handler.CacheUrl)
@@ -77,7 +81,7 @@ namespace Umbraco.Web.Routing
             // initialize handlers
             // create the definition cache
 
-            HttpContext.Current.Trace.Write("NotFoundHandler", "Registering custom handlers.");
+			LogHelper.Debug<DefaultLastChanceLookup>("Registering custom handlers.");                    
 
             _customHandlerTypes = new List<Type>();
 
@@ -101,17 +105,19 @@ namespace Umbraco.Web.Routing
                     ns = nsAttr.Value;
                 Type type = null;
 
-                HttpContext.Current.Trace.Write("NotFoundHandler",
-                                                string.Format("Registering '{0}.{1},{2}'.", ns, typeName, assemblyName));
-
+				LogHelper.Debug<DefaultLastChanceLookup>("Registering '{0}.{1},{2}'.", () => ns, () => typeName, () => assemblyName);      
+                
                 try
                 {
+					//TODO: This isn't a good way to load the assembly, its already in the Domain so we should be getting the type
+					// this loads the assembly into the wrong assembly load context!!
+
                     var assembly = Assembly.LoadFrom(IOHelper.MapPath(SystemDirectories.Bin + "/" + assemblyName + ".dll"));
                     type = assembly.GetType(ns + "." + typeName);
                 }
                 catch (Exception e)
                 {
-                    HttpContext.Current.Trace.Warn("NotFoundHandler", "Error registering handler, ignoring.", e);
+					LogHelper.Error<DefaultLastChanceLookup>("Error registering handler, ignoring.", e);                       
                 }
 
                 if (type != null)
@@ -142,9 +148,7 @@ namespace Umbraco.Web.Routing
                 }
                 catch (Exception e)
                 {
-                    HttpContext.Current.Trace.Warn("NotFoundHandler",
-                                                   string.Format("Error instanciating handler {0}, ignoring.", type.FullName),
-                                                   e);
+					LogHelper.Error<DefaultLastChanceLookup>(string.Format("Error instanciating handler {0}, ignoring.", type.FullName), e);                         
                 }
             }
 

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Web;
 using System.Reflection;
 using Umbraco.Core;
-using Umbraco.Core.Resolving;
 using umbraco.BasePages;
 using umbraco.BusinessLogic.Utils;
 using umbraco.cms;
@@ -148,7 +147,9 @@ namespace umbraco.BusinessLogic.Actions
         /// <returns></returns>
         public static List<string> GetJavaScriptFileReferences()
         {
-        	return ActionsResolver.Current.Actions.Select(x => x.JsSource).ToList();
+        	return ActionsResolver.Current.Actions
+				.Where(x => !string.IsNullOrWhiteSpace(x.JsSource))
+				.Select(x => x.JsSource).ToList();
         	//return ActionJsReference;
         }
 

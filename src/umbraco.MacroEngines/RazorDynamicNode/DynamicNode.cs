@@ -311,7 +311,6 @@ namespace umbraco.MacroEngines
                 result = typeof(DynamicNode).InvokeMember(binder.Name,
                                                   System.Reflection.BindingFlags.Instance |
                                                   System.Reflection.BindingFlags.Public |
-                                                  System.Reflection.BindingFlags.NonPublic |
                                                   System.Reflection.BindingFlags.GetProperty,
                                                   null,
                                                   this,
@@ -326,7 +325,6 @@ namespace umbraco.MacroEngines
                     result = typeof(DynamicNode).InvokeMember(binder.Name,
                                                   System.Reflection.BindingFlags.Instance |
                                                   System.Reflection.BindingFlags.Public |
-                                                  System.Reflection.BindingFlags.NonPublic |
                                                   System.Reflection.BindingFlags.Static |
                                                   System.Reflection.BindingFlags.InvokeMethod,
                                                   null,
@@ -411,6 +409,12 @@ namespace umbraco.MacroEngines
                     CMSNode working = ContentType.GetByAlias(node.NodeTypeAlias);
                     while (working != null)
                     {
+						//NOTE: I'm not sure if anyone has ever tested this but if you get working.Parent it will return a CMSNode and
+						// it will never be castable to a 'ContentType' object
+						// pretty sure the only reason why this method works for the one place that it is used is that it returns
+						// the current node's alias which is all that is actually requried, this is just added overhead for no 
+						// reason
+
                         if ((working as ContentType) != null)
                         {
                             list.Add((working as ContentType).Alias);
@@ -644,8 +648,7 @@ namespace umbraco.MacroEngines
                     result = n.GetType().InvokeMember(binder.Name,
                                                       System.Reflection.BindingFlags.GetProperty |
                                                       System.Reflection.BindingFlags.Instance |
-                                                      System.Reflection.BindingFlags.Public |
-                                                      System.Reflection.BindingFlags.NonPublic,
+                                                      System.Reflection.BindingFlags.Public,
                                                       null,
                                                       n,
                                                       null);

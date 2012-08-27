@@ -4,8 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using Umbraco.Core;
-using Umbraco.Core.Interfaces;
-using Umbraco.Core.Resolving;
+using Umbraco.Core.ObjectResolution;
 using umbraco.BusinessLogic;
 using umbraco.BusinessLogic.Utils;
 
@@ -25,6 +24,9 @@ namespace Umbraco.Web.Media.ThumbnailProviders
 
 		}
 
+		/// <summary>
+		/// Return the providers
+		/// </summary>
 		public IEnumerable<IThumbnailProvider> Providers
 		{
 			get 

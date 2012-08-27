@@ -7,6 +7,7 @@ using System.Web.Caching;
 using System.Xml;
 
 using System.Collections.Generic;
+using Umbraco.Core.Logging;
 
 
 namespace Umbraco.Core.Configuration
@@ -72,7 +73,7 @@ namespace Umbraco.Core.Configuration
                 }
                 catch (Exception e)
                 {
-					//Log.Add(LogTypes.Error, new User(0), -1, "Error reading umbracoSettings file: " + e.ToString());
+					LogHelper.Error<UmbracoSettings>("Error reading umbracoSettings file: " + e.ToString(), e);
                 }
                 settingsReader.Close();
                 return temp;
@@ -333,28 +334,6 @@ namespace Umbraco.Core.Configuration
         }
 
         /// <summary>
-        /// Gets a value indicating whether umbraco shouldn't add X-Umbraco-Version to the http header.
-        /// </summary>
-        /// <value><c>true</c> if umbraco will not add header; otherwise, <c>false</c>.</value>
-        public static bool RemoveUmbracoVersionHeader
-        {
-            get
-            {
-                try
-                {
-                    bool result;
-                    if (bool.TryParse(GetKey("/settings/requestHandler/removeUmbracoVersionHeader"), out result))
-                        return result;
-                    return false;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-        }
-
-        /// <summary>
         /// This will add a trailing slash (/) to urls when in directory url mode
         /// NOTICE: This will always return false if Directory Urls in not active
         /// </summary>
@@ -427,6 +406,9 @@ namespace Umbraco.Core.Configuration
                 }
             }
         }
+
+		//TODO: I"m not sure why we need this, need to ask Gareth what the deal is, pretty sure we can remove it or change it, seems like
+		// massive overkill.
 
         /// <summary>
         /// razor DynamicNode typecasting detects XML and returns DynamicXml - Root elements that won't convert to DynamicXml
@@ -1009,14 +991,24 @@ namespace Umbraco.Core.Configuration
         {
             get
             {
-                string value = GetKey("/settings/content/UseLegacyXmlSchema");
-                bool result;
-                if (!string.IsNullOrEmpty(value) && bool.TryParse(value, out result))
-                    return result;
-                return true;
+				try
+				{
+					string value = GetKey("/settings/content/UseLegacyXmlSchema");
+					bool result;
+					if (!string.IsNullOrEmpty(value) && bool.TryParse(value, out result))
+						return result;
+					return true;
+				}
+				catch (Exception)
+				{
+					//default. TODO: When we change this to a real config section we won't have to worry about parse errors
+					// and should handle defaults with unit tests properly.
+					return false; 
+				}
             }
         }
 
+		[Obsolete("This setting is not used anymore, the only file extensions that are supported are .cs and .vb files")]
     	public static IEnumerable<string> AppCodeFileExtensionsList
     	{
     		get
@@ -1027,7 +1019,7 @@ namespace Umbraco.Core.Configuration
     		}
     	}
 
-		[Obsolete("Use AppCodeFileExtensionsList instead")]
+		[Obsolete("This setting is not used anymore, the only file extensions that are supported are .cs and .vb files")]
         public static XmlNode AppCodeFileExtensions
         {
             get

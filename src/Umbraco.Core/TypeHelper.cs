@@ -68,6 +68,31 @@ namespace Umbraco.Core
 		}
 
 		/// <summary>
+		/// Returns a PropertyInfo from a type
+		/// </summary>
+		/// <param name="type"></param>
+		/// <param name="name"></param>
+		/// <param name="mustRead"></param>
+		/// <param name="mustWrite"></param>
+		/// <param name="includeIndexed"></param>
+		/// <param name="caseSensitive"> </param>
+		/// <returns></returns>
+		public static PropertyInfo GetProperty(Type type, string name, 
+			bool mustRead = true, 
+			bool mustWrite = true, 
+			bool includeIndexed = false,
+			bool caseSensitive = true)
+		{
+			return CachedDiscoverableProperties(type, mustRead, mustWrite, includeIndexed)
+				.FirstOrDefault(x =>
+					{
+						if (caseSensitive)
+							return x.Name == name;
+						return x.Name.InvariantEquals(name);
+					});
+		}
+
+		/// <summary>
 		/// Gets (and caches) <see cref="FieldInfo"/> discoverable in the current <see cref="AppDomain"/> for a given <paramref name="type"/>.
 		/// </summary>
 		/// <param name="type">The source.</param>
@@ -77,7 +102,7 @@ namespace Umbraco.Core
 			return GetFieldsCache.GetOrAdd(
 				type,
 				x => type
-				     	.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+				     	.GetFields(BindingFlags.Public | BindingFlags.Instance)
 				     	.Where(y => !y.IsInitOnly)
 				     	.ToArray());
 		}
@@ -95,7 +120,7 @@ namespace Umbraco.Core
 			return GetPropertiesCache.GetOrAdd(
 				new Tuple<Type, bool, bool, bool>(type, mustRead, mustWrite, includeIndexed),
 				x => type
-				     	.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+				     	.GetProperties(BindingFlags.Public | BindingFlags.Instance)
 				     	.Where(y => (!mustRead || y.CanRead)
 				     	            && (!mustWrite || y.CanWrite)
 				     	            && (includeIndexed || !y.GetIndexParameters().Any()))
