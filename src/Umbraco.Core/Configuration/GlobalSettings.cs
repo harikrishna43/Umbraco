@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
 using System.Web;
 using System.Web.Configuration;
 using System.Xml;
 using Umbraco.Core.IO;
+using Umbraco.Core.Logging;
 
 namespace Umbraco.Core.Configuration
 {
@@ -498,9 +498,14 @@ namespace Umbraco.Core.Configuration
         {
             get
             {
-                if (HttpContext != null)
-                    return bool.Parse(ConfigurationManager.AppSettings["umbracoHideTopLevelNodeFromPath"]);
-                return false;
+				try
+				{
+					return bool.Parse(ConfigurationManager.AppSettings["umbracoHideTopLevelNodeFromPath"]);
+				}
+				catch
+				{
+					return false;
+				}
             }
         }
 
@@ -731,7 +736,7 @@ namespace Umbraco.Core.Configuration
             foreach (string st in _reservedList._list.Keys)
                 res += st + ",";
 
-			Debug.Write("reserverd urls: '" + res + "'");
+			LogHelper.Debug<GlobalSettings>("reserverd urls: '" + res + "'");            
 
             // return true if url starts with an element of the reserved list
             return _reservedList.StartsWith(url.ToLower());
