@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
 using System.Web;
 using System.Web.Configuration;
 using System.Xml;
 using Umbraco.Core.IO;
+using Umbraco.Core.Logging;
 
 namespace Umbraco.Core.Configuration
 {
@@ -149,6 +149,29 @@ namespace Umbraco.Core.Configuration
                 }
             }
         }
+
+		/// <summary>
+		/// This returns the string of the MVC Area route.
+		/// </summary>
+		/// <remarks>
+		/// THIS IS TEMPORARY AND SHOULD BE REMOVED WHEN WE MIGRATE/UPDATE THE CONFIG SETTINGS TO BE A REAL CONFIG SECTION
+		/// AND SHOULD PROBABLY BE HANDLED IN A MORE ROBUST WAY.
+		/// 
+		/// This will return the MVC area that we will route all custom routes through like surface controllers, etc...
+		/// We will use the 'Path' (default ~/umbraco) to create it but since it cannot contain '/' and people may specify a path of ~/asdf/asdf/admin
+		/// we will convert the '/' to '-' and use that as the path. its a bit lame but will work.
+		/// </remarks>
+    	internal static string MvcArea
+    	{
+    		get 
+			{ 
+				if (Path.IsNullOrWhiteSpace())
+				{
+					throw new InvalidOperationException("Cannot create an MVC Area path without the umbracoPath specified");
+				}
+				return Path.TrimStart('~').TrimStart('/').Replace('/', '-').Trim();
+			}
+    	}
 
         /// <summary>
         /// Gets the path to umbraco's client directory (/umbraco_client by default).
@@ -498,9 +521,14 @@ namespace Umbraco.Core.Configuration
         {
             get
             {
-                if (HttpContext != null)
-                    return bool.Parse(ConfigurationManager.AppSettings["umbracoHideTopLevelNodeFromPath"]);
-                return false;
+				try
+				{
+					return bool.Parse(ConfigurationManager.AppSettings["umbracoHideTopLevelNodeFromPath"]);
+				}
+				catch
+				{
+					return false;
+				}
             }
         }
 
@@ -731,7 +759,7 @@ namespace Umbraco.Core.Configuration
             foreach (string st in _reservedList._list.Keys)
                 res += st + ",";
 
-			Debug.Write("reserverd urls: '" + res + "'");
+			LogHelper.Debug<GlobalSettings>("reserverd urls: '" + res + "'");            
 
             // return true if url starts with an element of the reserved list
             return _reservedList.StartsWith(url.ToLower());

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Dynamic;
+using Umbraco.Core;
 using umbraco.interfaces;
 using System.Collections;
 using System.Reflection;
@@ -12,7 +13,7 @@ using System.Linq.Expressions;
 using System.Linq.Dynamic;
 namespace umbraco.MacroEngines
 {
-    public class DynamicNodeList : DynamicObject, IEnumerable
+    public class DynamicNodeList : DynamicObject, IEnumerable<DynamicNode>
     {
         public List<DynamicNode> Items;
         public List<DynamicNode> get_Items()
@@ -78,6 +79,16 @@ namespace umbraco.MacroEngines
                 result = new DynamicNodeList(this.OrderBy<DynamicNode>(args.First().ToString()).ToList());
                 return true;
             }
+			if (name == "Take")
+			{
+				result = new DynamicNodeList(this.Take((int)args.First()));
+				return true;
+			}
+			if (name == "Skip")
+			{
+				result = new DynamicNodeList(this.Skip((int)args.First()));
+				return true;
+			}
             if (name == "InGroupsOf")
             {
                 int groupSize = 0;
@@ -165,7 +176,6 @@ namespace umbraco.MacroEngines
                 result = Items.GetType().InvokeMember(binder.Name,
                                                   System.Reflection.BindingFlags.Instance |
                                                   System.Reflection.BindingFlags.Public |
-                                                  System.Reflection.BindingFlags.NonPublic |
                                                   System.Reflection.BindingFlags.GetProperty,
                                                   null,
                                                   Items,
@@ -180,7 +190,6 @@ namespace umbraco.MacroEngines
                     result = Items.GetType().InvokeMember(binder.Name,
                                                   System.Reflection.BindingFlags.Instance |
                                                   System.Reflection.BindingFlags.Public |
-                                                  System.Reflection.BindingFlags.NonPublic |
                                                   System.Reflection.BindingFlags.Static |
                                                   System.Reflection.BindingFlags.InvokeMethod,
                                                   null,
@@ -377,6 +386,12 @@ namespace umbraco.MacroEngines
                     var genericArgs = (new[] { this }).Concat(args);
                     result = methodToExecute.Invoke(null, genericArgs.ToArray());
                 }
+				else if (TypeHelper.IsTypeAssignableFrom<IQueryable>(methodToExecute.GetParameters().First().ParameterType))
+				{
+					//if it is IQueryable, we'll need to cast Items AsQueryable
+					var genericArgs = (new[] { Items.AsQueryable() }).Concat(args);
+					result = methodToExecute.Invoke(null, genericArgs.ToArray());
+				}
                 else
                 {
                     var genericArgs = (new[] { Items }).Concat(args);
@@ -405,10 +420,15 @@ namespace umbraco.MacroEngines
             return result;
         }
 
-        public IEnumerator GetEnumerator()
-        {
-            return Items.GetEnumerator();
-        }
+		public IEnumerator<DynamicNode> GetEnumerator()
+		{
+			return Items.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
 
         public IQueryable<T> Where<T>(string predicate, params object[] values)
         {

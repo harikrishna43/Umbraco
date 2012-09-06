@@ -583,7 +583,7 @@ namespace umbraco.cms.businesslogic
                 {
                     if (p.PropertyType.DataTypeDefinition.DataType.Id == uploadField.Id
                          && p.Value.ToString() != ""
-                         && File.Exists(Umbraco.Core.IO.IOHelper.MapPath(p.Value.ToString())))
+                         && File.Exists(global::Umbraco.Core.IO.IOHelper.MapPath(p.Value.ToString())))
                     {
                         isUploadField = true;
                     }
