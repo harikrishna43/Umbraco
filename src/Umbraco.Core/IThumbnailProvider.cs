@@ -5,10 +5,11 @@ using System.Text;
 
 namespace Umbraco.Core
 {
-    internal interface IThumbnailProvider
+	internal interface IThumbnailProvider
     {
         int Priority { get; }
         bool CanProvideThumbnail(string fileUrl);
         string GetThumbnailUrl(string fileUrl);
     }
+
 }
