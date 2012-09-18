@@ -1,0 +1,367 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Umbraco.Core.Dynamics;
+using Umbraco.Web;
+using umbraco.interfaces;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using System.Web;
+using System.IO;
+using HtmlAgilityPack;
+
+namespace umbraco.MacroEngines.Library
+{
+	public class RazorLibraryCore
+    {
+        private readonly INode _node;
+    	private readonly UmbracoHelper _umbracoHelper;
+        public INode Node
+        {
+            get { return _node; }
+        }
+        public RazorLibraryCore(INode node)
+        {
+            this._node = node;
+			_umbracoHelper = new UmbracoHelper(UmbracoContext.Current);
+        }
+
+        public dynamic NodeById(int Id)
+        {
+            var node = new DynamicNode(Id);
+            if (node != null && node.Id == 0) return new DynamicNull();
+            return node;
+        }
+        public dynamic NodeById(string Id)
+        {
+            var node = new DynamicNode(Id);
+            if (node != null && node.Id == 0) return new DynamicNull();
+            return node;
+        }
+        public dynamic NodeById(DynamicNull Id)
+        {
+            return new DynamicNull();
+        }
+        public dynamic NodeById(object Id)
+        {
+            if (Id.GetType() == typeof(DynamicNull))
+            {
+                return new DynamicNull();
+            }
+            var node = new DynamicNode(Id);
+            if (node != null && node.Id == 0) return new DynamicNull();
+            return node;
+        }
+        public dynamic NodesById(List<object> Ids)
+        {
+            List<DynamicNode> nodes = new List<DynamicNode>();
+            foreach (object eachId in Ids)
+                nodes.Add(new DynamicNode(eachId));
+            return new DynamicNodeList(nodes);
+        }
+        public dynamic NodesById(List<int> Ids)
+        {
+            List<DynamicNode> nodes = new List<DynamicNode>();
+            foreach (int eachId in Ids)
+                nodes.Add(new DynamicNode(eachId));
+            return new DynamicNodeList(nodes);
+        }
+        public dynamic NodesById(List<int> Ids, DynamicBackingItemType ItemType)
+        {
+            List<DynamicNode> nodes = new List<DynamicNode>();
+            foreach (int eachId in Ids)
+                nodes.Add(new DynamicNode(eachId, ItemType));
+            return new DynamicNodeList(nodes);
+        }
+        public dynamic NodesById(params object[] Ids)
+        {
+            return NodesById(Ids.ToList());
+        }
+        public dynamic MediaById(DynamicNull Id)
+        {
+            return new DynamicNull();
+        }
+        public dynamic MediaById(int Id)
+        {
+            var ebm = ExamineBackedMedia.GetUmbracoMedia(Id);
+            if (ebm != null && ebm.Id == 0)
+            {
+                return new DynamicNull();
+            }
+            return new DynamicMedia(new DynamicBackingItem(ebm));
+        }
+        public dynamic MediaById(string Id)
+        {
+            int mediaId = 0;
+            if (int.TryParse(Id, out mediaId))
+            {
+                return MediaById(mediaId);
+            }
+            return new DynamicNull();
+        }
+        public dynamic MediaById(object Id)
+        {
+            if (Id.GetType() == typeof(DynamicNull))
+            {
+                return new DynamicNull();
+            }
+            int mediaId = 0;
+            if (int.TryParse(string.Format("{0}", Id), out mediaId))
+            {
+                return MediaById(mediaId);
+            }
+            return null;
+        }
+        public dynamic MediaById(List<object> Ids)
+        {
+            List<DynamicNode> nodes = new List<DynamicNode>();
+            foreach (object eachId in Ids)
+                nodes.Add(MediaById(eachId));
+            return new DynamicNodeList(nodes);
+        }
+        public dynamic MediaById(List<int> Ids)
+        {
+            List<DynamicNode> nodes = new List<DynamicNode>();
+            foreach (int eachId in Ids)
+                nodes.Add(MediaById(eachId));
+            return new DynamicNodeList(nodes);
+        }
+        public dynamic MediaById(params object[] Ids)
+        {
+            return MediaById(Ids.ToList());
+        }
+
+
+        public dynamic Search(string term, bool useWildCards = true, string searchProvider = null)
+        {
+			//wraps the functionality in UmbracoHelper but still returns the legacy DynamicNodeList
+			var nodes = ((DynamicDocumentList)_umbracoHelper.Search(term, useWildCards, searchProvider))
+				.Select(x => x.ConvertToNode());
+			return new DynamicNodeList(nodes);
+        }
+
+        public dynamic Search(Examine.SearchCriteria.ISearchCriteria criteria, Examine.Providers.BaseSearchProvider searchProvider = null)
+        {
+			//wraps the functionality in UmbracoHelper but still returns the legacy DynamicNodeList
+        	var nodes = ((DynamicDocumentList) _umbracoHelper.Search(criteria, searchProvider))
+        		.Select(x => x.ConvertToNode());
+        	return new DynamicNodeList(nodes);
+        }
+
+
+        public T As<T>() where T : class
+        {
+            return (this as T);
+        }
+
+        public dynamic ToDynamicXml(string xml)
+        {
+        	return _umbracoHelper.ToDynamicXml(xml);
+        }
+
+        public dynamic ToDynamicXml(XElement xElement)
+		{
+			return _umbracoHelper.ToDynamicXml(xElement);
+		}
+
+        public dynamic ToDynamicXml(XPathNodeIterator xpni)
+		{
+			return _umbracoHelper.ToDynamicXml(xpni);
+		}
+
+        public string Coalesce(params object[] args)
+        {
+        	return _umbracoHelper.Coalesce<DynamicNull>(args);
+        }
+
+        public string Concatenate(params object[] args)
+        {
+        	return _umbracoHelper.Concatenate<DynamicNull>(args);
+        }
+        public string Join(string seperator, params object[] args)
+        {
+        	return _umbracoHelper.Join<DynamicNull>(seperator, args);
+        }
+
+        public HtmlString If(bool test, string valueIfTrue, string valueIfFalse)
+        {
+        	return _umbracoHelper.If(test, valueIfTrue, valueIfFalse);
+        }
+        public HtmlString If(bool test, string valueIfTrue)
+        {
+        	return _umbracoHelper.If(test, valueIfTrue);
+        }
+
+        public HtmlTagWrapper Wrap(string tag, string innerText, params HtmlTagWrapperBase[] Children)
+        {
+            var item = Wrap(tag, innerText, (object)null);
+            foreach (var child in Children)
+            {
+                item.AddChild(child);
+            }
+            return item;
+        }
+        public HtmlTagWrapper Wrap(string tag, string innerText)
+        {
+            return Wrap(tag, innerText, (object)null);
+        }
+        public HtmlTagWrapper Wrap(string tag, object inner, object anonymousAttributes)
+        {
+            string innerText = null;
+            if (inner != null && inner.GetType() != typeof(DynamicNull))
+            {
+                innerText = string.Format("{0}", inner);
+            }
+            return Wrap(tag, innerText, anonymousAttributes);
+        }
+
+        public HtmlTagWrapper Wrap(string tag, object inner, object anonymousAttributes, params HtmlTagWrapperBase[] Children)
+        {
+            string innerText = null;
+            if (inner != null && inner.GetType() != typeof(DynamicNull))
+            {
+                innerText = string.Format("{0}", inner);
+            }
+            var item = Wrap(tag, innerText, anonymousAttributes);
+            foreach (var child in Children)
+            {
+                item.AddChild(child);
+            }
+            return item;
+        }
+        public HtmlTagWrapper Wrap(string tag, object inner)
+        {
+            string innerText = null;
+            if (inner != null && inner.GetType() != typeof(DynamicNull))
+            {
+                innerText = string.Format("{0}", inner);
+            }
+            return Wrap(tag, innerText, null);
+        }
+        public HtmlTagWrapper Wrap(string tag, string innerText, object anonymousAttributes)
+        {
+            HtmlTagWrapper wrap = new HtmlTagWrapper(tag);
+            if (anonymousAttributes != null)
+            {
+                wrap.ReflectAttributesFromAnonymousType(anonymousAttributes);
+            }
+            if (!string.IsNullOrWhiteSpace(innerText))
+            {
+                wrap.Children.Add(new HtmlTagWrapperTextNode(innerText));
+            }
+            return wrap;
+        }
+        public HtmlTagWrapper Wrap(string tag, string innerText, object anonymousAttributes, params HtmlTagWrapperBase[] Children)
+        {
+            HtmlTagWrapper wrap = new HtmlTagWrapper(tag);
+            if (anonymousAttributes != null)
+            {
+                wrap.ReflectAttributesFromAnonymousType(anonymousAttributes);
+            }
+            if (!string.IsNullOrWhiteSpace(innerText))
+            {
+                wrap.Children.Add(new HtmlTagWrapperTextNode(innerText));
+            }
+            foreach (var child in Children)
+            {
+                wrap.AddChild(child);
+            }
+            return wrap;
+        }
+
+        public HtmlTagWrapper Wrap(bool visible, string tag, string innerText, object anonymousAttributes)
+        {
+            var item = Wrap(tag, innerText, anonymousAttributes);
+            item.Visible = visible;
+            return item;
+        }
+        public HtmlTagWrapper Wrap(bool visible, string tag, string innerText, object anonymousAttributes, params HtmlTagWrapperBase[] Children)
+        {
+            var item = Wrap(tag, innerText, anonymousAttributes, Children);
+            item.Visible = visible;
+            foreach (var child in Children)
+            {
+                item.AddChild(child);
+            }
+            return item;
+        }
+        public IHtmlString Truncate(IHtmlString html, int length)
+        {
+            return Truncate(html.ToHtmlString(), length, true, false);
+        }
+        public IHtmlString Truncate(IHtmlString html, int length, bool addElipsis)
+        {
+            return Truncate(html.ToHtmlString(), length, addElipsis, false);
+        }
+        public IHtmlString Truncate(IHtmlString html, int length, bool addElipsis, bool treatTagsAsContent)
+        {
+            return Truncate(html.ToHtmlString(), length, addElipsis, treatTagsAsContent);
+        }
+        public IHtmlString Truncate(DynamicNull html, int length)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public IHtmlString Truncate(DynamicNull html, int length, bool addElipsis)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public IHtmlString Truncate(DynamicNull html, int length, bool addElipsis, bool treatTagsAsContent)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public IHtmlString Truncate(string html, int length)
+        {
+            return Truncate(html, length, true, false);
+        }
+        public IHtmlString Truncate(string html, int length, bool addElipsis)
+        {
+            return Truncate(html, length, addElipsis, false);
+        }
+        public IHtmlString Truncate(string html, int length, bool addElipsis, bool treatTagsAsContent)
+        {
+        	return _umbracoHelper.Truncate(html, length, addElipsis, treatTagsAsContent);
+        }
+
+
+        public HtmlString StripHtml(IHtmlString html)
+        {
+			return _umbracoHelper.StripHtml(html);
+        }
+        public HtmlString StripHtml(DynamicNull html)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public HtmlString StripHtml(string html)
+        {
+        	return _umbracoHelper.StripHtml(html);
+        }
+
+        public HtmlString StripHtml(IHtmlString html, List<string> tags)
+        {
+        	return _umbracoHelper.StripHtml(html, tags.ToArray());
+        }
+        public HtmlString StripHtml(DynamicNull html, List<string> tags)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public HtmlString StripHtml(string html, List<string> tags)
+        {
+        	return _umbracoHelper.StripHtml(html, tags.ToArray());
+        }
+
+        public HtmlString StripHtml(IHtmlString html, params string[] tags)
+        {
+        	return _umbracoHelper.StripHtml(html, tags);
+        }
+        public HtmlString StripHtml(DynamicNull html, params string[] tags)
+        {
+            return new HtmlString(string.Empty);
+        }
+        public HtmlString StripHtml(string html, params string[] tags)
+        {
+        	return _umbracoHelper.StripHtml(html, tags);
+        }
+
+    }
+}
