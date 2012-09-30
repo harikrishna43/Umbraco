@@ -99,14 +99,17 @@ namespace Umbraco.Web
 		/// <returns></returns>
 		public override IBootManager Complete(Action<ApplicationContext> afterComplete)
 		{
-			base.Complete(afterComplete);
-
 			//set routes
 			CreateRoutes();
+
+			base.Complete(afterComplete);
 
 			//call OnApplicationStarting of each application events handler
 			ApplicationEventsResolver.Current.ApplicationEventHandlers
 				.ForEach(x => x.OnApplicationStarted(_umbracoApplication, ApplicationContext));
+
+			// we're ready to serve content!
+			ApplicationContext.IsReady = true;
 
 			return this;
 		}
