@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Web;
+using System.Web.Compilation;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.UI;
@@ -157,7 +158,7 @@ namespace Umbraco.Web
 			// pass off to our handlers (mvc or webforms)
 
 			// assign the legacy page back to the docrequest
-			// handlers like default.aspx will want it
+			// handlers like default.aspx will want it and most macros currently need it
 			docreq.UmbracoPage = new page(docreq);
 
 			// these two are used by many legacy objects
@@ -283,52 +284,58 @@ namespace Umbraco.Web
 		// if yes, return true
 		bool EnsureIsReady(HttpContextBase httpContext, Uri uri)
 		{
+			var ready = ApplicationContext.Current.IsReady;
+
 			// ensure we are ready
-			if (!ApplicationContext.Current.IsReady)
+			if (!ready)
 			{
 				LogHelper.Warn<UmbracoModule>("Umbraco is not ready");
 
-				httpContext.Response.StatusCode = 503;
-
-				// fixme - default.aspx has to be ready for RequestContext.DocumentRequest==null
-				// fixme - in fact we should transfer to an empty html page...
-				var bootUrl = UriUtility.ToAbsolute(UmbracoSettings.BootSplashPage);
-
-				if (UmbracoSettings.EnableSplashWhileLoading) // legacy - should go
+				if (!UmbracoSettings.EnableSplashWhileLoading)
 				{
-					var configPath = UriUtility.ToAbsolute(SystemDirectories.Config);
-					bootUrl = string.Format("{0}/splashes/booting.aspx?url={1}", configPath, HttpUtility.UrlEncode(uri.ToString()));
-					// fixme ?orgurl=... ?retry=...
+					// let requests pile up and wait for 10s then show the splash anyway
+					ready = ApplicationContext.Current.WaitForReady(10 * 1000);
 				}
 
-				httpContext.RewritePath(bootUrl);
+				if (!ready)
+				{
+					httpContext.Response.StatusCode = 503;
 
-				return false;
+					var bootUrl = UmbracoSettings.BootSplashPage;
+					if (string.IsNullOrWhiteSpace(bootUrl))
+						bootUrl = "~/config/splashes/booting.aspx";
+					httpContext.RewritePath(UriUtility.ToAbsolute(bootUrl) + "?url=" + HttpUtility.UrlEncode(uri.ToString()));
+
+					return false;
+				}
 			}
 
 			return true;
 		}
 
-        // ensures Umbraco has at least one published node
-        // if not, rewrites to splash and return false
-        // if yes, return true
-        bool EnsureHasContent(HttpContextBase httpContext)
-        {
-            var context = UmbracoContext.Current;
-            var store = context.RoutingContext.PublishedContentStore;
-            if (!store.HasContent(context))
-            {
-                LogHelper.Warn<UmbracoModule>("Umbraco has not content");
+		// ensures Umbraco has at least one published node
+		// if not, rewrites to splash and return false
+		// if yes, return true
+		bool EnsureHasContent(HttpContextBase httpContext)
+		{
+			var context = UmbracoContext.Current;
+			var store = context.RoutingContext.PublishedContentStore;
+			if (!store.HasContent(context))
+			{
+				LogHelper.Warn<UmbracoModule>("Umbraco has no content");
 
-                var noContentUrl = UriUtility.ToAbsolute(UmbracoSettings.NoContentSplashPage);
-                httpContext.RewritePath(noContentUrl);
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
+				httpContext.Response.StatusCode = 503;
+
+				var noContentUrl = "~/config/splashes/noNodes.aspx";
+				httpContext.RewritePath(UriUtility.ToAbsolute(noContentUrl));
+
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
 
 		// ensures Umbraco is configured
 		// if not, redirect to install and return false
@@ -354,7 +361,7 @@ namespace Umbraco.Web
 		/// </summary>		
 		/// <param name="context"></param>
 		/// <param name="currentQuery"></param>
-		/// <param name="isMvc"> </param>
+		/// <param name="engine"> </param>
 		private void RewriteToUmbracoHandler(HttpContext context, string currentQuery, RenderingEngine engine)
 		{
 
@@ -391,6 +398,10 @@ namespace Umbraco.Web
 					rewritePath = "~/default.aspx" + currentQuery;
 					//First we rewrite the path to the path of the handler (i.e. default.aspx or /umbraco/RenderMvc )
 					context.RewritePath(rewritePath, "", currentQuery.TrimStart(new[] { '?' }), false);
+
+					//now, execute the handler
+					var webFormshandler = (global::umbraco.UmbracoDefault)BuildManager.CreateInstanceFromVirtualPath("~/default.aspx", typeof(global::umbraco.UmbracoDefault));
+					context.RemapHandler(webFormshandler);
 					break;
 			}
 
