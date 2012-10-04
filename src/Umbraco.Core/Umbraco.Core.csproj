@@ -37,6 +37,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Mvc, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml.Linq" />
@@ -78,10 +79,99 @@
     <Compile Include="IO\FileSystemProviderAttribute.cs" />
     <Compile Include="IO\IFileSystemExtensions.cs" />
     <Compile Include="IO\IMediaFileSystem.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentAll.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentPicker.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentRandom.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentStubs.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentTree.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentType.cs" />
+    <Compile Include="Macros\PropertyTypes\ContentTypeMultiple.cs" />
+    <Compile Include="Macros\PropertyTypes\MediaCurrent.cs" />
+    <Compile Include="Macros\PropertyTypes\Number.cs" />
+    <Compile Include="Macros\PropertyTypes\PropertyTypePicker.cs" />
+    <Compile Include="Macros\PropertyTypes\PropertyTypePickerMultiple.cs" />
+    <Compile Include="Macros\PropertyTypes\TabPicker.cs" />
+    <Compile Include="Macros\PropertyTypes\TabPickerMultiple.cs" />
+    <Compile Include="Macros\PropertyTypes\Text.cs" />
+    <Compile Include="Macros\PropertyTypes\TextMultiLine.cs" />
     <Compile Include="Macros\MacroTagParser.cs" />
+    <Compile Include="Macros\PropertyTypes\YesNoBool.cs" />
     <Compile Include="Mandate.cs" />
+    <Compile Include="Models\Content.cs" />
+    <Compile Include="Models\ContentStatus.cs" />
+    <Compile Include="Models\ContentType.cs" />
+    <Compile Include="Models\DataTypeDatabaseType.cs" />
+    <Compile Include="Models\DataTypeDefinition.cs" />
+    <Compile Include="Models\EntityBase\Entity.cs" />
+    <Compile Include="Models\EntityBase\IAggregateRoot.cs" />
+    <Compile Include="Models\EntityBase\ICanBeDirty.cs" />
+    <Compile Include="Models\EntityBase\IEntity.cs" />
+    <Compile Include="Models\EntityBase\IValueObject.cs" />
+    <Compile Include="Models\IContent.cs" />
+    <Compile Include="Models\IContentBase.cs" />
+    <Compile Include="Models\IContentType.cs" />
+    <Compile Include="Models\IContentTypeBase.cs" />
+    <Compile Include="Models\IContentTypeComposition.cs" />
+    <Compile Include="Models\IMacro.cs" />
+    <Compile Include="Models\IMacroProperty.cs" />
+    <Compile Include="Models\IMacroPropertyType.cs" />
+    <Compile Include="Models\IMedia.cs" />
+    <Compile Include="Models\IMediaType.cs" />
+    <Compile Include="Models\Macro.cs" />
+    <Compile Include="Models\MacroProperty.cs" />
+    <Compile Include="Models\MacroPropertyTypeBaseTypes.cs" />
+    <Compile Include="Models\MacroTypes.cs" />
+    <Compile Include="Models\Property.cs" />
+    <Compile Include="Models\PropertyCollection.cs" />
+    <Compile Include="Models\PropertyGroup.cs" />
+    <Compile Include="Models\PropertyGroupCollection.cs" />
+    <Compile Include="Models\PropertyType.cs" />
+    <Compile Include="Models\PropertyTypeCollection.cs" />
+    <Compile Include="Models\Rdbms\AppDto.cs" />
+    <Compile Include="Models\Rdbms\AppTreeDto.cs" />
+    <Compile Include="Models\Rdbms\ContentDto.cs" />
+    <Compile Include="Models\Rdbms\ContentTypeAllowedContentTypeDto.cs" />
+    <Compile Include="Models\Rdbms\ContentTypeDto.cs" />
+    <Compile Include="Models\Rdbms\ContentVersionDto.cs" />
+    <Compile Include="Models\Rdbms\ContentXmlDto.cs" />
+    <Compile Include="Models\Rdbms\DataTypeDto.cs" />
+    <Compile Include="Models\Rdbms\DataTypePreValueDto.cs" />
+    <Compile Include="Models\Rdbms\DictionaryDto.cs" />
+    <Compile Include="Models\Rdbms\DocumentDto.cs" />
+    <Compile Include="Models\Rdbms\DocumentTypeDto.cs" />
+    <Compile Include="Models\Rdbms\DomainDto.cs" />
+    <Compile Include="Models\Rdbms\LanguageDto.cs" />
+    <Compile Include="Models\Rdbms\LanguageTextDto.cs" />
+    <Compile Include="Models\Rdbms\LogDto.cs" />
+    <Compile Include="Models\Rdbms\MacroDto.cs" />
+    <Compile Include="Models\Rdbms\MacroPropertyDto.cs" />
+    <Compile Include="Models\Rdbms\MacroPropertyTypeDto.cs" />
+    <Compile Include="Models\Rdbms\Member2MemberGroupDto.cs" />
+    <Compile Include="Models\Rdbms\MemberDto.cs" />
+    <Compile Include="Models\Rdbms\MemberTypeDto.cs" />
+    <Compile Include="Models\Rdbms\NodeDto.cs" />
+    <Compile Include="Models\Rdbms\PreviewXmlDto.cs" />
+    <Compile Include="Models\Rdbms\PropertyDataDto.cs" />
+    <Compile Include="Models\Rdbms\PropertyTypeDto.cs" />
+    <Compile Include="Models\Rdbms\RelationDto.cs" />
+    <Compile Include="Models\Rdbms\RelationTypeDto.cs" />
+    <Compile Include="Models\Rdbms\StylesheetDto.cs" />
+    <Compile Include="Models\Rdbms\StylesheetPropertyDto.cs" />
+    <Compile Include="Models\Rdbms\TabDto.cs" />
+    <Compile Include="Models\Rdbms\TagDto.cs" />
+    <Compile Include="Models\Rdbms\TagRelationshipDto.cs" />
+    <Compile Include="Models\Rdbms\TaskDto.cs" />
+    <Compile Include="Models\Rdbms\TaskTypeDto.cs" />
+    <Compile Include="Models\Rdbms\TemplateDto.cs" />
+    <Compile Include="Models\Rdbms\User2AppDto.cs" />
+    <Compile Include="Models\Rdbms\User2NodeNotifyDto.cs" />
+    <Compile Include="Models\Rdbms\User2NodePermissionDto.cs" />
+    <Compile Include="Models\Rdbms\UserDto.cs" />
+    <Compile Include="Models\Rdbms\UserLoginDto.cs" />
+    <Compile Include="Models\Rdbms\UserTypeDto.cs" />
     <Compile Include="NameValueCollectionExtensions.cs" />
     <Compile Include="ObjectResolution\WeightedPluginAttribute.cs" />
+    <Compile Include="Persistence\PetaPoco.cs" />
     <Compile Include="PropertyEditors\DatePickerPropertyEditorValueConverter.cs" />
     <Compile Include="PropertyEditors\IPropertyEditorValueConverter.cs" />
     <Compile Include="Dynamics\ParseException.cs" />
@@ -162,7 +252,13 @@
       <Name>umbraco.interfaces</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Persistence\Caching\" />
+    <Folder Include="Persistence\Factories\" />
+    <Folder Include="Persistence\Querying\" />
+    <Folder Include="Persistence\Repositories\" />
+    <Folder Include="Persistence\UnitOfWork\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
