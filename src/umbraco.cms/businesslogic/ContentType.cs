@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -104,8 +105,36 @@ namespace umbraco.cms.businesslogic
 
         #region Static Methods
 
+		/// <summary>
+		/// Used for cache so we don't have to lookup column names all the time, this is actually only used for the ChildrenAsTable methods
+		/// </summary>
+		private static readonly ConcurrentDictionary<string, IDictionary<string, string>> AliasToNames = new ConcurrentDictionary<string, IDictionary<string, string>>();
+
         private static Dictionary<Tuple<string, string>, Guid> _propertyTypeCache = new Dictionary<Tuple<string, string>, Guid>();
-        public static void RemoveFromDataTypeCache(string contentTypeAlias)
+        
+		/// <summary>
+		/// Returns a content type's columns alias -> name mapping
+		/// </summary>
+		/// <param name="contentTypeAlias"></param>
+		/// <returns></returns>
+		/// <remarks>
+		/// This is currently only used for ChildrenAsTable methods, caching is moved here instead of in the app logic so we can clear the cache
+		/// </remarks>
+		internal static IDictionary<string, string> GetAliasesAndNames(string contentTypeAlias)
+		{
+			IDictionary<string, string> cached;
+			if (AliasToNames.TryGetValue(contentTypeAlias, out cached))
+			{
+				return cached;
+			}
+
+			var ct = ContentType.GetByAlias(contentTypeAlias);
+			var userFields = ct.PropertyTypes.ToDictionary(x => x.Alias, x => x.Name);
+			AliasToNames.TryAdd(contentTypeAlias, userFields);
+			return userFields;
+		}
+		
+		public static void RemoveFromDataTypeCache(string contentTypeAlias)
         {
             lock (_propertyTypeCache)
             {
@@ -120,8 +149,10 @@ namespace umbraco.cms.businesslogic
                 foreach (Tuple<string, string> key in toDelete)
                 {
                     _propertyTypeCache.Remove(key);
-                }
+                }				
             }
+			//don't put lock around this as it is ConcurrentDictionary.
+			AliasToNames.Clear();
         }
         public static Guid GetDataType(string contentTypeAlias, string propertyTypeAlias)
         {
@@ -1107,19 +1138,31 @@ namespace umbraco.cms.businesslogic
         }
 
 
-
+        private readonly object _virtualTabLoadLock = new object();
         /// <summary>
         /// Checks if we've loaded the virtual tabs into memory and if not gets them from the databse.
         /// </summary>
         [Obsolete("Use PropertyTypeGroup methods instead", false)]
         private void EnsureVirtualTabs()
         {
-            //optimize, lazy load the data only one time
+            // This class can be cached and potentially shared between multiple threads.
+            // Two or more threads can attempt to lazyily-load its virtual tabs at the same time.
+            // If that happens, the m_VirtualTabs will contain duplicates.
+            // We must prevent two threads from running InitializeVirtualTabs at the same time.
+            // We must also prevent m_VirtualTabs from being modified while it is being populated.
             if (m_VirtualTabs == null || m_VirtualTabs.Count == 0)
             {
-                InitializeVirtualTabs();
+                lock (_virtualTabLoadLock)
+                {
+                    //optimize, lazy load the data only one time
+                    if (m_VirtualTabs == null || m_VirtualTabs.Count == 0)
+                    {
+                        InitializeVirtualTabs();
+                    }
+                }
             }
         }
+
 
         /// <summary>
         /// Loads the tabs into memory from the database and stores them in a local list for retreival
@@ -1134,6 +1177,7 @@ namespace umbraco.cms.businesslogic
             // Master Content Type
             if (MasterContentTypes.Count > 0)
             {
+                foreach (TabI t in ContentType.GetContentType(MasterContentType).getVirtualTabs.ToList())
                 foreach (var mct in MasterContentTypes)
                     foreach (TabI t in ContentType.GetContentType(mct).getVirtualTabs.ToList())
                     {

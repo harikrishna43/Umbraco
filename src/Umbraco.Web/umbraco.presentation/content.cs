@@ -155,7 +155,7 @@ namespace umbraco
                     {
                         Cache.ClearCacheObjectTypes("MS.Internal.Xml.XPath.XPathSelectionIterator");
                     }
-                    requestHandler.ClearProcessedRequests();
+
                     _xmlContent = value;
 
                     if (!UmbracoSettings.isXmlContentCacheDisabled && UmbracoSettings.continouslyUpdateXmlDiskCache)
@@ -896,6 +896,16 @@ namespace umbraco
 
         internal const string PersistenceFlagContextKey = "vnc38ykjnkjdnk2jt98ygkxjng";
 
+		/// <summary>
+		/// Removes the flag that queues the file for persistence
+		/// </summary>
+		internal void RemoveXmlFilePersistenceQueue()
+		{
+			HttpContext.Current.Application.Lock();
+			HttpContext.Current.Application[PersistenceFlagContextKey] = null;
+			HttpContext.Current.Application.UnLock();
+		}
+
         internal bool IsXmlQueuedForPersistenceToFile
         {
             get
@@ -915,9 +925,7 @@ namespace umbraco
                             }
                             else
                             {
-                                HttpContext.Current.Application.Lock();
-                                HttpContext.Current.Application[PersistenceFlagContextKey] = null;
-                                HttpContext.Current.Application.UnLock();
+                                RemoveXmlFilePersistenceQueue();
                             }
                         }
                         catch

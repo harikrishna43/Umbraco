@@ -8,8 +8,10 @@ using System.Web;
 using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.Security;
+using System.Web.UI;
 using System.Xml;
 using System.Xml.Serialization;
+using umbraco.BasePages;
 using umbraco.BusinessLogic;
 using umbraco.businesslogic.Exceptions;
 using umbraco.cms.businesslogic.media;
@@ -63,7 +65,9 @@ namespace umbraco.presentation.umbraco.webservices
             {
                 case "json":
                     // Format as JSON 
-                    context.Response.ContentType = @"application/json";
+                    // Weirdly, this should be set to text/html to make it respond as json according to:
+                    // http://stackoverflow.com/questions/6934393/resource-interpreted-as-document-but-transferred-with-mime-type-application-jso
+                    context.Response.ContentType = @"text/html";
 
                     context.Response.Write(new JavaScriptSerializer().Serialize(response));
 
@@ -127,12 +131,12 @@ namespace umbraco.presentation.umbraco.webservices
             {
                 try
                 {
-                    // Check Path
+                    var parentNode = new Media(parentNodeId);
+                    // Check FilePath
                     if (!string.IsNullOrEmpty(context.Request["path"]))
                     {
                         var pathParts = context.Request["path"].Trim('/').Split('/');
-
-                        var parentNode = new Media(parentNodeId);
+                        
                         foreach (var pathPart in pathParts)
                         {
                             if (!string.IsNullOrEmpty(pathPart))
@@ -156,9 +160,14 @@ namespace umbraco.presentation.umbraco.webservices
                         // if there was a file uploded
                         if (uploadFile.ContentLength > 0)
                         {
+                            // Ensure we get the filename without the path in IE in intranet mode 
+                            // http://stackoverflow.com/questions/382464/httppostedfile-filename-different-from-ie
+                            var fileName = new FileInfo(uploadFile.FileName).Name;
+                            fileName = Umbraco.Core.IO.IOHelper.SafeFileName(fileName);
+
                             var postedMediaFile = new PostedMediaFile
                             {
-                                FileName = uploadFile.FileName,
+                                FileName = fileName,
                                 DisplayName = context.Request["name"],
                                 ContentType = uploadFile.ContentType,
                                 ContentLength = uploadFile.ContentLength,
@@ -174,6 +183,9 @@ namespace umbraco.presentation.umbraco.webservices
                         }
                     }
 
+                    var scripts = new ClientTools(new Page());
+                    scripts.SyncTree(parentNode.Path, true);
+
                     // log succes
                     Log.Add(LogTypes.New, parentNodeId, "Succes");
                 }
@@ -188,7 +200,9 @@ namespace umbraco.presentation.umbraco.webservices
                 // log error
                 Log.Add(LogTypes.Error, -1, "Parent node id is in incorrect format");
             }
-
+            
+            
+            
             return new UploadResponse();
         }
 

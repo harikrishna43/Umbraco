@@ -36,7 +36,7 @@ namespace umbraco.IO
 			return Umbraco.Core.IO.IOHelper.ResolveUrl(virtualPath); 
         }
 
-
+		[Obsolete("Use Umbraco.Web.Templates.TemplateUtilities.ResolveUrlsFromTextString instead, this method on this class will be removed in future versions")]
         public static string ResolveUrlsFromTextString(string text)
         {
 			return Umbraco.Core.IO.IOHelper.ResolveUrlsFromTextString(text); 
@@ -77,7 +77,12 @@ namespace umbraco.IO
 			return Umbraco.Core.IO.IOHelper.ValidateEditPath(filePath, validDir); 
         }
 
-        public static bool ValidateFileExtension(string filePath, List<string> validFileExtensions)
+        public static bool ValidateEditPath(string filePath, string[] validDirs)
+        {
+            return Umbraco.Core.IO.IOHelper.ValidateEditPath(filePath, validDirs);
+        }
+
+	    public static bool ValidateFileExtension(string filePath, List<string> validFileExtensions)
         {
 			return Umbraco.Core.IO.IOHelper.ValidateFileExtension(filePath, validFileExtensions); 
         }
