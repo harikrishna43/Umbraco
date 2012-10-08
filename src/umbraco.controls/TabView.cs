@@ -35,7 +35,6 @@ namespace umbraco.uicontrols {
 			this.Controls.Add(tp);
 			return tp;
 		}
-
 		
 		public string Status {
 			get { return status; }

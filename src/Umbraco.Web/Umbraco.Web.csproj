@@ -1804,7 +1804,9 @@
     <Content Include="umbraco.presentation\umbraco\dialogs\Preview.aspx" />
     <Content Include="umbraco.presentation\umbraco\controls\passwordChanger.ascx" />
     <Content Include="umbraco.presentation\umbraco\controls\ProgressBar.ascx" />
-    <Content Include="umbraco.presentation\umbraco\controls\ContentTypeControlNew.ascx" />
+    <Content Include="umbraco.presentation\umbraco\controls\ContentTypeControlNew.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\controls\GenericProperties\GenericProperty.ascx" />
     <Content Include="umbraco.presentation\umbraco\create\DLRScripting.ascx" />
     <Content Include="umbraco.presentation\umbraco\controls\Images\ImageViewer.ascx" />
@@ -1916,8 +1918,12 @@
     <Content Include="umbraco.presentation\umbraco\translation\preview.aspx" />
     <Content Include="umbraco.presentation\umbraco\translation\translationTasks.dtd" />
     <Content Include="umbraco.presentation\umbraco\translation\xml.aspx" />
-    <Content Include="umbraco.presentation\umbraco\create.aspx" />
-    <Content Include="umbraco.presentation\umbraco\create\content.ascx" />
+    <Content Include="umbraco.presentation\umbraco\create.aspx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
+    <Content Include="umbraco.presentation\umbraco\create\content.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\create\language.ascx">
       <SubType>UserControl</SubType>
     </Content>
@@ -1969,7 +1975,9 @@
     <Content Include="umbraco.presentation\umbraco\settings\EditDictionaryItem.aspx" />
     <Content Include="umbraco.presentation\umbraco\settings\editLanguage.aspx" />
     <Content Include="umbraco.presentation\umbraco\settings\EditMediaType.aspx" />
-    <Content Include="umbraco.presentation\umbraco\settings\EditNodeTypeNew.aspx" />
+    <Content Include="umbraco.presentation\umbraco\settings\EditNodeTypeNew.aspx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\settings\editTemplate.aspx">
       <SubType>ASPXCodeBehind</SubType>
     </Content>
