@@ -322,16 +322,7 @@ namespace umbraco
         {
 			get { return Umbraco.Core.Configuration.UmbracoSettings.ScriptDisableEditor; }
         }
-
-        /// <summary>
-        /// Gets the graphic headline format - png or gif
-        /// </summary>
-        /// <value>The graphic headline format.</value>
-        public static string GraphicHeadlineFormat
-        {
-			get { return Umbraco.Core.Configuration.UmbracoSettings.GraphicHeadlineFormat; }
-        }
-
+        
         /// <summary>
         /// Gets a value indicating whether umbraco will ensure unique node naming.
         /// This will ensure that nodes cannot have the same url, but will add extra characters to a url.
@@ -553,6 +544,19 @@ namespace umbraco
         public static bool ResolveUrlsFromTextString
         {
 			get { return Umbraco.Core.Configuration.UmbracoSettings.ResolveUrlsFromTextString; }
+        }
+
+
+        /// <summary>
+        /// Enables MVC, and at the same time disable webform masterpage templates.
+        /// This ensure views are automaticly created instead of masterpages.
+        /// Views are display in the tree instead of masterpages and a MVC template editor
+        /// is used instead of the masterpages editor
+        /// </summary>
+        /// <value><c>true</c> if umbraco defaults to using MVC views for templating, otherwise <c>false</c>.</value>
+        public static bool EnableMvcSupport
+        {
+            get { return Umbraco.Core.Configuration.UmbracoSettings.EnableMvcSupport; }
         }
 
         /// <summary>

@@ -10,7 +10,7 @@ using System.IO;
 namespace Umbraco.Core.IO
 {
     //all paths has a starting but no trailing /
-	internal class SystemDirectories
+	public class SystemDirectories
     {
         public static string Bin
         {
@@ -67,6 +67,15 @@ namespace Umbraco.Core.IO
                 return IOHelper.ReturnPath("umbracoMasterPagesPath", "~/masterpages");
             }
         }
+
+		public static string MvcViews
+		{
+			get
+			{
+				//NOTE: this is not configurable and shouldn't need to be
+				return "~/Views";
+			}
+		}
 
        
         public static string Media

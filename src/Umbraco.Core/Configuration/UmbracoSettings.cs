@@ -2,11 +2,13 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Web;
 using System.Web.Caching;
 using System.Xml;
 
 using System.Collections.Generic;
+using Umbraco.Core.Logging;
 
 
 namespace Umbraco.Core.Configuration
@@ -72,7 +74,7 @@ namespace Umbraco.Core.Configuration
                 }
                 catch (Exception e)
                 {
-					Trace.TraceError("Error reading umbracoSettings file: " + e.ToString() + ". ERROR: " + e.Message);
+					LogHelper.Error<UmbracoSettings>("Error reading umbracoSettings file: " + e.ToString(), e);
                 }
                 settingsReader.Close();
                 return temp;
@@ -143,7 +145,7 @@ namespace Umbraco.Core.Configuration
 		/// </summary>
 		internal static string BootSplashPage
 		{
-			get { return "~/default.aspx"; }
+            get { return "~/config/splashes/booting.aspx"; }
 		}
 
         /// <summary>
@@ -310,16 +312,21 @@ namespace Umbraco.Core.Configuration
             get { return "packages.umbraco.org"; }
         }
 
+		static bool? _useDomainPrefixes = null;
+
         /// <summary>
         /// Gets a value indicating whether umbraco will use domain prefixes.
         /// </summary>
         /// <value><c>true</c> if umbraco will use domain prefixes; otherwise, <c>false</c>.</value>
+		// TODO rename as EnforceAbsoluteUrls
         public static bool UseDomainPrefixes
         {
             get
             {
                 try
                 {
+					if (_useDomainPrefixes.HasValue)
+						return _useDomainPrefixes.Value;
                     bool result;
                     if (bool.TryParse(GetKey("/settings/requestHandler/useDomainPrefixes"), out result))
                         return result;
@@ -330,7 +337,14 @@ namespace Umbraco.Core.Configuration
                     return false;
                 }
             }
+			// for unit tests only
+			internal set
+			{
+				_useDomainPrefixes = value;
+			}
         }
+
+		static bool? _addTrailingSlash = null;
 
         /// <summary>
         /// This will add a trailing slash (/) to urls when in directory url mode
@@ -344,6 +358,8 @@ namespace Umbraco.Core.Configuration
                 {
                     if (GlobalSettings.UseDirectoryUrls)
                     {
+						if (_addTrailingSlash.HasValue)
+							return _addTrailingSlash.Value;
                         bool result;
                         if (bool.TryParse(GetKey("/settings/requestHandler/addTrailingSlash"), out result))
                             return result;
@@ -359,6 +375,11 @@ namespace Umbraco.Core.Configuration
                     return false;
                 }
             }
+			// for unit tests only
+			internal set
+			{
+				_addTrailingSlash = value;
+			}
         }
 
         /// <summary>
@@ -382,7 +403,6 @@ namespace Umbraco.Core.Configuration
                 }
             }
         }
-
 
         /// <summary>
         /// Gets a value indicating whether umbraco will attempt to load any skins to override default template files
@@ -433,59 +453,65 @@ namespace Umbraco.Core.Configuration
             }
         }
 
-        public static IEnumerable<RazorDataTypeModelStaticMappingItem> RazorDataTypeModelStaticMapping
+    	private static IEnumerable<RazorDataTypeModelStaticMappingItem> _razorDataTypeModelStaticMapping;
+    	private static readonly ReaderWriterLockSlim Lock = new ReaderWriterLockSlim();
+
+		public static IEnumerable<RazorDataTypeModelStaticMappingItem> RazorDataTypeModelStaticMapping
         {
             get
             {
-                if (HttpContext.Current != null && HttpContext.Current.Cache != null && HttpContext.Current.Cache["settings.scripting.razor.dataTypeModelStaticMappings"] != null)
-                {
-                    return HttpContext.Current.Cache["settings.scripting.razor.dataTypeModelStaticMappings"] as List<RazorDataTypeModelStaticMappingItem>;
-                }
-                /*
-                <dataTypeModelStaticMappings>
-                    <mapping dataTypeGuid="ef94c406-9e83-4058-a780-0375624ba7ca">DigibizAdvancedMediaPicker.RazorModel.ModelBinder</mapping>
-                    <mapping documentTypeAlias="RoomPage" nodeTypeAlias="teaser">DigibizAdvancedMediaPicker.RazorModel.ModelBinder</mapping>
-                </dataTypeModelStaticMappings>
-                 */
-                List<RazorDataTypeModelStaticMappingItem> items = new List<RazorDataTypeModelStaticMappingItem>();
-                XmlNode root = GetKeyAsNode("/settings/scripting/razor/dataTypeModelStaticMappings");
-                if (root != null)
-                {
-                    foreach (XmlNode element in root.SelectNodes(".//mapping"))
-                    {
-                        string propertyTypeAlias = null, nodeTypeAlias = null;
-                        Guid? dataTypeGuid = null;
-                        if (!string.IsNullOrEmpty(element.InnerText))
-                        {
-                            if (element.Attributes["dataTypeGuid"] != null)
-                            {
-                                dataTypeGuid = (Guid?)new Guid(element.Attributes["dataTypeGuid"].Value);
-                            }
-                            if (element.Attributes["propertyTypeAlias"] != null && !string.IsNullOrEmpty(element.Attributes["propertyTypeAlias"].Value))
-                            {
-                                propertyTypeAlias = element.Attributes["propertyTypeAlias"].Value;
-                            }
-                            if (element.Attributes["nodeTypeAlias"] != null && !string.IsNullOrEmpty(element.Attributes["nodeTypeAlias"].Value))
-                            {
-                                nodeTypeAlias = element.Attributes["nodeTypeAlias"].Value;
-                            }
-                            items.Add(new RazorDataTypeModelStaticMappingItem()
-                            {
-                                DataTypeGuid = dataTypeGuid,
-                                PropertyTypeAlias = propertyTypeAlias,
-                                NodeTypeAlias = nodeTypeAlias,
-                                TypeName = element.InnerText,
-                                Raw = element.OuterXml
-                            });
-                        }
-                    }
-                }
-                if (HttpContext.Current != null && HttpContext.Current.Cache != null)
-                {
-                    HttpContext.Current.Cache.Add("settings.scripting.razor.dataTypeModelStaticMappings", items, null, Cache.NoAbsoluteExpiration, new TimeSpan(0, 20, 0), CacheItemPriority.AboveNormal, null);
-                }
-                return items;
+				/*
+				<dataTypeModelStaticMappings>
+					<mapping dataTypeGuid="ef94c406-9e83-4058-a780-0375624ba7ca">DigibizAdvancedMediaPicker.RazorModel.ModelBinder</mapping>
+					<mapping documentTypeAlias="RoomPage" nodeTypeAlias="teaser">DigibizAdvancedMediaPicker.RazorModel.ModelBinder</mapping>
+				</dataTypeModelStaticMappings>
+				 */
 
+				using (var l = new UpgradeableReadLock(Lock))
+				{
+					if (_razorDataTypeModelStaticMapping == null)
+					{
+						l.UpgradeToWriteLock();
+				
+						List<RazorDataTypeModelStaticMappingItem> items = new List<RazorDataTypeModelStaticMappingItem>();
+						XmlNode root = GetKeyAsNode("/settings/scripting/razor/dataTypeModelStaticMappings");
+						if (root != null)
+						{
+							foreach (XmlNode element in root.SelectNodes(".//mapping"))
+							{
+								string propertyTypeAlias = null, nodeTypeAlias = null;
+								Guid? dataTypeGuid = null;
+								if (!string.IsNullOrEmpty(element.InnerText))
+								{
+									if (element.Attributes["dataTypeGuid"] != null)
+									{
+										dataTypeGuid = (Guid?)new Guid(element.Attributes["dataTypeGuid"].Value);
+									}
+									if (element.Attributes["propertyTypeAlias"] != null && !string.IsNullOrEmpty(element.Attributes["propertyTypeAlias"].Value))
+									{
+										propertyTypeAlias = element.Attributes["propertyTypeAlias"].Value;
+									}
+									if (element.Attributes["nodeTypeAlias"] != null && !string.IsNullOrEmpty(element.Attributes["nodeTypeAlias"].Value))
+									{
+										nodeTypeAlias = element.Attributes["nodeTypeAlias"].Value;
+									}
+									items.Add(new RazorDataTypeModelStaticMappingItem()
+									{
+										DataTypeGuid = dataTypeGuid,
+										PropertyTypeAlias = propertyTypeAlias,
+										NodeTypeAlias = nodeTypeAlias,
+										TypeName = element.InnerText,
+										Raw = element.OuterXml
+									});
+								}
+							}
+						}
+
+						_razorDataTypeModelStaticMapping = items;
+					}
+
+					return _razorDataTypeModelStaticMapping;	
+				}				
             }
         }
 
@@ -653,16 +679,7 @@ namespace Umbraco.Core.Configuration
                     return false;
             }
         }
-
-        /// <summary>
-        /// Gets the graphic headline format - png or gif
-        /// </summary>
-        /// <value>The graphic headline format.</value>
-        public static string GraphicHeadlineFormat
-        {
-            get { return GetKey("/settings/content/graphicHeadlineFormat"); }
-        }
-
+        
         /// <summary>
         /// Gets a value indicating whether umbraco will ensure unique node naming.
         /// This will ensure that nodes cannot have the same url, but will add extra characters to a url.
@@ -980,6 +997,8 @@ namespace Umbraco.Core.Configuration
             }
         }
 
+	    private static bool? _useLegacySchema;
+
         /// <summary>
         /// Whether to use the new 4.1 schema or the old legacy schema
         /// </summary>
@@ -992,6 +1011,9 @@ namespace Umbraco.Core.Configuration
             {
 				try
 				{
+					if (_useLegacySchema.HasValue)
+						return _useLegacySchema.Value;
+
 					string value = GetKey("/settings/content/UseLegacyXmlSchema");
 					bool result;
 					if (!string.IsNullOrEmpty(value) && bool.TryParse(value, out result))
@@ -1005,6 +1027,11 @@ namespace Umbraco.Core.Configuration
 					return false; 
 				}
             }
+			internal set
+			{
+				//used for unit  testing
+				_useLegacySchema = value;
+			}
         }
 
 		[Obsolete("This setting is not used anymore, the only file extensions that are supported are .cs and .vb files")]
@@ -1114,6 +1141,40 @@ namespace Umbraco.Core.Configuration
                 return _resolveUrlsFromTextString == true;
             }
         }
+
+        /// <summary>
+        /// Enables MVC, and at the same time disable webform masterpage templates.
+        /// This ensure views are automaticly created instead of masterpages.
+        /// Views are display in the tree instead of masterpages and a MVC template editor
+        /// is used instead of the masterpages editor
+        /// </summary>
+        /// <value><c>true</c> if umbraco defaults to using MVC views for templating, otherwise <c>false</c>.</value>
+
+        private static bool? _enableMvc;
+        public static bool EnableMvcSupport
+        {
+            get
+            {
+                if (_enableMvc == null)
+                {
+                    try
+                    {
+                         bool enableMvc = false;
+                         string value = GetKey("/settings/templates/enableMvcSupport");
+                         if (value != null)
+                            if (bool.TryParse(value, out enableMvc))
+                                _enableMvc = enableMvc;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.Error<UmbracoSettings>("Could not load /settings/templates/enableMvcSupport from umbracosettings.config", ex);
+                        _enableMvc = false;
+                    }
+                }
+                return _enableMvc == true;
+            }
+        }
+
 
         /// <summary>
         /// Configuration regarding webservices

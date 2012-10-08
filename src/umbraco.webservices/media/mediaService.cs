@@ -4,11 +4,11 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Web.Services;
+using Umbraco.Core.Media;
 using umbraco.IO;
 using umbraco.cms.businesslogic.media;
 using umbraco.cms.businesslogic.property;
 using Umbraco.Core.IO;
-using Umbraco.Core.Embed;
 using System.Xml;
 using System.Web;
 using System.Text.RegularExpressions;
@@ -130,9 +130,9 @@ namespace umbraco.webservices.media
         {
             Authenticate(username, password);
 
-			filename = filename.Replace("/", Umbraco.Core.IO.IOHelper.DirSepChar.ToString());
-			filename = filename.Replace(@"\", Umbraco.Core.IO.IOHelper.DirSepChar.ToString());
-			filename = filename.Substring(filename.LastIndexOf(Umbraco.Core.IO.IOHelper.DirSepChar) + 1, filename.Length - filename.LastIndexOf(Umbraco.Core.IO.IOHelper.DirSepChar) - 1).ToLower();
+			filename = filename.Replace("/", global::Umbraco.Core.IO.IOHelper.DirSepChar.ToString());
+			filename = filename.Replace(@"\", global::Umbraco.Core.IO.IOHelper.DirSepChar.ToString());
+			filename = filename.Substring(filename.LastIndexOf(global::Umbraco.Core.IO.IOHelper.DirSepChar) + 1, filename.Length - filename.LastIndexOf(global::Umbraco.Core.IO.IOHelper.DirSepChar) - 1).ToLower();
 
             Media m = new Media(id);
 
@@ -193,13 +193,13 @@ namespace umbraco.webservices.media
 
         [WebMethod]
         [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
-        public Umbraco.Core.Embed.Result Embed(string url, int width, int height)
+        public Result Embed(string url, int width, int height)
         {
             Result r = new Result();
             
             //todo cache embed doc
             var xmlConfig = new XmlDocument();
-            xmlConfig.Load(GlobalSettings.FullpathToRoot + Path.DirectorySeparatorChar + "config" + Path.DirectorySeparatorChar + "Embed.config");
+            xmlConfig.Load(GlobalSettings.FullpathToRoot + Path.DirectorySeparatorChar + "config" + Path.DirectorySeparatorChar + "EmbeddedMedia.config");
 
             foreach (XmlNode node in xmlConfig.SelectNodes("//provider"))
             {

@@ -1701,6 +1701,10 @@ namespace umbraco.cms.businesslogic.web
                                  , dr.GetInt("contentTypeId")
                                  , dr.GetInt("templateId")
                                  , dr.GetBoolean("isContainer"));
+            if (!dr.IsNull("releaseDate"))
+                _release = dr.GetDateTime("releaseDate");
+            if (!dr.IsNull("expireDate"))
+                _expire = dr.GetDateTime("expireDate");
         }
 
         protected void SaveXmlPreview(XmlDocument xd)
