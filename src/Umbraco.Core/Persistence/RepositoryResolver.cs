@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using Umbraco.Core.Configuration.Repositories;
-using Umbraco.Core.Models.EntityBase;
 using Umbraco.Core.Persistence.Repositories;
 using Umbraco.Core.Persistence.UnitOfWork;
 
@@ -24,7 +23,7 @@ namespace Umbraco.Core.Persistence
         //If we have come this far the correct types wasn't found and we throw an exception
         internal static TRepository ResolveByType<TRepository, TEntity, TId>(IUnitOfWork unitOfWork)
             where TRepository : class, IRepository<TId, TEntity>
-            where TEntity : class, IAggregateRoot
+            where TEntity : class
         {
             //Initialize the provider's default value
             TRepository repository = default(TRepository);
