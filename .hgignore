@@ -1,6 +1,7 @@
-# use glob syntax
-syntax: glob
+syntax: regex
+^src/packages/(?!repositories.config$)
 
+syntax: glob
 *.obj
 *.exe
 *.pdb

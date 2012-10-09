@@ -9,6 +9,7 @@ using Umbraco.Web.Models;
 using Umbraco.Web.Routing;
 using umbraco.cms.businesslogic;
 using Umbraco.Core;
+using ContentType = umbraco.cms.businesslogic.ContentType;
 
 namespace Umbraco.Web
 {
