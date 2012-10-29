@@ -1,6 +1,7 @@
-# use glob syntax
-syntax: glob
+syntax: regex
+^src/packages/(?!repositories.config$)
 
+syntax: glob
 *.obj
 *.exe
 *.pdb
@@ -13,6 +14,10 @@ syntax: glob
 obj/
 [Rr]elease*/
 _ReSharper*/
+*.ncrunchsolution
+*.ncrunchsolution.user
+*.ncrunchproject
+*.crunchsolution.cache
 [Tt]est[Rr]esult*
 [Bb]uild[Ll]og.*
 *.[Pp]ublish.xml
