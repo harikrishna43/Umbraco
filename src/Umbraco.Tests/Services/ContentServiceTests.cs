@@ -1,0 +1,388 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using Umbraco.Core.Models;
+using Umbraco.Tests.TestHelpers;
+using Umbraco.Tests.TestHelpers.Entities;
+
+namespace Umbraco.Tests.Services
+{
+    /// <summary>
+    /// Tests covering all methods in the ContentService class.
+    /// This is more of an integration test as it involves multiple layers
+    /// as well as configuration.
+    /// </summary>
+    [TestFixture]
+    public class ContentServiceTests : BaseDatabaseFactoryTest
+    {
+        public override void Initialize()
+        {
+            base.Initialize();
+
+            CreateTestData();
+        }
+
+        [Test]
+        public void Can_Create_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var content = contentService.CreateContent(-1, "umbTextpage");
+
+            // Assert
+            Assert.That(content, Is.Not.Null);
+            Assert.That(content.HasIdentity, Is.False);
+        }
+
+        [Test]
+        public void Cannot_Create_Content_With_Non_Existing_ContentType_Alias()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act & Assert
+            Assert.Throws<Exception>(() => contentService.CreateContent(-1, "umbAliasDoesntExist"));
+        }
+
+        [Test]
+        public void Can_Get_Content_By_Id()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var content = contentService.GetById(1046);
+
+            // Assert
+            Assert.That(content, Is.Not.Null);
+            Assert.That(content.Id, Is.EqualTo(1046));
+        }
+
+        [Test]
+        public void Can_Get_Content_By_Level()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetByLevel(2);
+
+            // Assert
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.GreaterThanOrEqualTo(2));
+        }
+
+        [Test]
+        public void Can_Get_Children_Of_Content_Id()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetChildren(1046);
+
+            // Assert
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.GreaterThanOrEqualTo(2));
+        }
+
+        [Test]
+        public void Can_Get_All_Versions_Of_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var subpage2 = contentService.GetById(1048);
+            subpage2.Name = "Text Page 2 Updated";
+            subpage2.SetValue("author", "Jane Doe");
+            contentService.Save(subpage2, 0);
+
+            // Act
+            var versions = contentService.GetVersions(1048);
+
+            // Assert
+            Assert.That(versions.Any(), Is.True);
+            Assert.That(versions.Count(), Is.GreaterThanOrEqualTo(2));
+        }
+
+        [Test]
+        public void Can_Get_Root_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetRootContent();
+
+            // Assert
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Can_Get_Content_For_Expiration()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetContentForExpiration();
+
+            // Assert
+            Assert.That(DateTime.UtcNow.AddMinutes(-5) <= DateTime.UtcNow);
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Can_Get_Content_For_Release()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetContentForRelease();
+
+            // Assert
+            Assert.That(DateTime.UtcNow.AddMinutes(-5) <= DateTime.UtcNow);
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Can_Get_Content_In_RecycleBin()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            var contents = contentService.GetContentInRecycleBin();
+
+            // Assert
+            Assert.That(contents, Is.Not.Null);
+            Assert.That(contents.Any(), Is.True);
+            Assert.That(contents.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Can_RePublish_All_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var contentTypeService = ServiceContext.ContentTypeService;
+            var contentType = contentTypeService.GetContentType("umbTextpage");
+
+            // Act
+            contentService.RePublishAll(0);
+            var contents = contentService.GetContentOfContentType(contentType.Id);
+
+            // Assert
+            Assert.That(contents.First(x => x.Id == 1046).Published, Is.True);//No restrictions, so should be published
+            Assert.That(contents.First(x => x.Id == 1047).Published, Is.True);//Released 5 mins ago, so should be published
+            Assert.That(contents.First(x => x.Id == 1048).Published, Is.False);//Expired 5 mins ago, so shouldn't be published
+            Assert.That(contents.First(x => x.Id == 1049).Published, Is.False);//Trashed content, so shouldn't be published
+        }
+
+        public void Can_Publish_Content()
+        { }
+
+        public void Can_Publish_Only_Valid_Content()
+        { }
+
+        public void Can_Publish_Content_Children()
+        { }
+
+        public void Can_Save_And_Publish_Content()
+        { }
+
+        [Test]
+        public void Can_Save_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.CreateContent(-1, "umbTextpage");
+            content.Name = "Home US";
+            content.SetValue("author", "Barack Obama");
+
+            // Act
+            contentService.Save(content, 0);
+
+            // Assert
+            Assert.That(content.HasIdentity, Is.True);
+        }
+
+        [Test]
+        public void Can_Bulk_Save_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var contentTypeService = ServiceContext.ContentTypeService;
+
+            var contentType = contentTypeService.GetContentType("umbTextpage");
+            Content subpage = MockedContent.CreateTextpageContent(contentType, "Text Subpage 1", 1047);
+            Content subpage2 = MockedContent.CreateTextpageContent(contentType, "Text Subpage 2", 1047);
+            var list = new List<IContent> {subpage, subpage2};
+
+            // Act
+            contentService.Save(list, 0);
+
+            // Assert
+            Assert.That(list.Any(x => !x.HasIdentity), Is.False);
+        }
+
+        [Test]
+        public void Can_Delete_Content_Of_Specific_ContentType()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var contentTypeService = ServiceContext.ContentTypeService;
+            var contentType = contentTypeService.GetContentType("umbTextpage");
+
+            // Act
+            contentService.DeleteContentOfType(contentType.Id);
+            var rootContent = contentService.GetRootContent();
+            var contents = contentService.GetContentOfContentType(contentType.Id);
+
+            // Assert
+            Assert.That(rootContent.Any(), Is.False);
+            Assert.That(contents.Any(x => !x.Trashed), Is.False);
+        }
+
+        [Test]
+        public void Can_Delete_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.GetById(1049);
+
+            // Act
+            contentService.Delete(content, 0);
+            var deleted = contentService.GetById(1049);
+
+            // Assert
+            Assert.That(deleted, Is.Null);
+        }
+
+        [Test]
+        public void Can_Move_Content_To_RecycleBin()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.GetById(1048);
+
+            // Act
+            contentService.MoveToRecycleBin(content, 0);
+
+            // Assert
+            Assert.That(content.ParentId, Is.EqualTo(-20));
+            Assert.That(content.Trashed, Is.True);
+        }
+
+        [Test]
+        public void Can_Empty_RecycleBin()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+
+            // Act
+            contentService.EmptyRecycleBin();
+            var contents = contentService.GetContentInRecycleBin();
+
+            // Assert
+            Assert.That(contents.Any(), Is.False);
+        }
+
+        [Test]
+        public void Can_Move_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.GetById(1049);
+
+            // Act - moving out of recycle bin
+            contentService.Move(content, 1046, 0);
+
+            // Assert
+            Assert.That(content.ParentId, Is.EqualTo(1046));
+            Assert.That(content.Trashed, Is.False);
+            Assert.That(content.Published, Is.False);
+        }
+
+        [Test]
+        public void Can_Copy_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.GetById(1048);
+
+            // Act
+            var copy = contentService.Copy(content, content.ParentId, 0);
+
+            // Assert
+            Assert.That(copy, Is.Not.Null);
+            Assert.That(copy.Id, Is.Not.EqualTo(content.Id));
+            Assert.AreNotSame(content, copy);
+            Assert.AreNotEqual(content.Name, copy.Name);
+        }
+
+        public void Can_Send_To_Publication()
+        { }
+
+        [Test]
+        public void Can_Rollback_Version_On_Content()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var subpage2 = contentService.GetById(1048);
+            var version = subpage2.Version;
+            subpage2.Name = "Text Page 2 Updated";
+            subpage2.SetValue("author", "Jane Doe");
+            contentService.Save(subpage2, 0);
+
+            // Act
+            var rollback = contentService.Rollback(1048, version, 0);
+
+            // Assert
+            Assert.That(rollback, Is.Not.Null);
+            Assert.AreNotEqual(rollback.Version, version);
+            Assert.That(rollback.GetValue<string>("author"), Is.Not.EqualTo("Jane Doe"));
+            Assert.AreEqual(subpage2.Name, rollback.Name);
+        }
+
+        public void CreateTestData()
+        {
+            //NOTE Maybe not the best way to create/save test data as we are using the services, which are being tested.
+
+            //Create and Save ContentType "umbTextpage" -> 1045
+            ContentType contentType = MockedContentTypes.CreateSimpleContentType("umbTextpage", "Textpage");
+            ServiceContext.ContentTypeService.Save(contentType);
+
+            //Create and Save Content "Homepage" based on "umbTextpage" -> 1046
+            Content textpage = MockedContent.CreateTextpageContent(contentType);
+            ServiceContext.ContentService.Save(textpage, 0);
+
+            //Create and Save Content "Text Page 1" based on "umbTextpage" -> 1047
+            Content subpage = MockedContent.CreateTextpageContent(contentType, "Text Page 1", textpage.Id);
+            subpage.ReleaseDate = DateTime.UtcNow.AddMinutes(-5);
+            ServiceContext.ContentService.Save(subpage, 0);
+
+            //Create and Save Content "Text Page 1" based on "umbTextpage" -> 1048
+            Content subpage2 = MockedContent.CreateTextpageContent(contentType, "Text Page 2", textpage.Id);
+            subpage2.ExpireDate = DateTime.UtcNow.AddMinutes(-5);
+            subpage2.ChangePublishedState(true);
+            ServiceContext.ContentService.Save(subpage2, 0);
+
+            //Create and Save Content "Text Page Deleted" based on "umbTextpage" -> 1049
+            Content trashed = MockedContent.CreateTextpageContent(contentType, "Text Page Deleted", -20);
+            trashed.Trashed = true;
+            ServiceContext.ContentService.Save(trashed, 0);
+        }
+    }
+}
