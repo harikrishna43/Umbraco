@@ -35,6 +35,9 @@ namespace Umbraco.Core
 			//create the ApplicationContext
 			ApplicationContext = ApplicationContext.Current = new ApplicationContext();
 
+            //initialize the DatabaseContext
+            DatabaseContext.Current.Initialize();
+
 			InitializeResolvers();
 
 			_isInitialized = true;
@@ -107,6 +110,9 @@ namespace Umbraco.Core
 
 			ActionsResolver.Current = new ActionsResolver(
 				PluginManager.Current.ResolveActions());
+
+            MacroPropertyTypeResolver.Current = new MacroPropertyTypeResolver(
+                PluginManager.Current.ResolveMacroPropertyTypes());
 
 			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
 				PluginManager.Current.ResolvePropertyEditorValueConverters());
