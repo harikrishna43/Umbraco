@@ -14,6 +14,7 @@ using System.Xml.Linq;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
 using Umbraco.Core.PropertyEditors;
 using umbraco.interfaces;
 
@@ -382,6 +383,15 @@ namespace Umbraco.Core
 		{
 			return ResolveTypes<IAction>();
 		}
+
+        /// <summary>
+        /// Returns all available IMacroPropertyTypes in application
+        /// </summary>
+        /// <returns></returns>
+        internal IEnumerable<Type> ResolveMacroPropertyTypes()
+        {
+            return ResolveTypes<IMacroPropertyType>();
+        }
 
 		/// <summary>
 		/// Gets/sets which assemblies to scan when type finding, generally used for unit testing, if not explicitly set
