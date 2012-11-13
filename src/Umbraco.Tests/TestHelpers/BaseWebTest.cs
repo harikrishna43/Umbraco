@@ -30,6 +30,7 @@ namespace Umbraco.Tests.TestHelpers
 				TestHelper.InitializeDatabase();
 			Resolution.Freeze();
 			ApplicationContext = new ApplicationContext() { IsReady = true };
+		    DatabaseContext = DatabaseContext.Current;
 			//we need to clear out all currently created template files
 			var masterPages = new DirectoryInfo(IOHelper.MapPath(SystemDirectories.Masterpages));
 			masterPages.GetFiles().ForEach(x => x.Delete());
@@ -42,6 +43,7 @@ namespace Umbraco.Tests.TestHelpers
 		{
 			//reset the app context
 			ApplicationContext.Current = null;
+		    DatabaseContext = null;
 			Resolution.IsFrozen = false;
 			if (RequiresDbSetup)
 				TestHelper.ClearDatabase();
@@ -73,6 +75,8 @@ namespace Umbraco.Tests.TestHelpers
 		}
 
 		protected ApplicationContext ApplicationContext { get; private set; }
+
+        protected DatabaseContext DatabaseContext { get; private set; }
 
 		internal virtual IRoutesCache GetRoutesCache()
 		{
