@@ -23,6 +23,7 @@ namespace Umbraco.Web.Routing
 
 		public PublishedContentRequestBuilder(PublishedContentRequest publishedContentRequest)
 		{
+			if (publishedContentRequest == null) throw new ArgumentNullException("publishedContentRequest");
 			_publishedContentRequest = publishedContentRequest;
 			_umbracoContext = publishedContentRequest.RoutingContext.UmbracoContext;
 			_routingContext = publishedContentRequest.RoutingContext;
@@ -312,7 +313,15 @@ namespace Umbraco.Web.Routing
 			{
 				LogHelper.Debug<PublishedContentRequest>("{0}Page is protected, check for access", () => tracePrefix);
 
-				var user = System.Web.Security.Membership.GetUser();
+                System.Web.Security.MembershipUser user = null;
+                try
+                {
+                    user = System.Web.Security.Membership.GetUser();
+                }
+                catch (ArgumentException)
+                {
+                    LogHelper.Debug<PublishedContentRequest>("{0}Membership.GetUser returned ArgumentException", () => tracePrefix);
+                }
 
 				if (user == null || !Member.IsLoggedOn())
 				{
