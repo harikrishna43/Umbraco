@@ -59,9 +59,11 @@
     <Compile Include="DynamicDocument\PublishedContentDataTableTests.cs" />
     <Compile Include="DynamicDocument\PublishedContentTests.cs" />
     <Compile Include="DynamicDocument\StronglyTypedQueryTests.cs" />
+    <Compile Include="HashCodeCombinerTests.cs" />
     <Compile Include="HtmlHelperExtensionMethodsTests.cs" />
     <Compile Include="IO\IOHelperTest.cs" />
     <Compile Include="LibraryTests.cs" />
+    <Compile Include="PropertyEditors\PropertyEditorValueConverterTests.cs" />
     <Compile Include="Resolvers\ActionsResolverTests.cs" />
     <Compile Include="AsynchronousRollingFileAppenderTests.cs" />
     <Compile Include="BusinessLogic\ApplicationTest.cs" />
@@ -75,6 +77,7 @@
     <Compile Include="ObjectExtensionsTests.cs" />
     <Compile Include="ContentStores\PublishContentStoreTests.cs" />
     <Compile Include="DataTypeFactoryTests.cs" />
+    <Compile Include="RouteParserTests.cs" />
     <Compile Include="Routing\LookupByNiceUrlWithDomainsTests.cs" />
     <Compile Include="Routing\NiceUrlsProviderWithDomainsTests.cs" />
     <Compile Include="Routing\uQueryGetNodeIdByUrlTests.cs" />
