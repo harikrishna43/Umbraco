@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Configuration;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
 using System.Web;
 using System.Web.Caching;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.Logging;
-using Umbraco.Core.Models;
+using Umbraco.Core.Services;
 
 
 namespace Umbraco.Core
@@ -139,5 +135,18 @@ namespace Umbraco.Core
             if (this.IsReady)
                 throw new Exception("ApplicationContext has already been initialized.");
         }
+
+        /// <summary>
+        /// Gets the current DatabaseContext
+        /// </summary>
+	    public DatabaseContext DatabaseContext
+	    {
+	        get { return DatabaseContext.Current; }
+	    }
+
+        /// <summary>
+        /// Gets the current ServiceContext
+        /// </summary>
+        public ServiceContext Services { get { return ServiceContext.Current; } }
     }
 }
