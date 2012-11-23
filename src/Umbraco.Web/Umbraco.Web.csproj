@@ -38,6 +38,8 @@
     <OldToolsVersion>4.0</OldToolsVersion>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>bin\</OutputPath>
@@ -239,6 +241,7 @@
     <Compile Include="ApplicationContextExtensions.cs" />
     <Compile Include="ApplicationEventsResolver.cs" />
     <Compile Include="CacheHelperExtensions.cs" />
+    <Compile Include="ContentExtensions.cs" />
     <Compile Include="Dynamics\DynamicExpression.cs" />
     <Compile Include="Dynamics\DynamicGrouping.cs" />
     <Compile Include="Dynamics\DynamicPublishedContentIdEqualityComparer.cs" />
@@ -314,6 +317,10 @@
     <Compile Include="Routing\LookupByPageIdQuery.cs" />
     <Compile Include="Mvc\SurfaceControllerResolver.cs" />
     <Compile Include="Templates\TemplateRenderer.cs" />
+    <Compile Include="Strategies\DeletedTemplate.cs" />
+    <Compile Include="Strategies\TrashedContent.cs" />
+    <Compile Include="Strategies\UpdateContentCache.cs" />
+    <Compile Include="Strategies\UpdateMultipleContentCache.cs" />
     <Compile Include="Templates\TemplateUtilities.cs" />
     <Compile Include="umbraco.presentation\Default.aspx.cs">
       <SubType>ASPXCodeBehind</SubType>
@@ -2182,4 +2189,5 @@ xcopy /s /y "$(ProjectDir)umbraco.presentation\*.master" "$(ProjectDir)..\Umbrac
   <PropertyGroup>
     <!--<PostBuildEvent>xcopy "$(ProjectDir)..\..\lib\*.dll" "$(TargetDir)*.dll" /Y</PostBuildEvent>-->
   </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>
