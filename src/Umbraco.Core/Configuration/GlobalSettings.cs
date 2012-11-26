@@ -26,10 +26,8 @@ namespace Umbraco.Core.Configuration
     {
 
         #region Private static fields
-        
-		// CURRENT UMBRACO VERSION ID
-    	private const string CurrentUmbracoVersion = "6.0.0";
 
+        private static Version _version;
     	private static string _reservedUrlsCache;
         private static string _reservedPathsCache;
         private static StartsWithContainer _reservedList = new StartsWithContainer();
@@ -256,7 +254,7 @@ namespace Umbraco.Core.Configuration
                 try
                 {
                     string configStatus = ConfigurationStatus;
-                    string currentVersion = CurrentVersion;
+                    string currentVersion = Version.ToString(3);
 
 
                     if (currentVersion != configStatus)
@@ -409,15 +407,27 @@ namespace Umbraco.Core.Configuration
         }
 
         /// <summary>
+        /// Gets the current version of Umbraco.
+        /// Version class with the specified major, minor, build (Patch), and revision numbers.
+        /// </summary>
+        /// <remarks>
+        /// CURRENT UMBRACO VERSION ID.
+        /// </remarks>
+        public static Version Version
+        {
+            get { return _version ?? (_version = typeof (GlobalSettings).Assembly.GetName().Version); }
+        }
+
+        /// <summary>
         /// Gets the current version.
         /// </summary>
         /// <value>The current version.</value>
+        [Obsolete("Use Umbraco.Core.Configuration.GlobalSettings.Version instead", false)]
         public static string CurrentVersion
         {
             get
             {
-                // change this to be hardcoded in the binary
-                return CurrentUmbracoVersion;
+                return Version.ToString(3);
             }
         }
 
@@ -425,12 +435,12 @@ namespace Umbraco.Core.Configuration
         /// Gets the major version number.
         /// </summary>
         /// <value>The major version number.</value>
+        [Obsolete("Use Umbraco.Core.Configuration.GlobalSettings.Version instead", false)]
         public static int VersionMajor
         {
             get
             {
-                string[] version = CurrentVersion.Split(".".ToCharArray());
-                return int.Parse(version[0]);
+                return Version.Major;
             }
         }
 
@@ -438,12 +448,12 @@ namespace Umbraco.Core.Configuration
         /// Gets the minor version number.
         /// </summary>
         /// <value>The minor version number.</value>
+        [Obsolete("Use Umbraco.Core.Configuration.GlobalSettings.Version instead", false)]
         public static int VersionMinor
         {
             get
             {
-                string[] version = CurrentVersion.Split(".".ToCharArray());
-                return int.Parse(version[1]);
+                return Version.Minor;
             }
         }
 
@@ -451,12 +461,12 @@ namespace Umbraco.Core.Configuration
         /// Gets the patch version number.
         /// </summary>
         /// <value>The patch version number.</value>
+        [Obsolete("Use Umbraco.Core.Configuration.GlobalSettings.Version instead", false)]
         public static int VersionPatch
         {
             get
             {
-                string[] version = CurrentVersion.Split(".".ToCharArray());
-                return int.Parse(version[2]);
+                return Version.Build;
             }
         }
 
@@ -464,15 +474,12 @@ namespace Umbraco.Core.Configuration
         /// Gets the version comment (like beta or RC).
         /// </summary>
         /// <value>The version comment.</value>
+        [Obsolete("Use Umbraco.Core.Configuration.GlobalSettings.Version instead", false)]
         public static string VersionComment
         {
             get
             {
-                string[] version = CurrentVersion.Split(".".ToCharArray());
-                if (version.Length > 3)
-                    return version[3];
-                else
-                    return "";
+                return "";
             }
         }
 

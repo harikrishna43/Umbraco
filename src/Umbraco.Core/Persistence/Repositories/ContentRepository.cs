@@ -89,10 +89,13 @@ namespace Umbraco.Core.Persistence.Repositories
             var sqlClause = GetBaseQuery(false);
             var translator = new SqlTranslator<IContent>(sqlClause, query);
             var sql = translator.Translate();
+            //sql.OrderBy("[cmsContentVersion].[VersionDate] DESC");
 
             //NOTE: This doesn't allow properties to be part of the query
             var dtos = Database.Fetch<DocumentDto, ContentVersionDto, ContentDto, NodeDto>(sql);
 
+            //NOTE: Won't work with language related queries because the language version isn't passed to the Get() method.
+            //A solution could be to look at the sql for the LanguageLocale column and choose the foreach-loop based on that.
             foreach (var dto in dtos.DistinctBy(x => x.NodeId))
             {
                 yield return Get(dto.NodeId);
@@ -309,6 +312,21 @@ namespace Umbraco.Core.Persistence.Repositories
 
             ((ICanBeDirty)content).ResetDirtyProperties();
             return content;
+        }
+
+        public IContent GetByLanguage(int id, string language)
+        {
+            var contentSql = GetBaseQuery(false);
+            contentSql.Where(GetBaseWhereClause(), new { Id = id });
+            contentSql.Where("[cmsContentVersion].[LanguageLocale] = @Language", new { Language = language });
+            contentSql.OrderBy("[cmsContentVersion].[VersionDate] DESC");
+
+            var dto = Database.Query<DocumentDto, ContentVersionDto, ContentDto, NodeDto>(contentSql).FirstOrDefault();
+
+            if (dto == null)
+                return null;
+
+            return GetByVersion(dto.NodeId, dto.ContentVersionDto.VersionId);
         }
 
         public void Delete(int id, Guid versionId)
