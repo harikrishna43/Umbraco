@@ -2,6 +2,8 @@ using System;
 using System.Data.Common;
 using System.Web.UI.WebControls;
 using System.Web.UI.HtmlControls;
+using Umbraco.Core;
+using Umbraco.Core.Persistence;
 using umbraco.DataLayer;
 using umbraco.DataLayer.Utility.Installer;
 using System.IO;
@@ -154,8 +156,38 @@ namespace umbraco.presentation.install.steps
 
             try
             {
-                DbConnectionStringBuilder connectionStringBuilder = CreateConnectionString();
-                GlobalSettings.DbDSN = connectionStringBuilder.ConnectionString;
+                /*DbConnectionStringBuilder connectionStringBuilder = CreateConnectionString();
+                GlobalSettings.DbDSN = connectionStringBuilder.ConnectionString;*/
+
+                if (string.IsNullOrEmpty(ConnectionString.Text) == false)
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection(ConnectionString.Text);
+                }
+                else if (IsEmbeddedDatabase)
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection();
+                }
+                else
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection(DatabaseServer.Text, DatabaseName.Text,
+                                                                        DatabaseUsername.Text, DatabasePassword.Text,
+                                                                        DatabaseType.SelectedValue);
+                }
+
+                if(DatabaseContext.Current.IsDatabaseConfigured == false)
+                    throw new Exception("ConnectionString could not be found");
+
+                Helper.setProgress(20, "Connection opened", "");
+
+                var database = new Database(DatabaseContext.Current.ConnectionString,
+                                            DatabaseContext.Current.ProviderName);
+                database.Initialize();
+
+                Helper.setProgress(90, "Refreshing content cache", "");
+
+                library.RefreshContent();
+
+                Helper.setProgress(100, "Database is up-to-date", "");
             }
             catch (Exception ex)
             {

@@ -84,7 +84,7 @@ namespace Umbraco.Core.Persistence
                 }
 
                 //Specific to Sql Ce - look for changes to Identity Seed
-                if(DatabaseFactory.Current.DatabaseProvider == DatabaseProviders.SqlServerCE)
+                if(DatabaseContext.Current.DatabaseProvider == DatabaseProviders.SqlServerCE)
                 {
                     var seedSql = SyntaxConfig.SqlSyntaxProvider.ToAlterIdentitySeedStatements(tableDefinition);
                     foreach (var sql in seedSql)
