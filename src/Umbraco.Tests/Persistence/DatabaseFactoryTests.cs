@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Data.SqlServerCe;
 using System.IO;
 using NUnit.Framework;
+using Umbraco.Core;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.SqlSyntax;
 using Umbraco.Tests.TestHelpers;
@@ -24,7 +25,7 @@ namespace Umbraco.Tests.Persistence
         [Test]
         public void Can_Assert_DatabaseProvider()
         {
-            var provider = DatabaseFactory.Current.DatabaseProvider;
+            var provider = DatabaseContext.Current.DatabaseProvider;
 
             Assert.AreEqual(DatabaseProviders.SqlServerCE, provider);
         }
@@ -52,7 +53,7 @@ namespace Umbraco.Tests.Persistence
             SyntaxConfig.SqlSyntaxProvider = SqlCeSyntaxProvider.Instance;
 
             //Create the umbraco database
-            DatabaseFactory.Current.Database.Initialize();
+            DatabaseFactory.Current.Database.CreateDatabaseSchema();
 
             bool umbracoNodeTable = DatabaseFactory.Current.Database.TableExist("umbracoNode");
             bool umbracoUserTable = DatabaseFactory.Current.Database.TableExist("umbracoUser");
