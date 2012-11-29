@@ -1,7 +1,11 @@
 using System;
 using System.Data.Common;
+using System.Threading;
 using System.Web.UI.WebControls;
 using System.Web.UI.HtmlControls;
+using Umbraco.Core;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Persistence;
 using umbraco.DataLayer;
 using umbraco.DataLayer.Utility.Installer;
 using System.IO;
@@ -154,14 +158,38 @@ namespace umbraco.presentation.install.steps
 
             try
             {
-                DbConnectionStringBuilder connectionStringBuilder = CreateConnectionString();
-                GlobalSettings.DbDSN = connectionStringBuilder.ConnectionString;
+                /*DbConnectionStringBuilder connectionStringBuilder = CreateConnectionString();
+                GlobalSettings.DbDSN = connectionStringBuilder.ConnectionString;*/
+
+                if (string.IsNullOrEmpty(ConnectionString.Text) == false)
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection(ConnectionString.Text);
+                }
+                else if (IsEmbeddedDatabase)
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection();
+                }
+                else
+                {
+                    DatabaseContext.Current.ConfigureDatabaseConnection(DatabaseServer.Text, DatabaseName.Text,
+                                                                        DatabaseUsername.Text, DatabasePassword.Text,
+                                                                        DatabaseType.SelectedValue);
+                }
+
+                var database = new Database(DatabaseContext.Current.ConnectionString,
+                                        DatabaseContext.Current.ProviderName);
+
+                database.Initialize();
             }
             catch (Exception ex)
             {
+                LogHelper.Error<detect>("Exception was thrown during the setup of the database in 'saveDBConfig'.", ex);
+
                 Exception error = new Exception("Could not save the web.config file. Please modify the connection string manually.", ex);
                 Helper.setProgress(-1, "Could not save the web.config file. Please modify the connection string manually.", error.InnerException.Message);
             }
+
+            Thread.Sleep(5000);
 
             settings.Visible = false;
             installing.Visible = true;
