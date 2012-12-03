@@ -12,6 +12,7 @@ using Umbraco.Core.Dynamics;
 using Umbraco.Core.Models;
 using umbraco;
 using umbraco.cms.businesslogic;
+using ContentType = umbraco.cms.businesslogic.ContentType;
 
 namespace Umbraco.Web
 {

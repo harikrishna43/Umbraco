@@ -213,6 +213,20 @@ namespace Umbraco.Core
         }
 
         /// <summary>
+        /// Parse string to Enum
+        /// </summary>
+        /// <typeparam name="T">The enum type</typeparam>
+        /// <param name="strType">The string to parse</param>
+        /// <param name="ignoreCase">The ignore case</param>
+        /// <returns>The parsed enum</returns>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "By Design")]
+        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", MessageId = "2#", Justification = "By Design")]
+        public static T EnumParse<T>(this string strType, bool ignoreCase)
+        {
+            return (T)Enum.Parse(typeof(T), strType, ignoreCase);
+        }
+
+        /// <summary>
         /// Strips all html from a string.
         /// </summary>
         /// <param name="text">The text.</param>
@@ -305,6 +319,17 @@ namespace Umbraco.Core
             if (removeSpaces)
                 result = result.Replace(" ", "");
 
+            return result;
+        }
+
+        /// <summary>
+        /// Splits a Pascal cased string into a phrase seperated by spaces.
+        /// </summary>
+        /// <param name="phrase">String to split</param>
+        /// <returns></returns>
+        public static string SplitPascalCasing(this string phrase)
+        {
+            string result = Regex.Replace(phrase, "([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", "$1 ");
             return result;
         }
 
