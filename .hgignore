@@ -1,6 +1,8 @@
-# use glob syntax
-syntax: glob
+syntax: regexp
+^src/packages/(?!repositories.config$)
+web.Template.[a-zA-Z0-9]*.Debug.config
 
+syntax: glob
 *.obj
 *.exe
 *.pdb
@@ -13,6 +15,10 @@ syntax: glob
 obj/
 [Rr]elease*/
 _ReSharper*/
+*.ncrunchsolution
+*.ncrunchsolution.user
+*.ncrunchproject
+*.crunchsolution.cache
 [Tt]est[Rr]esult*
 [Bb]uild[Ll]og.*
 *.[Pp]ublish.xml
@@ -59,3 +65,4 @@ src/Umbraco.Web.UI/App_Plugins/*
 src/Umbraco.Web.UI/Views/*
 
 src\Umbraco.Web.UI\[W]eb.config
+*.transformed

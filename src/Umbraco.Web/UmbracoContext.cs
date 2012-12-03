@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Web;
 using Umbraco.Core;
+using Umbraco.Core.Services;
 using Umbraco.Web.Routing;
 using umbraco;
 using umbraco.IO;
@@ -33,13 +34,13 @@ namespace Umbraco.Web
         /// </summary>
         private static UmbracoContext _umbracoContext;
 
-    	/// <summary>
-    	/// Creates a new Umbraco context.
-    	/// </summary>
-    	/// <param name="httpContext"></param>
-    	/// <param name="applicationContext"> </param>
-    	/// <param name="routesCache"> </param>
-    	internal UmbracoContext(
+        /// <summary>
+        /// Creates a new Umbraco context.
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <param name="applicationContext"> </param>
+        /// <param name="routesCache"> </param>
+        internal UmbracoContext(
 			HttpContextBase httpContext, 
 			ApplicationContext applicationContext,
 			IRoutesCache routesCache)
@@ -111,8 +112,11 @@ namespace Umbraco.Web
         /// <summary>
         /// Gets the current ApplicationContext
         /// </summary>
-        public ApplicationContext Application { get; private set; }
+        public ApplicationContext Application { get; private set; }       
 
+        /// <summary>
+        /// Gets the <see cref="IRoutesCache"/>
+        /// </summary>
 		internal IRoutesCache RoutesCache { get; private set; }
 		
 	    /// <summary>
