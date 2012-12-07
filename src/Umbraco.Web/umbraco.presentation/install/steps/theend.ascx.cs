@@ -1,4 +1,5 @@
 using System.IO;
+using Umbraco.Core.Configuration;
 using Umbraco.Core.IO;
 using umbraco.BusinessLogic;
 using System;
@@ -23,8 +24,8 @@ namespace umbraco.presentation.install.steps
             // Update configurationStatus
             try
             {
-                
-                GlobalSettings.ConfigurationStatus = GlobalSettings.CurrentVersion;
+
+                GlobalSettings.ConfigurationStatus = UmbracoVersion.Current.ToString(3);
                 Application["umbracoNeedConfiguration"] = false;
             }
             catch (Exception)
