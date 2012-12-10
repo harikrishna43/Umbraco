@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using Umbraco.Core.Auditing;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
 using Umbraco.Core.Models.EntityBase;
@@ -19,11 +20,11 @@ namespace Umbraco.Core.Services
     public class ContentService : IContentService
     {
         private readonly IPublishingStrategy _publishingStrategy;
-        private readonly IUserService _userService;
         private readonly IUnitOfWork _unitOfWork;
-        private HttpContextBase _httpContext;
+        private readonly IUserService _userService;
 	    private readonly IContentRepository _contentRepository;
 		private readonly IContentTypeRepository _contentTypeRepository;
+        private HttpContextBase _httpContext;
 
         public ContentService(IUnitOfWorkProvider provider, IPublishingStrategy publishingStrategy)
         {
@@ -48,7 +49,7 @@ namespace Umbraco.Core.Services
         /// Creates an <see cref="IContent"/> object using the alias of the <see cref="IContentType"/>
         /// that this Content is based on.
         /// </summary>
-        /// <param name="parentId">Id of Parent for content</param>
+        /// <param name="parentId">Id of Parent for the new Content</param>
         /// <param name="contentTypeAlias">Alias of the <see cref="IContentType"/></param>
         /// <param name="userId">Optional id of the user creating the content</param>
         /// <returns><see cref="IContent"/></returns>
@@ -80,6 +81,8 @@ namespace Umbraco.Core.Services
 
                 if (Created != null)
                     Created(content, e);
+
+                Audit.Add(AuditTypes.New, "", content.CreatorId, content.Id);
             }
 
             return content;
@@ -262,6 +265,8 @@ namespace Umbraco.Core.Services
 
                 //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content (singleton) class.
                 //global::umbraco.library.RefreshContent();
+
+                Audit.Add(AuditTypes.Publish, "RePublish All performed by user", userId == -1 ? 0 : userId, -1);
             }
 
             return published;
@@ -329,6 +334,8 @@ namespace Umbraco.Core.Services
                 //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content (singleton) class.
                 //TODO Need to investigate if it will also update the cache for children of the Content object
                 //global::umbraco.library.UpdateDocumentCache(content.Id);
+
+                Audit.Add(AuditTypes.Publish, "Publish with Children performed by user", userId == -1 ? 0 : userId, content.Id);
             }
 
             return published;
@@ -372,6 +379,8 @@ namespace Umbraco.Core.Services
 
                 //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content class.
                 //global::umbraco.library.UnPublishSingleNode(content.Id);
+
+                Audit.Add(AuditTypes.Publish, "UnPublish performed by user", userId == -1 ? 0 : userId, content.Id);
             }
 
             return unpublished;
@@ -454,6 +463,8 @@ namespace Umbraco.Core.Services
                 if (Saved != null)
                     Saved(content, e);
 
+                Audit.Add(AuditTypes.Publish, "Save and Publish performed by user", userId == -1 ? 0 : userId, content.Id);
+
                 return published;
             }
 
@@ -482,6 +493,8 @@ namespace Umbraco.Core.Services
 
                 if (Saved != null)
                     Saved(content, e);
+
+                Audit.Add(AuditTypes.Save, "Save Content performed by user", userId == -1 ? 0 : userId, content.Id);
             }
         }
 
@@ -530,6 +543,8 @@ namespace Umbraco.Core.Services
 
                 if (Saved != null)
                     Saved(contents, e);
+
+                Audit.Add(AuditTypes.Save, "Bulk Save content performed by user", userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -559,8 +574,11 @@ namespace Umbraco.Core.Services
                     repository.AddOrUpdate(content.Value);
                     _unitOfWork.Commit();
                 }
+
                 if (Saved != null)
                     Saved(contents, e);
+
+                Audit.Add(AuditTypes.Save, "Bulk Save (lazy) content performed by user", userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -569,7 +587,8 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <remarks>This needs extra care and attention as its potentially a dangerous and extensive operation</remarks>
         /// <param name="contentTypeId">Id of the <see cref="IContentType"/></param>
-        public void DeleteContentOfType(int contentTypeId)
+        /// <param name="userId">Optional Id of the user issueing the delete operation</param>
+        public void DeleteContentOfType(int contentTypeId, int userId = -1)
         {
             var repository = _contentRepository;
 
@@ -593,6 +612,8 @@ namespace Umbraco.Core.Services
 
                 if (Deleted != null)
                     Deleted(contents, e);
+
+                Audit.Add(AuditTypes.Delete, string.Format("Delete Content of Type {0} performed by user", contentTypeId), userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -621,6 +642,8 @@ namespace Umbraco.Core.Services
 
                 if (Deleted != null)
                     Deleted(content, e);
+
+                Audit.Add(AuditTypes.Delete, "Delete Content performed by user", userId == -1 ? 0 : userId, content.Id);
             }
         }
 
@@ -666,6 +689,8 @@ namespace Umbraco.Core.Services
 
                 if (Deleted != null)
                     Deleted(versionDate, e);
+
+                Audit.Add(AuditTypes.Delete, "Delete Content by version date performed by user", userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -696,6 +721,8 @@ namespace Umbraco.Core.Services
 
                 if (Deleted != null)
                     Deleted(versionId, e);
+
+                Audit.Add(AuditTypes.Delete, "Delete Content by version performed by user", userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -709,11 +736,24 @@ namespace Umbraco.Core.Services
         {
             //TODO If content item has children those should also be moved to the recycle bin
             //TODO Unpublish deleted content + children
-            var repository = _contentRepository;
-            SetWriter(content, userId);
-            content.ChangeTrashedState(true);
-            repository.AddOrUpdate(content);
-            _unitOfWork.Commit();
+
+            var e = new MoveEventArgs { ParentId = -20 };
+            if (Trashing != null)
+                Trashing(content, e);
+
+            if (!e.Cancel)
+            {
+                var repository = _contentRepository;
+                SetWriter(content, userId);
+                content.ChangeTrashedState(true);
+                repository.AddOrUpdate(content);
+                _unitOfWork.Commit();
+
+                if (Trashed != null)
+                    Trashed(content, e);
+
+                Audit.Add(AuditTypes.Move, "Move Content to Recycle Bin performed by user", userId == -1 ? 0 : userId, content.Id);
+            }
         }
 
         /// <summary>
@@ -759,6 +799,8 @@ namespace Umbraco.Core.Services
 
                 if(Moved != null)
                     Moved(content, e);
+
+                Audit.Add(AuditTypes.Move, "Move Content performed by user", userId == -1 ? 0 : userId, content.Id);
             }
         }
 
@@ -777,6 +819,8 @@ namespace Umbraco.Core.Services
                 repository.Delete(content);
             }
             _unitOfWork.Commit();
+
+            Audit.Add(AuditTypes.Delete, "Empty Recycle Bin performed by user", 0, -20);
         }
 
         /// <summary>
@@ -812,6 +856,8 @@ namespace Umbraco.Core.Services
             if(Copied != null)
                 Copied(copy, e);
 
+            Audit.Add(AuditTypes.Delete, "Copy Content performed by user", content.WriterId, content.Id);
+
             return copy;
         }
 
@@ -835,6 +881,8 @@ namespace Umbraco.Core.Services
 
                 if (SentToPublish != null)
                     SentToPublish(content, e);
+
+                Audit.Add(AuditTypes.SendToPublish, "Send to Publish performed by user", content.WriterId, content.Id);
             }
 
             /*SendToPublishEventArgs e = new SendToPublishEventArgs();
@@ -883,6 +931,8 @@ namespace Umbraco.Core.Services
 
                 if (Rolledback != null)
                     Rolledback(content, e);
+
+                Audit.Add(AuditTypes.RollBack, "Content rollback performed by user", content.WriterId, content.Id);
             }
 
             return content;
@@ -994,6 +1044,16 @@ namespace Umbraco.Core.Services
         /// Occurs after Copy
         /// </summary>
         public static event EventHandler<CopyEventArgs> Copied;
+
+        /// <summary>
+        /// Occurs before Content is moved to Recycle Bin
+        /// </summary>
+        public static event EventHandler<MoveEventArgs> Trashing;
+
+        /// <summary>
+        /// Occurs after Content is moved to Recycle Bin
+        /// </summary>
+        public static event EventHandler<MoveEventArgs> Trashed;
 
         /// <summary>
         /// Occurs before Move
