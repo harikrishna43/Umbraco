@@ -5,6 +5,7 @@ using System.Linq;
 using System.Web;
 using System.Xml;
 using Umbraco.Core.IO;
+using Umbraco.Core.Logging;
 using umbraco.BusinessLogic;
 using umbraco.BusinessLogic.Actions;
 using umbraco.cms.businesslogic.property;
@@ -344,7 +345,7 @@ namespace umbraco.cms.businesslogic.web
                 }
                 else
                 {
-                    Log.Add(LogTypes.Error, d.Id, String.Format("Couldn't import property '{0}' as the property type doesn't exist on this document type", propertyAlias));
+					LogHelper.Warn<Document>(String.Format("Couldn't import property '{0}' as the property type doesn't exist on this document type", propertyAlias));
                 }
             }
 
@@ -465,8 +466,7 @@ namespace umbraco.cms.businesslogic.web
                 }
                 catch (Exception ee)
                 {
-                    Log.Add(LogTypes.Error, new CMSNode(topNodeIds[i]).Id, "GetRootDocuments: " +
-                        ee.ToString());
+					LogHelper.Error<Document>("GetRootDocuments", ee);
                 }
             }
             return docs.ToArray();
@@ -607,8 +607,7 @@ namespace umbraco.cms.businesslogic.web
                 }
                 catch (Exception ee)
                 {
-                    Log.Add(LogTypes.Error, User.GetUser(0), dr.GetInt("nodeId"),
-                            string.Format("Error generating xml: {0}", ee));
+					LogHelper.Error<Document>("Error generating xml", ee);
                 }
             }
             dr.Close();
@@ -627,8 +626,7 @@ namespace umbraco.cms.businesslogic.web
                 }
                 catch (Exception ee)
                 {
-                    Log.Add(LogTypes.Error, User.GetUser(0), dr.GetInt("nodeId"),
-                            string.Format("Error generating preview xml: {0}", ee));
+					LogHelper.Error<Document>("Error generating preview xml", ee);
                 }
             }
             dr.Close();
@@ -1161,7 +1159,7 @@ where '" + Path + ",' like " + SqlHelper.Concat("node.path", "'%'"));
                 SqlHelper.ExecuteNonQuery("update cmsDocument set published = 0 where nodeId = " + Id);
                 SqlHelper.ExecuteNonQuery("update cmsDocument set published = 1 where versionId = @versionId", SqlHelper.CreateParameter("@versionId", tempVersion));
 
-                BusinessLogic.Log.Add(LogTypes.Debug, -1, newVersion.ToString() + " - " + Id.ToString());
+				LogHelper.Debug<Document>("PublishWithSubs: " + newVersion.ToString() + " - " + Id.ToString());
 
                 // Update xml in db
                 XmlGenerate(new XmlDocument());
