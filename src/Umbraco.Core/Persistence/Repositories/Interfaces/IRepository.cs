@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using Umbraco.Core.Persistence.UnitOfWork;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Umbraco.Core.Persistence.Repositories
 {
@@ -10,7 +10,7 @@ namespace Umbraco.Core.Persistence.Repositories
 	/// Currently this interface is empty but it is useful for flagging a repository without having generic parameters, it also might
 	/// come in handy if we need to add anything to the base/non-generic repository interface.
 	/// </remarks>
-	public interface IRepository
+	public interface IRepository : IDisposable
 	{
 		
 	}
