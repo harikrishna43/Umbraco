@@ -13,6 +13,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
+using System.Security.Permissions;
 using System.Text;
 using System.Configuration;
 using System.Data.Common;
@@ -935,7 +937,7 @@ namespace Umbraco.Core.Persistence
 		}
 
 		// Instance data used by the Multipoco factory delegate - essentially a list of the nested poco factories to call
-		class MultiPocoFactory
+		public class MultiPocoFactory
 		{
 			public List<Delegate> m_Delegates;
 			public Delegate GetItem(int index) { return m_Delegates[index]; }
@@ -944,7 +946,7 @@ namespace Umbraco.Core.Persistence
 		// Create a multi-poco factory
 		Func<IDataReader, object, TRet> CreateMultiPocoFactory<TRet>(Type[] types, string sql, IDataReader r)
 		{
-			var m = new DynamicMethod("petapoco_multipoco_factory", typeof(TRet), new Type[] { typeof(MultiPocoFactory), typeof(IDataReader), typeof(object) }, typeof(MultiPocoFactory));
+			var m = new DynamicMethod("petapoco_multipoco_factory", typeof(TRet), new Type[] { typeof(MultiPocoFactory), typeof(IDataReader), typeof(object) }, typeof(MultiPocoFactory), true);
 			var il = m.GetILGenerator();
 
 			// Load the callback
@@ -2302,6 +2304,7 @@ namespace Umbraco.Core.Persistence
 
 		public SqlJoinClause InnerJoin(string table) { return Join("INNER JOIN ", table); }
 		public SqlJoinClause LeftJoin(string table) { return Join("LEFT JOIN ", table); }
+        public SqlJoinClause LeftOuterJoin(string table) { return Join("LEFT OUTER JOIN ", table); }
         public SqlJoinClause RightJoin(string table) { return Join("RIGHT JOIN ", table); }
 
 		public class SqlJoinClause

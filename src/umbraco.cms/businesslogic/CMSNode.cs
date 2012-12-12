@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 
 using System.Xml;
-
+using Umbraco.Core.Models;
 using umbraco.cms.businesslogic.web;
 using umbraco.DataLayer;
 using umbraco.BusinessLogic;
@@ -11,11 +11,13 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
 using umbraco.IO;
-using umbraco.cms.businesslogic.media;
 using System.Collections;
 using umbraco.cms.businesslogic.task;
 using umbraco.cms.businesslogic.workflow;
 using umbraco.cms.businesslogic.Tags;
+using File = System.IO.File;
+using Media = umbraco.cms.businesslogic.media.Media;
+using Task = umbraco.cms.businesslogic.task.Task;
 
 namespace umbraco.cms.businesslogic
 {
@@ -1062,6 +1064,34 @@ order by level,sortOrder";
             _userId = dr.GetInt("nodeUser");
             _createDate = dr.GetDateTime("createDate");
             _isTrashed = dr.GetBoolean("trashed");
+        }
+
+        internal protected void PopulateCMSNodeFromContent(IContent content, Guid objectType)
+        {
+            _uniqueID = content.Key;
+            _nodeObjectType = objectType;
+            _level = content.Level;
+            _path = content.Path;
+            _parentid = content.ParentId;
+            _text = content.Name;
+            _sortOrder = content.SortOrder;
+            _userId = content.CreatorId;
+            _createDate = content.CreateDate;
+            _isTrashed = content.Trashed;
+        }
+
+        internal protected void PopulateCMSNodeFromContentType(IContentType contentType, Guid objectType)
+        {
+            _uniqueID = contentType.Key;
+            _nodeObjectType = objectType;
+            _level = contentType.Level;
+            _path = contentType.Path;
+            _parentid = contentType.ParentId;
+            _text = contentType.Name;
+            _sortOrder = contentType.SortOrder;
+            _userId = contentType.CreatorId;
+            _createDate = contentType.CreateDate;
+            _isTrashed = false;
         }
 
         #endregion
