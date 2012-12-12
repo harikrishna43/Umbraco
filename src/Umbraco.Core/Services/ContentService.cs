@@ -159,6 +159,49 @@ namespace Umbraco.Core.Services
         }
 
         /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="id">Id of the Parent to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetDescendants(int id)
+        {
+            var repository = _contentRepository;
+            var content = repository.Get(id);
+
+            var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith(content.Path));
+            var contents = repository.GetByQuery(query);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> item to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetDescendants(IContent content)
+        {
+            var repository = _contentRepository;
+
+            var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith(content.Path));
+            var contents = repository.GetByQuery(query);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a specific version of an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <param name="versionId">Id of the version to retrieve</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        public IContent GetByIdVersion(int id, Guid versionId)
+        {
+            var repository = _contentRepository;
+            return repository.GetByVersion(id, versionId);
+        }
+
+        /// <summary>
         /// Gets a collection of an <see cref="IContent"/> objects versions by Id
         /// </summary>
         /// <param name="id"></param>
@@ -168,6 +211,17 @@ namespace Umbraco.Core.Services
             var repository = _contentRepository;
             var versions = repository.GetAllVersions(id);
             return versions;
+        }
+
+        /// <summary>
+        /// Gets the published version of an <see cref="IContent"/> item
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        public IContent GetPublishedVersion(int id)
+        {
+            var version = GetVersions(id);
+            return version.FirstOrDefault(x => x.Published == true);
         }
 
         /// <summary>
@@ -181,7 +235,7 @@ namespace Umbraco.Core.Services
             var query = Query<IContent>.Builder.Where(x => x.ParentId == -1);
             var contents = repository.GetByQuery(query);
 
-            return contents;
+            return contents.OrderBy(x => x.SortOrder);
         }
 
         /// <summary>
@@ -224,6 +278,32 @@ namespace Umbraco.Core.Services
             var contents = repository.GetByQuery(query);
 
             return contents;
+        }
+
+        /// <summary>
+        /// Checks whether an <see cref="IContent"/> item has any children
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any children otherwise False</returns>
+        public bool HasChildren(int id)
+        {
+            var repository = _contentRepository;
+            var query = Query<IContent>.Builder.Where(x => x.ParentId == id);
+            int count = repository.Count(query);
+            return count > 0;
+        }
+
+        /// <summary>
+        /// Checks whether an <see cref="IContent"/> item has any published versions
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any published version otherwise False</returns>
+        public bool HasPublishedVersion(int id)
+        {
+            var repository = _contentRepository;
+            var query = Query<IContent>.Builder.Where(x => x.Published == true && x.Id == id);
+            int count = repository.Count(query);
+            return count > 0;
         }
 
         /// <summary>
@@ -602,10 +682,21 @@ namespace Umbraco.Core.Services
 
             if (!e.Cancel)
             {
-                foreach (var content in contents)
+                foreach (var content in contents.OrderByDescending(x => x.ParentId))
                 {
-                    ((Content) content).ChangeTrashedState(true);
-                    repository.AddOrUpdate(content);
+                    //Look for children of current content and move that to trash before the current content is deleted
+                    var c = content;
+                    var childQuery = Query<IContent>.Builder.Where(x => x.Path.StartsWith(c.Path));
+                    var children = repository.GetByQuery(childQuery);
+
+                    foreach (var child in children)
+                    {
+                        ((Content)child).ChangeTrashedState(true);
+                        repository.AddOrUpdate(child);
+                    }
+
+                    //Permantly delete the content
+                    repository.Delete(content);
                 }
 
                 _unitOfWork.Commit();
@@ -613,7 +704,7 @@ namespace Umbraco.Core.Services
                 if (Deleted != null)
                     Deleted(contents, e);
 
-                Audit.Add(AuditTypes.Delete, string.Format("Delete Content of Type {0} performed by user", contentTypeId), userId == -1 ? 0 : userId, -1);
+                Audit.Add(AuditTypes.Delete, string.Format("Delete Content of Type with Id: '{0}' performed by user", contentTypeId), userId == -1 ? 0 : userId, -1);
             }
         }
 
@@ -769,6 +860,8 @@ namespace Umbraco.Core.Services
         /// <param name="userId">Optional Id of the User moving the Content</param>
         public void Move(IContent content, int parentId, int userId = -1)
         {
+            //TODO Verify that SortOrder + Path is updated correctly
+            //TODO Add a check to see if parentId = -20 because then we should change the TrashState
             var e = new MoveEventArgs { ParentId = parentId };
             if (Moving != null)
                 Moving(content, e);
@@ -833,6 +926,9 @@ namespace Umbraco.Core.Services
         /// <returns>The newly created <see cref="IContent"/> object</returns>
         public IContent Copy(IContent content, int parentId, int userId = -1)
         {
+            //TODO Current implementation doesn't account for files, so should be updated to check properties for files that should be copied/re-created.
+            //TODO Add overload for creating a relation between New vs. Old copy
+            //TODO Children should also be copied (?)
             var e = new CopyEventArgs{ParentId = parentId};
             if (Copying != null)
                 Copying(content, e);

@@ -5,13 +5,15 @@ using System.Diagnostics;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using Umbraco.Core.Models;
 using umbraco.cms.businesslogic.cache;
-using umbraco.cms.businesslogic.datatype;
-using umbraco.cms.businesslogic.language;
 using umbraco.cms.businesslogic.propertytype;
 using umbraco.cms.businesslogic.web;
 using umbraco.DataLayer;
 using umbraco.BusinessLogic;
+using DataTypeDefinition = umbraco.cms.businesslogic.datatype.DataTypeDefinition;
+using Language = umbraco.cms.businesslogic.language.Language;
+using PropertyType = umbraco.cms.businesslogic.propertytype.PropertyType;
 
 namespace umbraco.cms.businesslogic
 {
@@ -44,24 +46,6 @@ namespace umbraco.cms.businesslogic
         public ContentType(int id, bool noSetup) : base(id, noSetup) { }
 
         public ContentType(Guid id, bool noSetup) : base(id, noSetup) { }
-
-        ///// <summary>
-        ///// Initializes a new instance of the <see cref="ContentType"/> class.
-        ///// </summary>
-        ///// <param name="id">The id.</param>
-        ///// <param name="UseOptimizedMode">if set to <c>true</c> [use optimized mode] which loads in the data from the 
-        ///// database in an optimized manner (less queries)
-        ///// </param>
-        //public ContentType(bool optimizedMode, int id)
-        //    : base(id, optimizedMode)
-        //{
-        //    this._optimizedMode = optimizedMode;
-
-        //    if (optimizedMode)
-        //    {
-
-        //    }
-        //}
 
         /// <summary>
         /// Creates a new content type object manually.
@@ -973,6 +957,16 @@ namespace umbraco.cms.businesslogic
 
         #region Protected Methods
 
+        internal protected void PopulateContentTypeFromContentType(IContentType contentType, Guid objectType)
+        {
+            _alias = contentType.Alias;
+            _iconurl = contentType.Icon;
+            _isContainerContentType = contentType.IsContainer;
+            _allowAtRoot = contentType.AllowedAsRoot;
+            _thumbnail = contentType.Thumbnail;
+            _description = contentType.Description;
+        }
+
         protected void PopulateContentTypeNodeFromReader(IRecordsReader dr)
         {
             _alias = dr.GetString("Alias");
@@ -1506,44 +1500,6 @@ namespace umbraco.cms.businesslogic
             }
         }
         #endregion
-
-
-        ///// <summary>
-        ///// Analyzes the content types.
-        ///// </summary>
-        ///// <param name="ObjectType">Type of the object.</param>
-        ///// <param name="ForceUpdate">if set to <c>true</c> [force update].</param>
-        //protected void AnalyzeContentTypes(Guid ObjectType, bool ForceUpdate)
-        //{
-        //    if (!_analyzedContentTypes.ContainsKey(ObjectType) || ForceUpdate)
-        //    {
-        //        using (IRecordsReader dr = SqlHelper.ExecuteReader(
-        //                                                          "select id from umbracoNode where nodeObjectType = @objectType",
-        //                                                          SqlHelper.CreateParameter("@objectType", ObjectType)))
-        //        {
-        //            while (dr.Read())
-        //            {
-        //                ContentType ct = new ContentType(dr.GetInt("id"));
-        //                if (!_optimizedContentTypes.ContainsKey(ct.UniqueId))
-        //                    _optimizedContentTypes.Add(ct.UniqueId, false);
-
-        //                _optimizedContentTypes[ct.UniqueId] = usesUmbracoDataOnly(ct);
-        //            }
-        //        }
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Determines whether this instance is optimized.
-        ///// </summary>
-        ///// <returns>
-        ///// 	<c>true</c> if this instance is optimized; otherwise, <c>false</c>.
-        ///// </returns>
-        //protected bool IsOptimized()
-        //{
-        //    return (bool) _optimizedContentTypes[UniqueId];
-        //}
-
 
     }
 }

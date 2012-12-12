@@ -256,5 +256,48 @@ namespace Umbraco.Core.Services
         /// <param name="userId">Optional Id of the User issueing the rollback of the Content</param>
         /// <returns>The newly created <see cref="IContent"/> object</returns>
         IContent Rollback(int id, Guid versionId, int userId = -1);
+
+        /// <summary>
+        /// Cheacks whether an <see cref="IContent"/> item has any published versions
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any published version otherwise False</returns>
+        bool HasPublishedVersion(int id);
+
+        /// <summary>
+        /// Gets a specific version of an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <param name="versionId">Id of the version to retrieve</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        IContent GetByIdVersion(int id, Guid versionId);
+
+        /// <summary>
+        /// Gets the published version of an <see cref="IContent"/> item
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        IContent GetPublishedVersion(int id);
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="id">Id of the Parent to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        IEnumerable<IContent> GetDescendants(int id);
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> item to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        IEnumerable<IContent> GetDescendants(IContent content);
+
+        /// <summary>
+        /// Checks whether an <see cref="IContent"/> item has any children
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any children otherwise False</returns>
+        bool HasChildren(int id);
     }
 }
