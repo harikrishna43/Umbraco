@@ -12,13 +12,15 @@ namespace Umbraco.Core.Services
     /// </summary>
     internal class UserService : IUserService
     {
-        private readonly IUnitOfWork _unitOfWork;
+	    private readonly RepositoryFactory _repositoryFactory;
+	    private readonly IDatabaseUnitOfWork _unitOfWork;
 	    private readonly IUserRepository _userRepository;
 
-        public UserService(IUnitOfWorkProvider provider)
+		public UserService(IDatabaseUnitOfWorkProvider provider, RepositoryFactory repositoryFactory)
         {
-            _unitOfWork = provider.GetUnitOfWork();
-	        _userRepository = RepositoryResolver.Current.Factory.CreateUserRepository(_unitOfWork);
+			_repositoryFactory = repositoryFactory;
+			_unitOfWork = provider.GetUnitOfWork();
+			_userRepository = _repositoryFactory.CreateUserRepository(_unitOfWork);
         }
 
         #region Implementation of IUserService
@@ -49,7 +51,7 @@ namespace Umbraco.Core.Services
             if(HttpRuntime.Cache[cacheKey] == null)
             {
                 userId =
-                    DatabaseContext.Current.Database.ExecuteScalar<int>(
+					_unitOfWork.Database.ExecuteScalar<int>(
                         "select userID from umbracoUserLogins where contextID = @ContextId",
                         new {ContextId = new Guid(contextId)});
 
