@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Umbraco.Core.Configuration;
+using Umbraco.Core.IO;
 using Umbraco.Core.Models;
 using Umbraco.Core.Models.EntityBase;
 using Umbraco.Core.Models.Rdbms;
@@ -127,18 +129,19 @@ namespace Umbraco.Core.Persistence.Repositories
         {
             var list = new List<string>
                            {
-                               string.Format("DELETE FROM umbracoUser2NodeNotify WHERE nodeId = @Id"),
-                               string.Format("DELETE FROM umbracoUser2NodePermission WHERE nodeId = @Id"),
-                               string.Format("DELETE FROM umbracoRelation WHERE parentId = @Id"),
-                               string.Format("DELETE FROM umbracoRelation WHERE childId = @Id"),
-                               string.Format("DELETE FROM cmsTagRelationship WHERE nodeId = @Id"),
-                               string.Format("DELETE FROM cmsDocument WHERE NodeId = @Id"),
-                               string.Format("DELETE FROM cmsPropertyData WHERE contentNodeId = @Id"),
-                               string.Format("DELETE FROM cmsPreviewXml WHERE nodeId = @Id"),
-                               string.Format("DELETE FROM cmsContentVersion WHERE ContentId = @Id"),
-                               string.Format("DELETE FROM cmsContentXml WHERE nodeID = @Id"),
-                               string.Format("DELETE FROM cmsContent WHERE NodeId = @Id"),
-                               string.Format("DELETE FROM umbracoNode WHERE id = @Id")
+                               "DELETE FROM umbracoUser2NodeNotify WHERE nodeId = @Id",
+                               "DELETE FROM umbracoUser2NodePermission WHERE nodeId = @Id",
+                               "DELETE FROM umbracoRelation WHERE parentId = @Id",
+                               "DELETE FROM umbracoRelation WHERE childId = @Id",
+                               "DELETE FROM cmsTagRelationship WHERE nodeId = @Id",
+                               "DELETE FROM umbracoDomains WHERE domainRootStructureID = @Id",
+                               "DELETE FROM cmsDocument WHERE NodeId = @Id",
+                               "DELETE FROM cmsPropertyData WHERE contentNodeId = @Id",
+                               "DELETE FROM cmsPreviewXml WHERE nodeId = @Id",
+                               "DELETE FROM cmsContentVersion WHERE ContentId = @Id",
+                               "DELETE FROM cmsContentXml WHERE nodeID = @Id",
+                               "DELETE FROM cmsContent WHERE NodeId = @Id",
+                               "DELETE FROM umbracoNode WHERE id = @Id"
                            };
             return list;
         }
@@ -226,6 +229,13 @@ namespace Umbraco.Core.Persistence.Repositories
             //Updates Modified date and Version Guid
             ((Content)entity).UpdatingEntity();
 
+            //Look up parent to get and set the correct Path if ParentId has changed
+            if (((ICanBeDirty) entity).IsPropertyDirty("ParentId"))
+            {
+                var parent = Database.First<NodeDto>("WHERE id = @ParentId", new {ParentId = entity.ParentId});
+                entity.Path = string.Concat(parent.Path, ",", entity.Id);
+            }
+
             var factory = new ContentFactory(NodeObjectTypeId, entity.Id);
             //Look up Content entry to get Primary for updating the DTO
             var contentDto = Database.SingleOrDefault<ContentDto>("WHERE nodeId = @Id", new { Id = entity.Id });
@@ -253,6 +263,18 @@ namespace Umbraco.Core.Persistence.Repositories
                 Database.Update(docDto);
             }
 
+            //If Published state has changed previous versions should have their publish state reset
+            if (((ICanBeDirty) entity).IsPropertyDirty("Published") && entity.Published)
+            {
+                var publishedDocs = Database.Fetch<DocumentDto>("WHERE nodeId = @Id AND published = @IsPublished", new { Id = entity.Id, IsPublished = true });
+                foreach (var doc in publishedDocs)
+                {
+                    var docDto = doc;
+                    docDto.Published = false;
+                    Database.Update(docDto);
+                }
+            }
+
             //Create a new version - cmsContentVersion
             //Assumes a new Version guid and Version date (modified date) has been set
             var contentVersionDto = dto.ContentVersionDto;
@@ -273,7 +295,37 @@ namespace Umbraco.Core.Persistence.Repositories
 
             ((ICanBeDirty)entity).ResetDirtyProperties();
         }
-        
+
+        protected override void PersistDeletedItem(IContent entity)
+        {
+            var fs = FileSystemProviderManager.Current.GetFileSystemProvider<MediaFileSystem>();
+            var uploadFieldId = new Guid("5032a6e6-69e3-491d-bb28-cd31cd11086c");
+            //Loop through properties to check if the content contains media that should be deleted
+            foreach (var property in entity.Properties)
+            {
+                if (property.PropertyType.DataTypeControlId == uploadFieldId &&
+                    string.IsNullOrEmpty(property.Value.ToString()) == false
+                    && fs.FileExists(IOHelper.MapPath(property.Value.ToString())))
+                {
+                    var relativeFilePath = fs.GetRelativePath(property.Value.ToString());
+                    var parentDirectory = System.IO.Path.GetDirectoryName(relativeFilePath);
+
+                    // don't want to delete the media folder if not using directories.
+                    if (UmbracoSettings.UploadAllowDirectories && parentDirectory != fs.GetRelativePath("/"))
+                    {
+                        //issue U4-771: if there is a parent directory the recursive parameter should be true
+                        fs.DeleteDirectory(parentDirectory, String.IsNullOrEmpty(parentDirectory) == false);
+                    }
+                    else
+                    {
+                        fs.DeleteFile(relativeFilePath, true);
+                    }
+                }
+            }
+
+            base.PersistDeletedItem(entity);
+        }
+
         #endregion
 
         #region Implementation of IContentRepository

@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Xml.Linq;
 using Umbraco.Core.Auditing;
+using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
 using Umbraco.Core.Models.EntityBase;
+using Umbraco.Core.Models.Rdbms;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.Querying;
 using Umbraco.Core.Persistence.Repositories;
@@ -42,8 +45,6 @@ namespace Umbraco.Core.Services
 			_contentRepository = RepositoryResolver.Current.Factory.CreateContentRepository(_unitOfWork);
 			_contentTypeRepository = RepositoryResolver.Current.Factory.CreateContentTypeRepository(_unitOfWork);
         }
-
-        //TODO Add GetLatestUnpublishedVersions(int id){}
 
         /// <summary>
         /// Creates an <see cref="IContent"/> object using the alias of the <see cref="IContentType"/>
@@ -159,6 +160,65 @@ namespace Umbraco.Core.Services
         }
 
         /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by its name or partial name
+        /// </summary>
+        /// <param name="parentId">Id of the Parent to retrieve Children from</param>
+        /// <param name="name">Full or partial name of the children</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetChildrenByName(int parentId, string name)
+        {
+            var repository = _contentRepository;
+
+            var query = Query<IContent>.Builder.Where(x => x.ParentId == parentId && x.Name.Contains(name));
+            var contents = repository.GetByQuery(query);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="id">Id of the Parent to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetDescendants(int id)
+        {
+            var repository = _contentRepository;
+            var content = repository.Get(id);
+
+            var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith(content.Path));
+            var contents = repository.GetByQuery(query);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects by Parent Id
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> item to retrieve Descendants from</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetDescendants(IContent content)
+        {
+            var repository = _contentRepository;
+
+            var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith(content.Path));
+            var contents = repository.GetByQuery(query);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a specific version of an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <param name="versionId">Id of the version to retrieve</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        public IContent GetByIdVersion(int id, Guid versionId)
+        {
+            var repository = _contentRepository;
+            return repository.GetByVersion(id, versionId);
+        }
+
+        /// <summary>
         /// Gets a collection of an <see cref="IContent"/> objects versions by Id
         /// </summary>
         /// <param name="id"></param>
@@ -168,6 +228,17 @@ namespace Umbraco.Core.Services
             var repository = _contentRepository;
             var versions = repository.GetAllVersions(id);
             return versions;
+        }
+
+        /// <summary>
+        /// Gets the published version of an <see cref="IContent"/> item
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
+        /// <returns>An <see cref="IContent"/> item</returns>
+        public IContent GetPublishedVersion(int id)
+        {
+            var version = GetVersions(id);
+            return version.FirstOrDefault(x => x.Published == true);
         }
 
         /// <summary>
@@ -181,7 +252,7 @@ namespace Umbraco.Core.Services
             var query = Query<IContent>.Builder.Where(x => x.ParentId == -1);
             var contents = repository.GetByQuery(query);
 
-            return contents;
+            return contents.OrderBy(x => x.SortOrder);
         }
 
         /// <summary>
@@ -227,15 +298,43 @@ namespace Umbraco.Core.Services
         }
 
         /// <summary>
+        /// Checks whether an <see cref="IContent"/> item has any children
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any children otherwise False</returns>
+        public bool HasChildren(int id)
+        {
+            var repository = _contentRepository;
+            var query = Query<IContent>.Builder.Where(x => x.ParentId == id);
+            int count = repository.Count(query);
+            return count > 0;
+        }
+
+        /// <summary>
+        /// Checks whether an <see cref="IContent"/> item has any published versions
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/></param>
+        /// <returns>True if the content has any published version otherwise False</returns>
+        public bool HasPublishedVersion(int id)
+        {
+            var repository = _contentRepository;
+            var query = Query<IContent>.Builder.Where(x => x.Published == true && x.Id == id);
+            int count = repository.Count(query);
+            return count > 0;
+        }
+
+        /// <summary>
         /// Re-Publishes all Content
         /// </summary>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
+        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this RePublish method. By default this method will update the cache.</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        public bool RePublishAll(int userId = -1)
+        public bool RePublishAll(int userId = -1, bool omitCacheRefresh = false)
         {
             var repository = _contentRepository;
 
             var list = new List<IContent>();
+            var updated = new List<IContent>();
 
             //Consider creating a Path query instead of recursive method:
             //var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith("-1"));
@@ -259,12 +358,24 @@ namespace Umbraco.Core.Services
                 {
                     SetWriter(item, userId);
                     repository.AddOrUpdate(item);
+                    updated.Add(item);
                 }
 
                 _unitOfWork.Commit();
 
-                //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content (singleton) class.
-                //global::umbraco.library.RefreshContent();
+                foreach (var c in updated)
+                {
+                    var xml = c.ToXml();
+                    var poco = new ContentXmlDto { NodeId = c.Id, Xml = xml.ToString(SaveOptions.None) };
+                    var exists = DatabaseContext.Current.Database.IsNew(poco);
+                    int result = exists
+                                     ? DatabaseContext.Current.Database.Update(poco)
+                                     : Convert.ToInt32(DatabaseContext.Current.Database.Insert(poco));
+                }
+
+                //Updating content to published state is finished, so we fire event through PublishingStrategy to have cache updated
+                if(omitCacheRefresh == false)
+                    _publishingStrategy.PublishingFinalized(updated, true);
 
                 Audit.Add(AuditTypes.Publish, "RePublish All performed by user", userId == -1 ? 0 : userId, -1);
             }
@@ -277,10 +388,11 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to publish</param>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
+        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will update the cache.</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        public bool Publish(IContent content, int userId = -1)
+        public bool Publish(IContent content, int userId = -1, bool omitCacheRefresh = false)
         {
-            return SaveAndPublish(content, userId);
+            return SaveAndPublish(content, userId, omitCacheRefresh);
         }
 
         /// <summary>
@@ -288,8 +400,9 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to publish along with its children</param>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
+        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will update the cache.</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        public bool PublishWithChildren(IContent content, int userId = -1)
+        public bool PublishWithChildren(IContent content, int userId = -1, bool omitCacheRefresh = false)
         {
             var repository = _contentRepository;
 
@@ -314,6 +427,7 @@ namespace Umbraco.Core.Services
             //Consider creating a Path query instead of recursive method:
             //var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith(content.Path));
 
+            var updated = new List<IContent>();
             var list = new List<IContent>();
             list.Add(content);
             list.AddRange(GetChildrenDeep(content.Id));
@@ -327,13 +441,24 @@ namespace Umbraco.Core.Services
                 {
                     SetWriter(item, userId);
                     repository.AddOrUpdate(item);
+                    updated.Add(item);
                 }
 
                 _unitOfWork.Commit();
 
-                //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content (singleton) class.
-                //TODO Need to investigate if it will also update the cache for children of the Content object
-                //global::umbraco.library.UpdateDocumentCache(content.Id);
+                foreach (var c in updated)
+                {
+                    var xml = c.ToXml();
+                    var poco = new ContentXmlDto { NodeId = c.Id, Xml = xml.ToString(SaveOptions.None) };
+                    var exists = DatabaseContext.Current.Database.FirstOrDefault<ContentXmlDto>("WHERE nodeId = @Id", new { Id = c.Id }) != null;
+                    int result = exists
+                                     ? DatabaseContext.Current.Database.Update(poco)
+                                     : Convert.ToInt32(DatabaseContext.Current.Database.Insert(poco));
+                }
+
+                //Save xml to db and call following method to fire event:
+                if(omitCacheRefresh == false)
+                    _publishingStrategy.PublishingFinalized(updated, false);
 
                 Audit.Add(AuditTypes.Publish, "Publish with Children performed by user", userId == -1 ? 0 : userId, content.Id);
             }
@@ -346,8 +471,9 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to publish</param>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
+        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Unpublish method. By default this method will update the cache.</param>
         /// <returns>True if unpublishing succeeded, otherwise False</returns>
-        public bool UnPublish(IContent content, int userId = -1)
+        public bool UnPublish(IContent content, int userId = -1, bool omitCacheRefresh = false)
         {
             var repository = _contentRepository;
 
@@ -377,8 +503,19 @@ namespace Umbraco.Core.Services
 
                 _unitOfWork.Commit();
 
-                //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content class.
-                //global::umbraco.library.UnPublishSingleNode(content.Id);
+                //Remove 'published' xml from the cmsContentXml table for the unpublished content and its (possible) children
+                DatabaseContext.Current.Database.Delete<ContentXmlDto>("WHERE nodeId = @Id", new {Id = content.Id});
+                if (hasChildren)
+                {
+                    foreach (var child in children)
+                    {
+                        DatabaseContext.Current.Database.Delete<ContentXmlDto>("WHERE nodeId = @Id", new { Id = child.Id });
+                    }
+                }
+
+                //Delete xml from db? and call following method to fire event through PublishingStrategy to update cache
+                if(omitCacheRefresh == false)
+                    _publishingStrategy.UnPublishingFinalized(content);
 
                 Audit.Add(AuditTypes.Publish, "UnPublish performed by user", userId == -1 ? 0 : userId, content.Id);
             }
@@ -417,8 +554,9 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to save and publish</param>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
+        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will update the cache.</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        public bool SaveAndPublish(IContent content, int userId = -1)
+        public bool SaveAndPublish(IContent content, int userId = -1, bool omitCacheRefresh = false)
         {
             var e = new SaveEventArgs();
             if (Saving != null)
@@ -429,7 +567,7 @@ namespace Umbraco.Core.Services
                 var repository = _contentRepository;
 
                 //Check if parent is published (although not if its a root node) - if parent isn't published this Content cannot be published
-                if (content.ParentId != -1 && content.ParentId != -20 && GetById(content.ParentId).Published == false)
+                if (content.ParentId != -1 && content.ParentId != -20 && HasPublishedVersion(content.ParentId) == false)
                 {
                     LogHelper.Info<ContentService>(
                         string.Format(
@@ -456,14 +594,22 @@ namespace Umbraco.Core.Services
                     repository.AddOrUpdate(content);
                     _unitOfWork.Commit();
 
-                    //TODO Change this so we can avoid a depencency to the horrible library method / umbraco.content (singleton) class.
-                    //global::umbraco.library.UpdateDocumentCache(content.Id);
+                    var xml = content.ToXml();
+                    var poco = new ContentXmlDto{NodeId = content.Id, Xml = xml.ToString(SaveOptions.None)};
+                    var exists = DatabaseContext.Current.Database.FirstOrDefault<ContentXmlDto>("WHERE nodeId = @Id", new {Id = content.Id}) != null;
+                    int result = exists
+                                     ? DatabaseContext.Current.Database.Update(poco)
+                                     : Convert.ToInt32(DatabaseContext.Current.Database.Insert(poco));
+
+                    //Save xml to db and call following method to fire event through PublishingStrategy to update cache
+                    if(omitCacheRefresh == false)
+                        _publishingStrategy.PublishingFinalized(content);
                 }
 
                 if (Saved != null)
                     Saved(content, e);
 
-                Audit.Add(AuditTypes.Publish, "Save and Publish performed by user", userId == -1 ? 0 : userId, content.Id);
+                Audit.Add(AuditTypes.Publish, "Save and Publish performed by user", content.WriterId, content.Id);
 
                 return published;
             }
@@ -602,39 +748,60 @@ namespace Umbraco.Core.Services
 
             if (!e.Cancel)
             {
-                foreach (var content in contents)
+                foreach (var content in contents.OrderByDescending(x => x.ParentId))
                 {
-                    ((Content) content).ChangeTrashedState(true);
-                    repository.AddOrUpdate(content);
-                }
+                    //Look for children of current content and move that to trash before the current content is deleted
+                    var c = content;
+                    var childQuery = Query<IContent>.Builder.Where(x => x.Path.StartsWith(c.Path));
+                    var children = repository.GetByQuery(childQuery);
 
-                _unitOfWork.Commit();
+                    foreach (var child in children)
+                    {
+                        if(child.ContentType.Id != contentTypeId)
+                            MoveToRecycleBin(child, userId);
+                    }
+
+                    //Permantly delete the content
+                    Delete(content, userId);
+                }
 
                 if (Deleted != null)
                     Deleted(contents, e);
 
-                Audit.Add(AuditTypes.Delete, string.Format("Delete Content of Type {0} performed by user", contentTypeId), userId == -1 ? 0 : userId, -1);
+                Audit.Add(AuditTypes.Delete, string.Format("Delete Content of Type with Id: '{0}' performed by user", contentTypeId), userId == -1 ? 0 : userId, -1);
             }
         }
 
         /// <summary>
-        /// Permanently deletes an <see cref="IContent"/> object
+        /// Permanently deletes an <see cref="IContent"/> object.
         /// </summary>
+        /// <remarks>
+        /// This method will also delete associated media files, child content and possibly associated domains.
+        /// </remarks>
         /// <remarks>Please note that this method will completely remove the Content from the database</remarks>
         /// <param name="content">The <see cref="IContent"/> to delete</param>
         /// <param name="userId">Optional Id of the User deleting the Content</param>
         public void Delete(IContent content, int userId = -1)
         {
-            //TODO Ensure that content is unpublished when deleted
-            //TODO This method should handle/react to errors when there is a constraint issue with the content being deleted
-            //TODO Children should either be deleted or moved to the recycle bin
-
             var e = new DeleteEventArgs { Id = content.Id };
             if (Deleting != null)
                 Deleting(content, e);
 
             if (!e.Cancel)
             {
+                //Make sure that published content is unpublished before being deleted
+                if (content.HasPublishedVersion())
+                {
+                    UnPublish(content, userId);
+                }
+
+                //Delete children before deleting the 'possible parent'
+                var children = GetChildren(content.Id);
+                foreach (var child in children)
+                {
+                    Delete(child, userId);
+                }
+
                 var repository = _contentRepository;
                 SetWriter(content, userId);
                 repository.Delete(content);
@@ -643,7 +810,7 @@ namespace Umbraco.Core.Services
                 if (Deleted != null)
                     Deleted(content, e);
 
-                Audit.Add(AuditTypes.Delete, "Delete Content performed by user", userId == -1 ? 0 : userId, content.Id);
+                Audit.Add(AuditTypes.Delete, "Delete Content performed by user", userId == -1 ? 0 : content.WriterId, content.Id);
             }
         }
 
@@ -734,15 +901,25 @@ namespace Umbraco.Core.Services
         /// <param name="userId">Optional Id of the User deleting the Content</param>
         public void MoveToRecycleBin(IContent content, int userId = -1)
         {
-            //TODO If content item has children those should also be moved to the recycle bin
-            //TODO Unpublish deleted content + children
-
             var e = new MoveEventArgs { ParentId = -20 };
             if (Trashing != null)
                 Trashing(content, e);
 
             if (!e.Cancel)
             {
+                //Make sure that published content is unpublished before being moved to the Recycle Bin
+                if (content.HasPublishedVersion())
+                {
+                    UnPublish(content, userId);
+                }
+
+                //Move children to Recycle Bin before the 'possible parent' is moved there
+                var children = GetChildren(content.Id);
+                foreach (var child in children)
+                {
+                    MoveToRecycleBin(child, userId);
+                }
+
                 var repository = _contentRepository;
                 SetWriter(content, userId);
                 content.ChangeTrashedState(true);
@@ -769,6 +946,8 @@ namespace Umbraco.Core.Services
         /// <param name="userId">Optional Id of the User moving the Content</param>
         public void Move(IContent content, int parentId, int userId = -1)
         {
+            //TODO Verify that SortOrder + Path is updated correctly
+            //TODO Add a check to see if parentId = -20 because then we should change the TrashState
             var e = new MoveEventArgs { ParentId = parentId };
             if (Moving != null)
                 Moving(content, e);
@@ -829,9 +1008,10 @@ namespace Umbraco.Core.Services
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to copy</param>
         /// <param name="parentId">Id of the Content's new Parent</param>
+        /// <param name="relateToOriginal">Boolean indicating whether the copy should be related to the original</param>
         /// <param name="userId">Optional Id of the User copying the Content</param>
         /// <returns>The newly created <see cref="IContent"/> object</returns>
-        public IContent Copy(IContent content, int parentId, int userId = -1)
+        public IContent Copy(IContent content, int parentId, bool relateToOriginal, int userId = -1)
         {
             var e = new CopyEventArgs{ParentId = parentId};
             if (Copying != null)
@@ -847,16 +1027,75 @@ namespace Umbraco.Core.Services
 
                 var repository = _contentRepository;
 
-                SetWriter(content, userId);
+                SetWriter(copy, userId);
 
                 repository.AddOrUpdate(copy);
                 _unitOfWork.Commit();
+                
+                //NOTE This 'Relation' part should eventually be delegated to a RelationService
+                if (relateToOriginal)
+                {
+                    var relationTypeRepository = RepositoryResolver.Current.Factory.CreateRelationTypeRepository(_unitOfWork);
+                    var relationRepository = RepositoryResolver.Current.Factory.CreateRelationRepository(_unitOfWork);
+
+                    var relationType = relationTypeRepository.Get(1);
+
+                    var relation = new Relation(content.Id, copy.Id, relationType);
+                    relationRepository.AddOrUpdate(relation);
+                    _unitOfWork.Commit();
+
+                    Audit.Add(AuditTypes.Copy,
+                              string.Format("Copied content with Id: '{0}' related to original content with Id: '{1}'",
+                                            copy.Id, content.Id), copy.WriterId, copy.Id);
+                }
+
+                var uploadFieldId = new Guid("5032a6e6-69e3-491d-bb28-cd31cd11086c");
+                if (content.Properties.Any(x => x.PropertyType.DataTypeControlId == uploadFieldId))
+                {
+                    bool isUpdated = false;
+                    var fs = FileSystemProviderManager.Current.GetFileSystemProvider<MediaFileSystem>();
+
+                    //Loop through properties to check if the content contains media that should be deleted
+                    foreach (var property in content.Properties.Where(x => x.PropertyType.DataTypeControlId == uploadFieldId 
+                        && string.IsNullOrEmpty(x.Value.ToString()) == false))
+                    {
+                        if (fs.FileExists(IOHelper.MapPath(property.Value.ToString())))
+                        {
+                            var currentPath = fs.GetRelativePath(property.Value.ToString());
+                            var propertyId = copy.Properties.First(x => x.Alias == property.Alias).Id;
+                            var newPath = fs.GetRelativePath(propertyId, System.IO.Path.GetFileName(currentPath));
+
+                            fs.CopyFile(currentPath, newPath);
+                            copy.SetValue(property.Alias, fs.GetUrl(newPath));
+
+                            //Copy thumbnails
+                            foreach (var thumbPath in fs.GetThumbnails(currentPath))
+                            {
+                                var newThumbPath = fs.GetRelativePath(propertyId, System.IO.Path.GetFileName(thumbPath));
+                                fs.CopyFile(thumbPath, newThumbPath);
+                            }
+                            isUpdated = true;
+                        }
+                    }
+
+                    if (isUpdated)
+                    {
+                        repository.AddOrUpdate(copy);
+                        _unitOfWork.Commit();
+                    }
+                }
+
+                var children = GetChildren(content.Id);
+                foreach (var child in children)
+                {
+                    Copy(child, copy.Id, relateToOriginal, userId);
+                }
             }
 
             if(Copied != null)
                 Copied(copy, e);
 
-            Audit.Add(AuditTypes.Delete, "Copy Content performed by user", content.WriterId, content.Id);
+            Audit.Add(AuditTypes.Copy, "Copy Content performed by user", content.WriterId, content.Id);
 
             return copy;
         }
@@ -867,7 +1106,7 @@ namespace Umbraco.Core.Services
         /// <param name="content">The <see cref="IContent"/> to send to publication</param>
         /// <param name="userId">Optional Id of the User issueing the send to publication</param>
         /// <returns>True if sending publication was succesfull otherwise false</returns>
-        public bool SendToPublication(IContent content, int userId = -1)
+        internal bool SendToPublication(IContent content, int userId = -1)
         {
             //TODO Implement something similar to this
             var e = new SendToPublishEventArgs();
