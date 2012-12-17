@@ -1,21 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using System.Data;
 using System.Xml;
+using Umbraco.Core;
 using Umbraco.Core.IO;
+using Umbraco.Core.Models;
 using umbraco.cms.businesslogic.property;
-using umbraco.cms.businesslogic.propertytype;
 using umbraco.DataLayer;
 using System.Runtime.CompilerServices;
 using umbraco.cms.helpers;
-using umbraco.BusinessLogic;
-using umbraco.interfaces;
-using System.IO;
-using umbraco.IO;
 using umbraco.cms.businesslogic.datatype.controls;
-using Umbraco.Core;
+using File = System.IO.File;
+using Property = umbraco.cms.businesslogic.property.Property;
+using PropertyType = umbraco.cms.businesslogic.propertytype.PropertyType;
 
 namespace umbraco.cms.businesslogic
 {
@@ -29,6 +26,7 @@ namespace umbraco.cms.businesslogic
     /// Note that Content data in umbraco is *not* tablular but in a treestructure.
     /// 
     /// </summary>
+    [Obsolete("Deprecated, Use Umbraco.Core.Models.Content or Umbraco.Core.Models.Media", false)]
     public class Content : CMSNode
     {
         #region Private Members
@@ -40,10 +38,11 @@ namespace umbraco.cms.businesslogic
         private string _contentTypeIcon;
         private ContentType _contentType;
         private Properties m_LoadedProperties = null;
+        private IContentBase _contentBase;
 
         #endregion
 
-        #region Constructors        
+        #region Constructors
       
         public Content(int id) : base(id) { }
 
@@ -52,6 +51,15 @@ namespace umbraco.cms.businesslogic
         protected Content(Guid id) : base(id) { }
 
         protected Content(Guid id, bool noSetup) : base(id, noSetup) { }
+
+        protected internal Content(IContentBase contentBase)
+            : base(contentBase)
+        {
+            _contentBase = contentBase;
+            _version = _contentBase.Version;
+            _versionDate = _contentBase.UpdateDate;
+            _versionDateInitialized = true;
+        }
 
         #endregion
 
@@ -62,18 +70,17 @@ namespace umbraco.cms.businesslogic
         /// </summary>
         /// <param name="ct">The ContentType</param>
         /// <returns>A list of Content objects sharing the ContentType defined.</returns>
+        [Obsolete("Deprecated, Use Umbraco.Core.Services.ContentService.GetContentOfContentType() or Umbraco.Core.Services.MediaService.GetMediaOfMediaType()", false)]
         public static Content[] getContentOfContentType(ContentType ct)
         {
-            IRecordsReader dr = SqlHelper.ExecuteReader("Select nodeId from  cmsContent INNER JOIN umbracoNode ON cmsContent.nodeId = umbracoNode.id where ContentType = " + ct.Id + " ORDER BY umbracoNode.text ");
-            System.Collections.ArrayList tmp = new System.Collections.ArrayList();
+            var list = new List<Content>();
+            var content = ApplicationContext.Current.Services.ContentService.GetContentOfContentType(ct.Id);
+            list.AddRange(content.OrderBy(x => x.Name).Select(x => new Content(x)));
 
-            while (dr.Read()) tmp.Add(dr.GetInt("nodeId"));
-            dr.Close();
+            var media = ApplicationContext.Current.Services.MediaService.GetMediaOfMediaType(ct.Id);
+            list.AddRange(media.OrderBy(x => x.Name).Select(x => new Content(x)));
 
-            Content[] retval = new Content[tmp.Count];
-            for (int i = 0; i < tmp.Count; i++) retval[i] = new Content((int)tmp[i]);
-
-            return retval;
+            return list.ToArray();
         }
 
         /// <summary>
@@ -81,10 +88,22 @@ namespace umbraco.cms.businesslogic
         /// </summary>
         /// <param name="version">The version identifier</param>
         /// <returns>The Content object from the given version</returns>
+        [Obsolete("Deprecated, Use Umbraco.Core.Services.ContentService.GetByIdVersion() or Umbraco.Core.Services.MediaService.GetByIdVersion()", false)]
         public static Content GetContentFromVersion(Guid version)
         {
-            int tmpContentId = SqlHelper.ExecuteScalar<int>("Select ContentId from cmsContentVersion where versionId = '" + version.ToString() + "'");
-            return new Content(tmpContentId);
+            int id =
+                ApplicationContext.Current.DatabaseContext.Database.ExecuteScalar<int>(
+                    "Select ContentId from cmsContentVersion where versionId = @VersionId", new {VersionId = version});
+
+            var content = ApplicationContext.Current.Services.ContentService.GetByIdVersion(id, version);
+            if (content != null)
+            {
+                return new Content(content);
+            }
+
+            //TODO Change to use GetByIdVersion once that method has been implemented in the MediaService
+            var media = ApplicationContext.Current.Services.MediaService.GetById(id);
+            return new Content(media);
         }
 
         #endregion
@@ -219,22 +238,6 @@ namespace umbraco.cms.businesslogic
             {
                 EnsureProperties();
                 return m_LoadedProperties.ToArray();
-
-                //if (this.ContentType == null)
-                //    return new Property[0];
-
-                //List<Property> result = new List<Property>();
-                //foreach (PropertyType prop in this.ContentType.PropertyTypes)
-                //{
-                //    if (prop == null)
-                //        continue;
-                //    Property p = getProperty(prop);
-                //    if (p == null)
-                //        continue;
-                //    result.Add(p);
-                //}
-
-                //return result.ToArray();
             }
         }
 
@@ -300,26 +303,6 @@ namespace umbraco.cms.businesslogic
         /// <returns>The property with the given propertytype</returns>
         public Property getProperty(PropertyType pt)
         {
-
-            //object o = SqlHelper.ExecuteScalar<object>(
-            //    "select id from cmsPropertyData where versionId=@version and propertyTypeId=@propertyTypeId",
-            //    SqlHelper.CreateParameter("@version", this.Version),
-            //    SqlHelper.CreateParameter("@propertyTypeId", pt.Id));
-            //if (o == null)
-            //    return null;
-            //int propertyId;
-            //if (!int.TryParse(o.ToString(), out propertyId))
-            //    return null;
-            //try
-            //{
-            //    return new Property(propertyId, pt);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Log.Add(LogTypes.Error, this.Id, "An error occurred retreiving property. EXCEPTION: " + ex.Message);
-            //    return null;
-            //}
-
             EnsureProperties();
 
             var prop = m_LoadedProperties
@@ -422,7 +405,7 @@ namespace umbraco.cms.businesslogic
 
         public virtual void XmlPopulate(XmlDocument xd, ref XmlNode x, bool Deep)
         {
-            var props = this.getProperties;
+            var props = this.GenericProperties;
             foreach (property.Property p in props)
                 if (p != null)
                     x.AppendChild(p.ToXml(xd));
@@ -512,7 +495,7 @@ namespace umbraco.cms.businesslogic
         /// Creates a new Content object from the ContentType.
         /// </summary>
         /// <param name="ct"></param>
-        protected void CreateContent(ContentType ct)
+        protected virtual void CreateContent(ContentType ct)
         {
             SqlHelper.ExecuteNonQuery("insert into cmsContent (nodeId,ContentType) values (" + this.Id + "," + ct.Id + ")");
             createNewVersion(DateTime.Now);
@@ -699,9 +682,7 @@ namespace umbraco.cms.businesslogic
                     continue;
 
                 //get the propertyId
-                var property = propData
-                    .Where(x => x.PropertyTypeId == pt.Id)
-                    .SingleOrDefault();
+                var property = propData.LastOrDefault(x => x.PropertyTypeId == pt.Id);
                 if (property == null)
                     continue;
                 var propertyId = property.Id;
