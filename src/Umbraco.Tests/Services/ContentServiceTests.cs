@@ -723,6 +723,26 @@ namespace Umbraco.Tests.Services
             Assert.That(c2.Value.ParentId > 0, Is.True);
         }
 
+        [Test]
+        public void Can_Verify_Content_Has_Published_Version()
+        {
+            // Arrange
+            var contentService = ServiceContext.ContentService;
+            var content = contentService.GetById(1046);
+            bool published = contentService.PublishWithChildren(content, 0);
+            var homepage = contentService.GetById(1046);
+            homepage.Name = "Homepage";
+            ServiceContext.ContentService.Save(homepage);
+
+            // Act
+            bool hasPublishedVersion = ServiceContext.ContentService.HasPublishedVersion(1046);
+
+            // Assert
+            Assert.That(published, Is.True);
+            Assert.That(homepage.Published, Is.False);
+            Assert.That(hasPublishedVersion, Is.True);
+        }
+
         public void CreateTestData()
         {
             //NOTE Maybe not the best way to create/save test data as we are using the services, which are being tested.
