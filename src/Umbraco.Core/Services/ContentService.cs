@@ -354,6 +354,24 @@ namespace Umbraco.Core.Services
             }
         }
 
+        /// <summary>
+        /// Checks if the passed in <see cref="IContent"/> can be published based on the anscestors publish state.
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to check if anscestors are published</param>
+        /// <returns>True if the Content can be published, otherwise False</returns>
+        public bool IsPublishable(IContent content)
+        {
+            //If the passed in content has yet to be saved we "fallback" to checking the Parent
+            //because if the Parent is publishable then the current content can be Saved and Published
+            if (content.HasIdentity == false)
+            {
+                IContent parent = GetById(content.ParentId);
+                return IsPublishable(parent, true);
+            }
+
+            return IsPublishable(content, false);
+        }
+
 	    /// <summary>
 	    /// Re-Publishes all Content
 	    /// </summary>
@@ -442,11 +460,11 @@ namespace Umbraco.Core.Services
             //TODO Refactor this so omitCacheRefresh isn't exposed in the public method, but only in an internal one as its purely there for legacy reasons.
 
 	        //Check if parent is published (although not if its a root node) - if parent isn't published this Content cannot be published
-	        if (content.ParentId != -1 && content.ParentId != -20 && HasPublishedVersion(content.ParentId) == false)
+	        if (content.ParentId != -1 && content.ParentId != -20 && IsPublishable(content) == false)
 	        {
 	            LogHelper.Info<ContentService>(
 	                string.Format(
-	                    "Content '{0}' with Id '{1}' could not be published because its parent is not published.",
+	                    "Content '{0}' with Id '{1}' could not be published because its parent or one of its ancestors is not published.",
 	                    content.Name, content.Id));
 	            return false;
 	        }
@@ -518,17 +536,7 @@ namespace Umbraco.Core.Services
 	    {
             //TODO Refactor this so omitCacheRefresh isn't exposed in the public method, but only in an internal one as its purely there for legacy reasons.
 
-	        //Look for children and unpublish them if any exists, otherwise just unpublish the passed in Content.
-	        var children = GetChildrenDeep(content.Id);
-	        var hasChildren = children.Any();
-
-	        if (hasChildren)
-	            children.Add(content);
-
-	        var unpublished = hasChildren
-	                              ? _publishingStrategy.UnPublish(children, userId)
-	                              : _publishingStrategy.UnPublish(content, userId);
-
+	        var unpublished = _publishingStrategy.UnPublish(content, userId);
 	        if (unpublished)
 	        {
 	            var uow = _uowProvider.GetUnitOfWork();
@@ -536,24 +544,8 @@ namespace Umbraco.Core.Services
 	            {
 	                repository.AddOrUpdate(content);
 
-	                if (hasChildren)
-	                {
-	                    foreach (var child in children)
-	                    {
-	                        SetWriter(child, userId);
-	                        repository.AddOrUpdate(child);
-	                    }
-	                }
-
-	                //Remove 'published' xml from the cmsContentXml table for the unpublished content and its (possible) children
+	                //Remove 'published' xml from the cmsContentXml table for the unpublished content
 	                uow.Database.Delete<ContentXmlDto>("WHERE nodeId = @Id", new {Id = content.Id});
-	                if (hasChildren)
-	                {
-	                    foreach (var child in children)
-	                    {
-	                        uow.Database.Delete<ContentXmlDto>("WHERE nodeId = @Id", new {Id = child.Id});
-	                    }
-	                }
 
                     uow.Commit();
 	            }
@@ -581,7 +573,7 @@ namespace Umbraco.Core.Services
 				return false;
 
 			//Check if parent is published (although not if its a root node) - if parent isn't published this Content cannot be published
-			if (content.ParentId != -1 && content.ParentId != -20 && HasPublishedVersion(content.ParentId) == false)
+	            if (content.ParentId != -1 && content.ParentId != -20 && IsPublishable(content) == false)
 			{
 				LogHelper.Info<ContentService>(
 					string.Format(
@@ -630,6 +622,15 @@ namespace Umbraco.Core.Services
 				_publishingStrategy.PublishingFinalized(content);
 
 			Saved.RaiseEvent(new SaveEventArgs<IContent>(content, false), this);
+                if (HasChildren(content.Id))
+                {
+                    var children = GetChildrenDeep(content.Id);
+                    var shouldBeRepublished = children.Where(child => HasPublishedVersion(child.Id));
+
+                    if (omitCacheRefresh == false)
+                        _publishingStrategy.PublishingFinalized(shouldBeRepublished, false);
+                }
+
 
 			Audit.Add(AuditTypes.Publish, "Save and Publish performed by user", userId == -1 ? 0 : userId, content.Id);
 
@@ -1161,6 +1162,40 @@ namespace Umbraco.Core.Services
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// Checks if the passed in <see cref="IContent"/> can be published based on the anscestors publish state.
+        /// </summary>
+        /// <remarks>
+        /// Check current is only used when falling back to checking the Parent of non-saved content, as
+        /// non-saved content doesn't have a valid path yet.
+        /// </remarks>
+        /// <param name="content"><see cref="IContent"/> to check if anscestors are published</param>
+        /// <param name="checkCurrent">Boolean indicating whether the passed in content should also be checked for published versions</param>
+        /// <returns>True if the Content can be published, otherwise False</returns>
+        private bool IsPublishable(IContent content, bool checkCurrent)
+        {
+            var ids = content.Path.Split(',').Select(int.Parse).ToList();
+            foreach (var id in ids)
+            {
+                //If Id equals that of the recycle bin we return false because nothing in the bin can be published
+                if (id == -20)
+                    return false;
+
+                //We don't chech the System Root, so just continue
+                if (id == -1) continue;
+
+                //If the current id equals that of the passed in content and if current shouldn't be checked we skip it.
+                if (checkCurrent == false && id == content.Id) continue;
+
+                //Check if the content for the current id has a published version - escape the loop if we encounter content with no published version
+                bool hasPublishedVersion = HasPublishedVersion(id);
+                if (hasPublishedVersion == false)
+                    return false;
+            }
+
+            return true;
         }
 
 		/// <summary>
