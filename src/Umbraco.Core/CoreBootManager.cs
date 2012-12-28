@@ -2,9 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Umbraco.Core.Configuration;
 using Umbraco.Core.Logging;
 using Umbraco.Core.ObjectResolution;
+using Umbraco.Core.Persistence;
+using Umbraco.Core.Persistence.UnitOfWork;
 using Umbraco.Core.PropertyEditors;
+using Umbraco.Core.Publishing;
+using Umbraco.Core.Services;
 
 namespace Umbraco.Core
 {
@@ -14,7 +19,7 @@ namespace Umbraco.Core
 	/// <remarks>
 	/// This does not provide any startup functionality relating to web objects
 	/// </remarks>
-	internal class CoreBootManager : IBootManager
+	public class CoreBootManager : IBootManager
 	{
 
 		private DisposableTimer _timer;
@@ -32,8 +37,19 @@ namespace Umbraco.Core
 			LogHelper.Info<CoreBootManager>("Umbraco application starting");
 			_timer = DisposableTimer.Start(x => LogHelper.Info<CoreBootManager>("Umbraco application startup complete" + " (took " + x + "ms)"));
 
+			//create database and service contexts for the app context
+			var dbFactory = new DefaultDatabaseFactory(GlobalSettings.UmbracoConnectionName);
+			var dbContext = new DatabaseContext(dbFactory);
+			var serviceContext = new ServiceContext(
+				new PetaPocoUnitOfWorkProvider(dbFactory), 
+				new FileUnitOfWorkProvider(), 
+				new PublishingStrategy());
+			
 			//create the ApplicationContext
-			ApplicationContext = ApplicationContext.Current = new ApplicationContext();
+			ApplicationContext = ApplicationContext.Current = new ApplicationContext(dbContext, serviceContext);
+
+            //initialize the DatabaseContext
+			dbContext.Initialize();
 
 			InitializeResolvers();
 
@@ -93,6 +109,9 @@ namespace Umbraco.Core
 		/// </summary>
 		protected virtual void InitializeResolvers()
 		{
+			RepositoryResolver.Current = new RepositoryResolver(
+				new RepositoryFactory());
+
 			CacheRefreshersResolver.Current = new CacheRefreshersResolver(
 				PluginManager.Current.ResolveCacheRefreshers());
 
@@ -107,6 +126,9 @@ namespace Umbraco.Core
 
 			ActionsResolver.Current = new ActionsResolver(
 				PluginManager.Current.ResolveActions());
+
+            MacroPropertyTypeResolver.Current = new MacroPropertyTypeResolver(
+                PluginManager.Current.ResolveMacroPropertyTypes());
 
 			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
 				PluginManager.Current.ResolvePropertyEditorValueConverters());
