@@ -4,7 +4,7 @@ using Umbraco.Core.Persistence.SqlSyntax;
 
 namespace Umbraco.Core.Persistence.Migrations.Syntax.Create.Expressions
 {
-    public class CreateConstraintExpression : IMigrationExpression
+    public class CreateConstraintExpression : MigrationExpressionBase
     {
         public CreateConstraintExpression(ConstraintType type)
         {
@@ -17,7 +17,13 @@ namespace Umbraco.Core.Persistence.Migrations.Syntax.Create.Expressions
         {
             var constraintType = (Constraint.IsPrimaryKeyConstraint) ? "PRIMARY KEY" : "UNIQUE";
 
-            string[] columns = new string[Constraint.Columns.Count];
+            if (Constraint.IsPrimaryKeyConstraint && SyntaxConfig.SqlSyntaxProvider.SupportsClustered())
+                constraintType += " CLUSTERED";
+
+            if (Constraint.IsNonUniqueConstraint)
+                constraintType = string.Empty;
+
+            var columns = new string[Constraint.Columns.Count];
 
             for (int i = 0; i < Constraint.Columns.Count; i++)
             {

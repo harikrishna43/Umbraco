@@ -3,9 +3,11 @@ using System.Collections;
 using System.Text;
 using System.Xml;
 using System.Linq;
+using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
 using Umbraco.Core.Persistence.Caching;
 using umbraco.BusinessLogic;
+using umbraco.cms.businesslogic.propertytype;
 using umbraco.DataLayer;
 using System.Collections.Generic;
 using Umbraco.Core;
@@ -114,8 +116,7 @@ namespace umbraco.cms.businesslogic.web
                 }
                 catch (Exception exception)
                 {
-                    // Note, Log.Add quietly swallows the exception if it can't write to the database
-                    Log.Add(LogTypes.System, -1, string.Format("{0} while trying to build DTD for Xml schema; is Umbraco installed correctly and the connection string configured?", exception.Message));
+                    LogHelper.Error<DocumentType>("Exception while trying to build DTD for Xml schema; is Umbraco installed correctly and the connection string configured?", exception);
                 }
 
             }
