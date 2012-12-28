@@ -298,7 +298,9 @@ namespace umbraco.cms.businesslogic
             EnsureProperties();
 
             var prop = m_LoadedProperties.SingleOrDefault(x => x.PropertyType.Id == pt.Id);
+
             return prop;
+
         }
 
         /// <summary>

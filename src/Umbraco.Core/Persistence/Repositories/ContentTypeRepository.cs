@@ -114,26 +114,20 @@ namespace Umbraco.Core.Persistence.Repositories
 
         protected override Sql GetBaseQuery(bool isCount)
         {
-            //TODO Investigate the proper usage of IsDefault on cmsDocumentType
-            /*sql.From("cmsDocumentType");
-            sql.RightJoin("cmsContentType ON ([cmsContentType].[nodeId] = [cmsDocumentType].[contentTypeNodeId])");
-            sql.InnerJoin("umbracoNode ON ([cmsContentType].[nodeId] = [umbracoNode].[id])");
-            sql.Where("[umbracoNode].[nodeObjectType] = @NodeObjectType", new { NodeObjectType = NodeObjectTypeId });
-            sql.Where("[cmsDocumentType].[IsDefault] = @IsDefault", new { IsDefault = true });*/
-
             var sql = new Sql();
+            //TODO Investigate the proper usage of IsDefault on cmsDocumentType
             sql.Select(isCount ? "COUNT(*)" : "*");
-            sql.From<DocumentTypeDto>();
-            sql.RightJoin<ContentTypeDto>().On<ContentTypeDto, DocumentTypeDto>(x => x.NodeId, y => y.ContentTypeNodeId);
-            sql.InnerJoin<NodeDto>().On<ContentTypeDto, NodeDto>(x => x.NodeId, y => y.NodeId);
-            sql.Where<NodeDto>(x => x.NodeObjectType == NodeObjectTypeId);
-
+            sql.From("cmsDocumentType");
+            sql.RightJoin("cmsContentType ON (cmsContentType.nodeId = cmsDocumentType.contentTypeNodeId)");
+            sql.InnerJoin("umbracoNode ON (cmsContentType.nodeId = umbracoNode.id)");
+            sql.Where("umbracoNode.nodeObjectType = @NodeObjectType", new { NodeObjectType = NodeObjectTypeId });
+            sql.Where("cmsDocumentType.IsDefault = @IsDefault", new { IsDefault = true });
             return sql;
         }
 
         protected override string GetBaseWhereClause()
         {
-            return "[umbracoNode].[id] = @Id";
+            return "umbracoNode.id = @Id";
         }
 
         protected override IEnumerable<string> GetDeleteClauses()

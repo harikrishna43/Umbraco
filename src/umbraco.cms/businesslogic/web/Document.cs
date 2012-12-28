@@ -354,6 +354,9 @@ namespace umbraco.cms.businesslogic.web
             NewEventArgs e = new NewEventArgs();
             d.OnNew(e);
 
+            // Log
+            LogHelper.Info<Document>(string.Format("New document {0}", d.Id));
+
             // Run Handler				
             umbraco.BusinessLogic.Actions.Action.RunActionHandlers(d, ActionNew.Instance);
 
@@ -1158,7 +1161,7 @@ namespace umbraco.cms.businesslogic.web
                     }
                     else
                     {
-                        Log.Add(LogTypes.System, d.Id, "Document not published so XML cannot be generated");
+                        LogHelper.Debug<Document>(string.Format("Document {0} not published so XML cannot be generated", d.Id));
                     }
                 }
 

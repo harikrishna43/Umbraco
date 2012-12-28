@@ -1,6 +1,8 @@
 ﻿using Umbraco.Core.Persistence.Migrations.Syntax.Alter;
 using Umbraco.Core.Persistence.Migrations.Syntax.Create;
 using Umbraco.Core.Persistence.Migrations.Syntax.Delete;
+using Umbraco.Core.Persistence.Migrations.Syntax.Execute;
+using Umbraco.Core.Persistence.Migrations.Syntax.IfDatabase;
 using Umbraco.Core.Persistence.Migrations.Syntax.Insert;
 using Umbraco.Core.Persistence.Migrations.Syntax.Rename;
 using Umbraco.Core.Persistence.Migrations.Syntax.Update;
@@ -41,6 +43,11 @@ namespace Umbraco.Core.Persistence.Migrations
             get { return new DeleteBuilder(_context); }
         }
 
+        public IExecuteBuilder Execute
+        {
+            get { return new ExecuteBuilder(_context); }
+        }
+
         public IInsertBuilder Insert
         {
             get { return new InsertBuilder(_context); }
@@ -54,6 +61,11 @@ namespace Umbraco.Core.Persistence.Migrations
         public IUpdateBuilder Update
         {
             get { return new UpdateBuilder(_context); }
+        }
+
+        public IIfDatabaseBuilder IfDatabase(params DatabaseProviders[] databaseProviders)
+        {
+            return new IfDatabaseBuilder(_context, databaseProviders);
         }
     }
 }

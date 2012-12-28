@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Text;
 using Umbraco.Core.Persistence.DatabaseAnnotations;
 using Umbraco.Core.Persistence.DatabaseModelDefinitions;
 
@@ -36,6 +38,11 @@ namespace Umbraco.Core.Persistence.SqlSyntax
             InitColumnTypeMap();
         }
 
+        public override bool SupportsClustered()
+        {
+            return false;
+        }
+
         public override string GetIndexType(IndexTypes indexTypes)
         {
             string indexType;
@@ -68,6 +75,20 @@ namespace Umbraco.Core.Persistence.SqlSyntax
             return string.Format("[{0}]", name);
         }
 
+        public override string FormatColumnRename(string tableName, string oldName, string newName)
+        {
+            //NOTE Sql CE doesn't support renaming a column, so a new column needs to be created, then copy data and finally remove old column
+            //This assumes that the new column has been created, and that the old column will be deleted after this statement has run.
+            //http://stackoverflow.com/questions/3967353/microsoft-sql-compact-edition-rename-column
+
+            return string.Format("UPDATE {0} SET {1} = {2}", tableName, newName, oldName);
+        }
+
+        public override string FormatTableRename(string oldName, string newName)
+        {
+            return string.Format(RenameTable, oldName, newName);
+        }
+
         public override string FormatPrimaryKey(TableDefinition table)
         {
             var columnDefinition = table.Columns.FirstOrDefault(x => x.IsPrimaryKey);
@@ -80,7 +101,9 @@ namespace Umbraco.Core.Persistence.SqlSyntax
 
             string columns = string.IsNullOrEmpty(columnDefinition.PrimaryKeyColumns)
                                  ? GetQuotedColumnName(columnDefinition.Name)
-                                 : columnDefinition.PrimaryKeyColumns;
+                                 : string.Join(", ", columnDefinition.PrimaryKeyColumns
+                                                                     .Split(new[]{',', ' '}, StringSplitOptions.RemoveEmptyEntries)
+                                                                     .Select(GetQuotedColumnName));
 
             return string.Format(CreateConstraint,
                                  GetQuotedTableName(table.Name),
@@ -128,8 +151,18 @@ namespace Umbraco.Core.Persistence.SqlSyntax
             return null;
         }
 
+        public override string DeleteDefaultConstraint
+        {
+            get
+            {
+                return "ALTER TABLE [{0}] ALTER COLUMN [{1}] DROP DEFAULT";
+            }
+        }
+
         public override string AddColumn { get { return "ALTER TABLE {0} ADD {1}"; } }
 
         public override string DropIndex { get { return "DROP INDEX {1}.{0}"; } }
+
+        public override string RenameTable { get { return "sp_rename '{0}', '{1}'"; } }
     }
 }
