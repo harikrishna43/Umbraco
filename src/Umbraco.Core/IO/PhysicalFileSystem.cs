@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using Umbraco.Core.CodeAnnotations;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Publishing;
 
 namespace Umbraco.Core.IO
 {
@@ -125,7 +126,8 @@ namespace Umbraco.Core.IO
 
         public Stream OpenFile(string path)
         {
-            return File.OpenRead(GetFullPath(path));
+            var fullPath = GetFullPath(path);
+            return File.OpenRead(fullPath);
         }
 
         public void DeleteFile(string path)
@@ -139,7 +141,7 @@ namespace Umbraco.Core.IO
             }
             catch (FileNotFoundException ex)
             {
-                LogHelper.Error<PhysicalFileSystem>("File not found", ex);
+                LogHelper.Info<PublishingStrategy>(string.Format("DeleteFile failed with FileNotFoundException: {0}", ex.InnerException));
             }
         }
 

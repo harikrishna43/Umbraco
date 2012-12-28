@@ -85,9 +85,11 @@ namespace Umbraco.Core.IO
         public static string MapPath(string path, bool useHttpContext)
         {
             // Check if the path is already mapped
-            if ((path.Length >= 2 && path[1] == Path.VolumeSeparatorChar) || path.StartsWith("\\"))
+            if ((path.Length >= 2 && path[1] == Path.VolumeSeparatorChar)
+                || path.StartsWith(@"\\")) //UNC Paths start with "\\". If the site is running off a network drive mapped paths will look like "\\Whatever\Boo\Bar"
+            {
                 return path;
-
+            }
 			// Check that we even have an HttpContext! otherwise things will fail anyways
 			// http://umbraco.codeplex.com/workitem/30946
 
@@ -220,7 +222,7 @@ namespace Umbraco.Core.IO
             {
                 foreach (var character in Path.GetInvalidFileNameChars())
                 {
-                    filePath = filePath.Replace(character, '_');
+                    filePath = filePath.Replace(character, '-');
                 }
             }
             else
@@ -240,10 +242,14 @@ namespace Umbraco.Core.IO
                 if (reservedCharacters.IndexOf(character) == -1)
                     stringBuilder.Append(character);
                 else
-                    stringBuilder.Append("_");
+                    stringBuilder.Append("-");
             }
 
-            return stringBuilder.ToString();
+            // Remove repeating dashes
+            // From: http://stackoverflow.com/questions/5111967/regex-to-remove-a-specific-repeated-character
+            var reducedString = Regex.Replace(stringBuilder.ToString(), "-+", "-");
+
+            return reducedString;
         }
     }
 }
