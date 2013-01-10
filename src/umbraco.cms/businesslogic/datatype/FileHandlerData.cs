@@ -1,11 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
+using Umbraco.Core.IO;
 using umbraco.cms.businesslogic.Files;
 using umbraco.cms.businesslogic.property;
-using umbraco.IO;
+using IContent = Umbraco.Core.Models.IContent;
+using IMedia = Umbraco.Core.Models.IMedia;
 
 namespace umbraco.cms.businesslogic.datatype
 {
@@ -19,38 +20,37 @@ namespace umbraco.cms.businesslogic.datatype
             _thumbnailSizes = thumbnailSizes;
         }
 
+		/// <summary>
+		/// Gets/sets the loaded Conent object which we can resolve from other classes since this class sets it's properties
+		/// </summary>
+		internal Content LoadedContentItem { get; set; }
+
+		/// <summary>
+		/// Called to ensure we have a valid LoadedContentItem.
+		/// </summary>
+		/// <param name="version"></param>
+		private void EnsureLoadedContentItem(Guid version)
+		{
+			if (LoadedContentItem == null)
+			{
+				LoadedContentItem = Content.GetContentFromVersion(Version);
+			}
+		}
+
         public override object Value
         {
             get { return base.Value; }
             set
             {
-                UmbracoFile um = null;
-                if (value is HttpPostedFile || value is HttpPostedFileBase || value is HttpPostedFileWrapper)
+	            if (value is HttpPostedFile || value is HttpPostedFileBase)
                 {
-                    string name = string.Empty;
-                    Stream fileStream = null;
+	                Stream fileStream = null;
 
-                    if (value is HttpPostedFile)
-                    {
-                        var file = value as HttpPostedFile;
-                        name = Umbraco.Core.IO.IOHelper.SafeFileName(file.FileName.Substring(file.FileName.LastIndexOf(IOHelper.DirSepChar) + 1, file.FileName.Length - file.FileName.LastIndexOf(IOHelper.DirSepChar) - 1).ToLower());
-                        fileStream = file.InputStream;
-                    }
-                    else if (value is HttpPostedFileBase)
-                    {
-                        var file = value as HttpPostedFileBase;
-                        name = Umbraco.Core.IO.IOHelper.SafeFileName(file.FileName.Substring(file.FileName.LastIndexOf(IOHelper.DirSepChar) + 1, file.FileName.Length - file.FileName.LastIndexOf(IOHelper.DirSepChar) - 1).ToLower());
-                        fileStream = file.InputStream;
-                    }
-                    else if (value is HttpPostedFileWrapper)
-                    {
-                        var file = value as HttpPostedFileWrapper;
-                        name = file.FileName;
-                        fileStream = file.InputStream;
-                    }
+					var file = value as HttpPostedFile;
+					var name = IOHelper.SafeFileName(file.FileName.Substring(file.FileName.LastIndexOf(IOHelper.DirSepChar) + 1, file.FileName.Length - file.FileName.LastIndexOf(IOHelper.DirSepChar) - 1).ToLower());
+					fileStream = file.InputStream;
 
-
-                    // handle upload
+	                // handle upload
 
                     if (name != String.Empty)
                     {
@@ -59,7 +59,7 @@ namespace umbraco.cms.businesslogic.datatype
                                               : PropertyId + "-" + name;
 
                         //fileName = Path.Combine(SystemDirectories.Media, fileName);
-                        um = UmbracoFile.Save(fileStream, fileName);
+                        UmbracoFile um = UmbracoFile.Save(fileStream, fileName);
 
                         if (um.SupportsResizing)
                         {
@@ -83,31 +83,18 @@ namespace umbraco.cms.businesslogic.datatype
                         }
 
                         // check for auto fill of other properties (width, height, extension and filesize)
-                        string propertyTypeAlias = new Property(PropertyId).PropertyType.Alias;
                         if (UmbracoSettings.ImageAutoFillImageProperties != null)
                         {
+                            string propertyTypeAlias = new Property(PropertyId).PropertyType.Alias;
+
                             XmlNode uploadFieldConfigNode =
                                 UmbracoSettings.ImageAutoFillImageProperties.SelectSingleNode(
                                     string.Format("uploadField [@alias = \"{0}\"]", propertyTypeAlias));
+
                             if (uploadFieldConfigNode != null)
                             {
-                                // get the current document
-                                Content content = Content.GetContentFromVersion(Version);
-                                // only add dimensions to web images
-                                if (um.SupportsResizing)
-                                {
-                                    updateContentProperty(uploadFieldConfigNode, content, "widthFieldAlias",
-                                                          um.GetDimensions().Item1);
-                                    updateContentProperty(uploadFieldConfigNode, content, "heightFieldAlias",
-                                                          um.GetDimensions().Item2);
-                                }
-                                else
-                                {
-                                    updateContentProperty(uploadFieldConfigNode, content, "widthFieldAlias", String.Empty);
-                                    updateContentProperty(uploadFieldConfigNode, content, "heightFieldAlias", String.Empty);
-                                }
-                                updateContentProperty(uploadFieldConfigNode, content, "lengthFieldAlias", um.Length);
-                                updateContentProperty(uploadFieldConfigNode, content, "extensionFieldAlias", um.Extension);
+	                            EnsureLoadedContentItem(Version);								
+								FillProperties(uploadFieldConfigNode, LoadedContentItem, um);                                
                             }
                         }
 
@@ -119,18 +106,18 @@ namespace umbraco.cms.businesslogic.datatype
                         base.Value = String.Empty;
 
                         // also reset values of related fields
-                        clearRelatedValues();
+                        ClearRelatedValues();
                     }
                 }
                 else
                 {
                     base.Value = value;
-                    clearRelatedValues();
+                    ClearRelatedValues();
                 }
             }
         }
-        
-        private void clearRelatedValues()
+
+        private void ClearRelatedValues()
         {
             string propertyTypeAlias = new Property(PropertyId).PropertyType.Alias;
             if (UmbracoSettings.ImageAutoFillImageProperties != null)
@@ -141,17 +128,28 @@ namespace umbraco.cms.businesslogic.datatype
                 if (uploadFieldConfigNode != null)
                 {
                     // get the current document
-                    Content content = Content.GetContentFromVersion(Version);
+                    //Content legacy = Content.GetContentFromVersion(Version);
+	                EnsureLoadedContentItem(Version);
                     // only add dimensions to web images
-                    updateContentProperty(uploadFieldConfigNode, content, "widthFieldAlias", String.Empty);
-                    updateContentProperty(uploadFieldConfigNode, content, "heightFieldAlias", String.Empty);
-                    updateContentProperty(uploadFieldConfigNode, content, "lengthFieldAlias", String.Empty);
-                    updateContentProperty(uploadFieldConfigNode, content, "extensionFieldAlias", String.Empty);
+                    UpdateContentProperty(uploadFieldConfigNode, LoadedContentItem, "widthFieldAlias", String.Empty);
+					UpdateContentProperty(uploadFieldConfigNode, LoadedContentItem, "heightFieldAlias", String.Empty);
+					UpdateContentProperty(uploadFieldConfigNode, LoadedContentItem, "lengthFieldAlias", String.Empty);
+					UpdateContentProperty(uploadFieldConfigNode, LoadedContentItem, "extensionFieldAlias", String.Empty);
                 }
             }
         }
 
-        private void updateContentProperty(XmlNode uploadFieldConfigNode, Content content, string propertyAlias,
+        private void FillProperties(XmlNode uploadFieldConfigNode, Content content, UmbracoFile um)
+        {
+            // only add dimensions to web images
+            UpdateContentProperty(uploadFieldConfigNode, content, "widthFieldAlias", um.SupportsResizing ? um.GetDimensions().Item1.ToString() : string.Empty);
+            UpdateContentProperty(uploadFieldConfigNode, content, "heightFieldAlias", um.SupportsResizing ? um.GetDimensions().Item2.ToString() : string.Empty);
+
+            UpdateContentProperty(uploadFieldConfigNode, content, "lengthFieldAlias", um.Length);
+            UpdateContentProperty(uploadFieldConfigNode, content, "extensionFieldAlias", um.Extension);
+        }
+
+        private static void UpdateContentProperty(XmlNode uploadFieldConfigNode, Content content, string propertyAlias,
                                            object propertyValue)
         {
             XmlNode propertyNode = uploadFieldConfigNode.SelectSingleNode(propertyAlias);

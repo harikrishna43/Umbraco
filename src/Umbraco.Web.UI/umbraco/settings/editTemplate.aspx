@@ -1,34 +1,39 @@
 <%@ Page MasterPageFile="../masterpages/umbracoPage.Master" Language="c#" CodeBehind="EditTemplate.aspx.cs"
     ValidateRequest="false" AutoEventWireup="True" Inherits="Umbraco.Web.UI.Umbraco.Settings.EditTemplate" %>
-
+<%@ Import Namespace="Umbraco.Core.IO" %>
 <%@ Register TagPrefix="cc1" Namespace="umbraco.uicontrols" Assembly="controls" %>
 <%@ Register TagPrefix="umb" Namespace="ClientDependency.Core.Controls" Assembly="ClientDependency.Core" %>
+
+<asp:Content ID="DocTypeContent" ContentPlaceHolderID="DocType" runat="server">
+    <!DOCTYPE html>
+</asp:Content>
+
 <asp:Content ContentPlaceHolderID="head" runat="server">
-    <umb:CssInclude ID="CssInclude1" runat="server" FilePath="splitbutton/splitbutton.css"
-        PathNameAlias="UmbracoClient" />
-    <umb:JsInclude ID="JsInclude" runat="server" FilePath="splitbutton/jquery.splitbutton.js"
-        PathNameAlias="UmbracoClient" Priority="1" />
-    <script language="javascript" type="text/javascript">
+    <umb:CssInclude ID="CssInclude1" runat="server" FilePath="splitbutton/splitbutton.css" PathNameAlias="UmbracoClient" />
+    <umb:JsInclude ID="JsInclude" runat="server" FilePath="splitbutton/jquery.splitbutton.js" PathNameAlias="UmbracoClient" />
+    
+    <script type="text/javascript">
         jQuery(document).ready(function() {
             //macro split button
-            jQuery('#sbMacro').splitbutton({menu:'#macroMenu'});
-            jQuery("#splitButtonMacro").appendTo("#splitButtonMacroPlaceHolder");
-            jQuery(".macro").click(function(){
-                var alias = jQuery(this).attr("rel");
-               if(jQuery(this).attr("params") == "1")
-                {
-                    openMacroModal(alias);
-                }
-                else
-                {
-                    insertMacro(alias);
-                }
-            });
-            applySplitButtonOverflow('mcontainer','innerc','macroMenu','.macro', 'showMoreMacros');
             
-            //razor macro split button
-            jQuery('#sb').splitbutton({menu:'#codeTemplateMenu'});
-            jQuery("#splitButton").appendTo("#splitButtonPlaceHolder");
+            jQuery("#splitButtonMacro").appendTo("#splitButtonMacroPlaceHolder");
+            jQuery('#sbMacro').splitbutton({menu:'#macroMenu'});
+            //jQuery(".macro").click(function(){
+            //    var alias = jQuery(this).attr("rel");
+            //   if(jQuery(this).attr("params") == "1")
+            //    {
+            //        openMacroModal(alias);
+            //    }
+            //    else
+            //    {
+            //        insertMacro(alias);
+            //    }
+            //});
+            //applySplitButtonOverflow('mcontainer','innerc','macroMenu','.macro', 'showMoreMacros');
+            
+            ////razor macro split button
+            //jQuery('#sb').splitbutton({menu:'#codeTemplateMenu'});
+            //jQuery("#splitButton").appendTo("#splitButtonPlaceHolder");
 
             jQuery(".codeTemplate").click(function(){              
                 insertCodeBlockFromTemplate(jQuery(this).attr("rel"));
@@ -162,7 +167,7 @@
             if(alias != null && alias != ""){
                 t = "&alias="+alias;
             }
-            UmbClientMgr.openModalWindow('<%= umbraco.IO.IOHelper.ResolveUrl(umbraco.IO.SystemDirectories.Umbraco) %>/dialogs/editMacro.aspx?objectId=<%= editorSource.ClientID %>' + t, 'Insert Macro', true, 470, 530, 0, 0, '', '');
+            UmbClientMgr.openModalWindow('<%= IOHelper.ResolveUrl(SystemDirectories.Umbraco) %>/dialogs/editMacro.aspx?renderingEngine=Webforms&objectId=<%= editorSource.ClientID %>' + t, 'Insert Macro', true, 470, 530, 0, 0, '', '');
        }
 
     </script>
