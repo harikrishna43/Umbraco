@@ -12,6 +12,7 @@ using Umbraco.Core.IO;
 using umbraco.cms.businesslogic.macro;
 using umbraco.interfaces;
 using Umbraco.Web.Mvc;
+using Umbraco.Core;
 
 namespace Umbraco.Web.Macros
 {
@@ -58,26 +59,25 @@ namespace Umbraco.Web.Macros
 			get { return EngineName; }
 		}
 
-        //NOTE: We do not return any supported extensions because we don't want the MacroEngineFactory to return this
-        // macro engine when searching for engines via extension. Those types of engines are reserved for files that are
-        // stored in the ~/macroScripts folder and each engine must support unique extensions. This is a total Hack until 
-        // we rewrite how macro engines work.
-        public IEnumerable<string> SupportedExtensions
-        {
-            get { return Enumerable.Empty<string>(); }
-            //get { return new[] {"cshtml", "vbhtml"}; }
-        }
+		//NOTE: We do not return any supported extensions because we don't want the MacroEngineFactory to return this
+		// macro engine when searching for engines via extension. Those types of engines are reserved for files that are
+		// stored in the ~/macroScripts folder and each engine must support unique extensions. This is a total Hack until 
+		// we rewrite how macro engines work.
+		public IEnumerable<string> SupportedExtensions
+		{
+			get { return Enumerable.Empty<string>(); }
+			//get { return new[] {"cshtml", "vbhtml"}; }
+		}
 
-        //NOTE: We do not return any supported extensions because we don't want the MacroEngineFactory to return this
-        // macro engine when searching for engines via extension. Those types of engines are reserved for files that are
-        // stored in the ~/macroScripts folder and each engine must support unique extensions. This is a total Hack until 
-        // we rewrite how macro engines work.
-        public IEnumerable<string> SupportedUIExtensions
-        {
-            get { return Enumerable.Empty<string>(); }
-            //get { return new[] { "cshtml", "vbhtml" }; }
-        }
-
+		//NOTE: We do not return any supported extensions because we don't want the MacroEngineFactory to return this
+		// macro engine when searching for engines via extension. Those types of engines are reserved for files that are
+		// stored in the ~/macroScripts folder and each engine must support unique extensions. This is a total Hack until 
+		// we rewrite how macro engines work.
+		public IEnumerable<string> SupportedUIExtensions
+		{
+			get { return Enumerable.Empty<string>(); }
+			//get { return new[] { "cshtml", "vbhtml" }; }
+		}
 		public Dictionary<string, IMacroGuiRendering> SupportedProperties
 		{
 			get { throw new NotSupportedException(); }
@@ -103,7 +103,8 @@ namespace Umbraco.Web.Macros
 		{
 			if (macro == null) throw new ArgumentNullException("macro");
 			if (currentPage == null) throw new ArgumentNullException("currentPage");
-
+			if (macro.ScriptName.IsNullOrWhiteSpace()) throw new ArgumentException("The ScriptName property of the macro object cannot be null or empty");
+		
 			if (!macro.ScriptName.StartsWith(SystemDirectories.MvcViews + "/MacroPartials/")
 				&& (!Regex.IsMatch(macro.ScriptName, "~/App_Plugins/.+?/Views/MacroPartials", RegexOptions.Compiled)))
 			{

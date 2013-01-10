@@ -1,16 +1,6 @@
 using System;
-using System.Collections;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Web;
-using System.Web.SessionState;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using System.Web.UI.HtmlControls;
-using System.Reflection;
-using System.Diagnostics;
-using umbraco.IO;
+using System.Globalization;
+using Umbraco.Core.Configuration;
 
 namespace umbraco.dialogs
 {
@@ -20,16 +10,11 @@ namespace umbraco.dialogs
 	public partial class about : BasePages.UmbracoEnsuredPage
 	{
 
-		protected void Page_Load(object sender, System.EventArgs e)
+		protected void Page_Load(object sender, EventArgs e)
 		{
 			// Put user code to initialize the page here
-			version.Text = GlobalSettings.CurrentVersion;
-			thisYear.Text = DateTime.Now.Year.ToString();
-
-
-			// umbraco.dll version
-			FileVersionInfo myFileVersionInfo = FileVersionInfo.GetVersionInfo(IOHelper.MapPath(SystemDirectories.Bin + "/umbraco.dll"));
-			version.Text += " (Assembly version: " + myFileVersionInfo.FileVersion + ")";
+			thisYear.Text = DateTime.Now.Year.ToString(CultureInfo.InvariantCulture);
+            version.Text = string.Format("{0} (Assembly version: {1})", UmbracoVersion.Current.ToString(3), UmbracoVersion.AssemblyVersion);
 		}
 
 		#region Web Form Designer generated code

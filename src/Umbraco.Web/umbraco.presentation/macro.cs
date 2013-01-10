@@ -1494,15 +1494,7 @@ namespace umbraco
 
             try
             {
-                string userControlPath = fileName;
-
-                if (!userControlPath.StartsWith("~"))
-                {
-                    if (userControlPath.StartsWith("/"))
-                        userControlPath = "~" + userControlPath;
-                    else
-                        userControlPath = "~/" + userControlPath;
-                }
+                string userControlPath = IOHelper.FindFile(fileName);
 
                 if (!File.Exists(IOHelper.MapPath(userControlPath)))
                     return new LiteralControl(string.Format("UserControl {0} does not exist.", fileName));
