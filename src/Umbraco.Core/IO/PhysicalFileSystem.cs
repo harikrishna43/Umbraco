@@ -10,15 +10,18 @@ using Umbraco.Core.Publishing;
 
 namespace Umbraco.Core.IO
 {
-	[UmbracoExperimentalFeature("http://issues.umbraco.org/issue/U4-1156", "Will be declared public after 4.10")]
-    internal class PhysicalFileSystem : IFileSystem
+    public class PhysicalFileSystem : IFileSystem
     {
 		internal string RootPath { get; private set; }
         private readonly string _rootUrl;
 
         public PhysicalFileSystem(string virtualRoot)
         {
-            RootPath = IOHelper.MapPath(virtualRoot);
+	        if (virtualRoot == null) throw new ArgumentNullException("virtualRoot");
+			if (!virtualRoot.StartsWith("~/"))
+				throw new ArgumentException("The virtualRoot argument must be a virtual path and start with '~/'");
+
+	        RootPath = IOHelper.MapPath(virtualRoot);
             _rootUrl = IOHelper.ResolveUrl(virtualRoot);
         }
 
@@ -29,6 +32,9 @@ namespace Umbraco.Core.IO
 
             if (string.IsNullOrEmpty(rootUrl))
                 throw new ArgumentException("The argument 'rootUrl' cannot be null or empty.");
+
+			if (rootPath.StartsWith("~/"))
+				throw new ArgumentException("The rootPath argument cannot be a virtual path and cannot start with '~/'");
 
             RootPath = rootPath;
             _rootUrl = rootUrl;
