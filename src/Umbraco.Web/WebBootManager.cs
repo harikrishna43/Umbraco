@@ -24,7 +24,7 @@ namespace Umbraco.Web
 	/// <summary>
 	/// A bootstrapper for the Umbraco application which initializes all objects including the Web portion of the application 
 	/// </summary>
-	internal class WebBootManager : CoreBootManager
+	public class WebBootManager : CoreBootManager
 	{
 		private readonly bool _isForTesting;
 		private readonly UmbracoApplication _umbracoApplication;
@@ -32,6 +32,7 @@ namespace Umbraco.Web
 		public WebBootManager(UmbracoApplication umbracoApplication)
 			: this(umbracoApplication, false)
 		{
+			
 		}
 
 		/// <summary>
@@ -152,6 +153,16 @@ namespace Umbraco.Web
 				new { controller = "InstallPackage", action = "Index", id = UrlParameter.Optional }
 				);
 			installPackageRoute.DataTokens.Add("area", umbracoPath);
+
+			//Create the REST/web/script service routes
+			var webServiceRoutes = RouteTable.Routes.MapRoute(
+				"Umbraco_web_services",
+				"Umbraco/RestServices/{controller}/{action}/{id}",
+				new {controller = "SaveFileController", action = "Index", id = UrlParameter.Optional},
+				//VERY IMPORTANT! for this route, only match controllers in this namespace!
+				new string[] { "Umbraco.Web.WebServices" }
+				);
+			webServiceRoutes.DataTokens.Add("area", umbracoPath);
 
 			//we need to find the surface controllers and route them
 			var surfaceControllers = SurfaceControllerResolver.Current.RegisteredSurfaceControllers.ToArray();
