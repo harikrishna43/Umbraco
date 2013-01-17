@@ -9,7 +9,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Web.Security;
+using System.Xml;
+using Umbraco.Core.Configuration;
 
 namespace Umbraco.Core
 {
@@ -19,28 +20,6 @@ namespace Umbraco.Core
     ///</summary>
     public static class StringExtensions
     {
-		/// <summary>
-		/// Encrypt the string using the MachineKey in medium trust
-		/// </summary>
-		/// <param name="toEncrypt"></param>
-		/// <returns></returns>
-		public static string EncryptWithMachineKey(this string toEncrypt)
-		{
-			var output = FormsAuthentication.Encrypt(new FormsAuthenticationTicket(0, "temp", DateTime.Now, DateTime.MaxValue, false, toEncrypt));
-			return output;
-		}
-
-		/// <summary>
-		/// Decrypt the encrypted string using the Machine key in medium trust
-		/// </summary>
-		/// <param name="encrypted"></param>
-		/// <returns></returns>
-		public static string DecryptWithMachineKey(this string encrypted)
-		{
-			var output = FormsAuthentication.Decrypt(encrypted);
-			return output.UserData;
-		}
-
 		//this is from SqlMetal and just makes it a bit of fun to allow pluralisation
 		public static string MakePluralName(this string name)
 		{
@@ -236,6 +215,20 @@ namespace Umbraco.Core
         }
 
         /// <summary>
+        /// Parse string to Enum
+        /// </summary>
+        /// <typeparam name="T">The enum type</typeparam>
+        /// <param name="strType">The string to parse</param>
+        /// <param name="ignoreCase">The ignore case</param>
+        /// <returns>The parsed enum</returns>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "By Design")]
+        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", MessageId = "2#", Justification = "By Design")]
+        public static T EnumParse<T>(this string strType, bool ignoreCase)
+        {
+            return (T)Enum.Parse(typeof(T), strType, ignoreCase);
+        }
+
+        /// <summary>
         /// Strips all html from a string.
         /// </summary>
         /// <param name="text">The text.</param>
@@ -328,6 +321,17 @@ namespace Umbraco.Core
             if (removeSpaces)
                 result = result.Replace(" ", "");
 
+            return result;
+        }
+
+        /// <summary>
+        /// Splits a Pascal cased string into a phrase seperated by spaces.
+        /// </summary>
+        /// <param name="phrase">String to split</param>
+        /// <returns></returns>
+        public static string SplitPascalCasing(this string phrase)
+        {
+            string result = Regex.Replace(phrase, "([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", "$1 ");
             return result;
         }
 
@@ -736,6 +740,25 @@ namespace Umbraco.Core
             return !string.IsNullOrWhiteSpace(input)
                        ? input
                        : alternative;
+        }
+
+        public static string FormatUrl(this string url)
+        {
+            string newUrl = url;
+            XmlNode replaceChars = UmbracoSettings.UrlReplaceCharacters;
+            foreach (XmlNode n in replaceChars.SelectNodes("char"))
+            {
+                if (n.Attributes.GetNamedItem("org") != null && n.Attributes.GetNamedItem("org").Value != "")
+                    newUrl = newUrl.Replace(n.Attributes.GetNamedItem("org").Value, XmlHelper.GetNodeValue(n));
+            }
+
+            // check for double dashes
+            if (UmbracoSettings.RemoveDoubleDashesFromUrlReplacing)
+            {
+                newUrl = Regex.Replace(newUrl, @"[-]{2,}", "-");
+            }
+
+            return newUrl;
         }
     }
 }
