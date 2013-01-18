@@ -8,11 +8,11 @@ using Umbraco.Core.ObjectResolution;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.Mappers;
 using Umbraco.Core.Persistence.Migrations;
+using Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionSix;
 using Umbraco.Core.Persistence.UnitOfWork;
 using Umbraco.Core.PropertyEditors;
 using Umbraco.Core.Publishing;
 using Umbraco.Core.Services;
-using MigrationsVersionSixth = Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionSixth;
 using MigrationsVersionFourNineZero = Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionFourNineZero;
 
 namespace Umbraco.Core
@@ -135,29 +135,16 @@ namespace Umbraco.Core
             MacroPropertyTypeResolver.Current = new MacroPropertyTypeResolver(
                 PluginManager.Current.ResolveMacroPropertyTypes());
 
+            //the database migration objects
+            MigrationResolver.Current = new MigrationResolver(
+                PluginManager.Current.ResolveMigrationTypes());
+
 			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
 				PluginManager.Current.ResolvePropertyEditorValueConverters());
 			//add the internal ones, these are not public currently so need to add them manually
 			PropertyEditorValueConvertersResolver.Current.AddType<DatePickerPropertyEditorValueConverter>();
 			PropertyEditorValueConvertersResolver.Current.AddType<TinyMcePropertyEditorValueConverter>();
 			PropertyEditorValueConvertersResolver.Current.AddType<YesNoPropertyEditorValueConverter>();
-
-			//the database migration objects
-			MigrationResolver.Current = new MigrationResolver(new List<Type>
-				{
-					typeof (MigrationsVersionFourNineZero.RemoveUmbracoAppConstraints),
-					typeof (MigrationsVersionSixth.DeleteAppTables),
-					typeof (MigrationsVersionSixth.EnsureAppsTreesUpdated),
-					typeof (MigrationsVersionSixth.MoveMasterContentTypeData),
-					typeof (MigrationsVersionSixth.NewCmsContentType2ContentTypeTable),
-					typeof (MigrationsVersionSixth.RemoveMasterContentTypeColumn),
-					typeof (MigrationsVersionSixth.RenameCmsTabTable),
-					typeof (MigrationsVersionSixth.RenameTabIdColumn),
-					typeof (MigrationsVersionSixth.UpdateCmsContentTypeAllowedContentTypeTable),
-					typeof (MigrationsVersionSixth.UpdateCmsContentTypeTable),
-					typeof (MigrationsVersionSixth.UpdateCmsContentVersionTable),
-					typeof (MigrationsVersionSixth.UpdateCmsPropertyTypeGroupTable)
-				});
-		}
+        }
 	}
 }
