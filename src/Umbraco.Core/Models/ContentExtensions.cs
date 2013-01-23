@@ -406,6 +406,7 @@ namespace Umbraco.Core.Models
 
 			//nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
 			//var nodeName = content.ContentType.Alias.ToUmbracoAlias(StringAliasCaseType.CamelCase, true);
+            var niceUrl = content.Name.FormatUrl().ToLower();
 			var nodeName = content.ContentType.Alias;
 
 			var x = content.ToXml(nodeName);
