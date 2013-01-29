@@ -62,8 +62,8 @@ namespace Umbraco.Web
 			// create the RoutingContext, and assign
 			var routingContext = new RoutingContext(
 				umbracoContext,
-				DocumentLookupsResolver.Current.DocumentLookups,
-				LastChanceLookupResolver.Current.LastChanceLookup,
+				IContentFinderResolver.Current.Finders,
+				IContentLastChanceFinderResolver.Current.Finder,
 				PublishedContentStoreResolver.Current.PublishedContentStore,
 				niceUrls);
 			umbracoContext.RoutingContext = routingContext;
@@ -80,9 +80,9 @@ namespace Umbraco.Web
 				return;
 
 			if (UmbracoContext.Current == null)
-				throw new NullReferenceException("The UmbracoContext.Current is null, ProcessRequest cannot proceed unless there is a current UmbracoContext");
+				throw new InvalidOperationException("The UmbracoContext.Current is null, ProcessRequest cannot proceed unless there is a current UmbracoContext");
 			if (UmbracoContext.Current.RoutingContext == null)
-				throw new NullReferenceException("The UmbracoContext.RoutingContext has not been assigned, ProcessRequest cannot proceed unless there is a RoutingContext assigned to the UmbracoContext");
+				throw new InvalidOperationException("The UmbracoContext.RoutingContext has not been assigned, ProcessRequest cannot proceed unless there is a RoutingContext assigned to the UmbracoContext");
 
 			var umbracoContext = UmbracoContext.Current;		
 
@@ -101,16 +101,26 @@ namespace Umbraco.Web
 
 			// ok, process
 
-			var uri = umbracoContext.OriginalRequestUrl;
+			// note: requestModule.UmbracoRewrite also did some stripping of &umbPage
+			// from the querystring... that was in v3.x to fix some issues with pre-forms
+			// auth. Paul Sterling confirmed in jan. 2013 that we can get rid of it.
 
-			// legacy - no idea what this is but does something with the query strings
-			LegacyCleanUmbPageFromQueryString(ref uri);
-
-			// instanciate a request a process
+			// instanciate, prepare and process the published content request
 			// important to use CleanedUmbracoUrl - lowercase path-only version of the current url
-			var docreq = new PublishedContentRequest(umbracoContext.CleanedUmbracoUrl, umbracoContext.RoutingContext);
-			docreq.ProcessRequest(httpContext, umbracoContext, 
-				docreq2 => RewriteToUmbracoHandler(HttpContext.Current, uri.Query, docreq2.RenderingEngine));
+			var pcr = new PublishedContentRequest(umbracoContext.CleanedUmbracoUrl, umbracoContext.RoutingContext);
+			umbracoContext.PublishedContentRequest = pcr;
+			pcr.Prepare();
+			if (pcr.IsRedirect)
+			{
+				httpContext.Response.Redirect(pcr.RedirectUrl, true);
+				return;
+			}
+			if (pcr.Is404)
+				httpContext.Response.StatusCode = 404;
+			if (!pcr.HasPublishedContent)
+				httpContext.RemapHandler(new PublishedContentNotFoundHandler());
+			else
+				RewriteToUmbracoHandler(httpContext, pcr);
 		}
 
 		/// <summary>
@@ -307,22 +317,33 @@ namespace Umbraco.Web
 		/// <param name="context"></param>
 		/// <param name="currentQuery"></param>
 		/// <param name="engine"> </param>
-		private void RewriteToUmbracoHandler(HttpContext context, string currentQuery, RenderingEngine engine)
+		private void RewriteToUmbracoHandler(HttpContextBase context, PublishedContentRequest pcr)
 		{
+			// NOTE: we do not want to use TransferRequest even though many docs say it is better with IIS7, turns out this is
+			// not what we need. The purpose of TransferRequest is to ensure that .net processes all of the rules for the newly
+			// rewritten url, but this is not what we want!
+			// read: http://forums.iis.net/t/1146511.aspx
 
-			//NOTE: We do not want to use TransferRequest even though many docs say it is better with IIS7, turns out this is
-			//not what we need. The purpose of TransferRequest is to ensure that .net processes all of the rules for the newly
-			//rewritten url, but this is not what we want!
-			// http://forums.iis.net/t/1146511.aspx
+			string query = pcr.Uri.Query.TrimStart(new[] { '?' });
 
 			string rewritePath;
-			switch (engine)
+
+            if (pcr.RenderingEngine == RenderingEngine.Unknown)
+            {
+                // Unkwnown means that no template was found. Default to Mvc because Mvc supports hijacking
+                // routes which sometimes doesn't require a template since the developer may want full control
+                // over the rendering. Can't do it in WebForms, so Mvc it is. And Mvc will also handle what to
+                // do if no template or hijacked route is exist.
+                pcr.RenderingEngine = RenderingEngine.Mvc;
+            }
+
+			switch (pcr.RenderingEngine)
 			{
 				case RenderingEngine.Mvc:
 					// GlobalSettings.Path has already been through IOHelper.ResolveUrl() so it begins with / and vdir (if any)
 					rewritePath = GlobalSettings.Path.TrimEnd(new[] { '/' }) + "/RenderMvc";
-					// we rewrite the path to the path of the handler (i.e. default.aspx or /umbraco/RenderMvc )
-					context.RewritePath(rewritePath, "", currentQuery.TrimStart(new[] { '?' }), false);
+					// rewrite the path to the path of the handler (i.e. /umbraco/RenderMvc)
+					context.RewritePath(rewritePath, "", query, false);
 
 					//if it is MVC we need to do something special, we are not using TransferRequest as this will 
 					//require us to rewrite the path with query strings and then reparse the query strings, this would 
@@ -333,63 +354,20 @@ namespace Umbraco.Web
 					//we also cannot re-create this functionality because the setter for the HttpContext.Request.RequestContext is internal
 					//so really, this is pretty much the only way without using Server.TransferRequest and if we did that, we'd have to rethink
 					//a bunch of things!
-
 					var urlRouting = new UrlRoutingModule();
-					urlRouting.PostResolveRequestCache(new HttpContextWrapper(context));
-
+					urlRouting.PostResolveRequestCache(context);
 					break;
+
 				case RenderingEngine.WebForms:
-				default:
 					rewritePath = "~/default.aspx";
-					// rewrite the path to the path of the handler (i.e. default.aspx or /umbraco/RenderMvc )
-					context.RewritePath(rewritePath, "", currentQuery.TrimStart(new[] { '?' }), false);
-
+					// rewrite the path to the path of the handler (i.e. default.aspx)
+					context.RewritePath(rewritePath, "", query, false);
 					break;
-			}
 
+                default:
+                    throw new Exception("Invalid RenderingEngine.");
+            }
 		}
-
-		#region Legacy
-
-		// "Clean umbPage from querystring, caused by .NET 2.0 default Auth Controls"
-		// but really, at the moment I have no idea what this does, and why...
-		// SD: I also have no idea what this does, I've googled umbPage and really nothing shows up
-		internal static void LegacyCleanUmbPageFromQueryString(ref Uri uri)
-		{
-			string receivedQuery = uri.Query;
-			string path = uri.AbsolutePath;
-			string query = null;
-
-			if (receivedQuery.Length > 0)
-			{
-				// Clean umbPage from querystring, caused by .NET 2.0 default Auth Controls
-				if (receivedQuery.IndexOf("umbPage") > 0)
-				{
-					int ampPos = receivedQuery.IndexOf('&');
-					// query contains no ampersand?
-					if (ampPos < 0)
-					{
-						// no ampersand means no original query string
-						query = String.Empty;
-						// ampersand would occur past then end the of received query
-						ampPos = receivedQuery.Length;
-					}
-					else
-					{
-						// original query string past ampersand
-						query = receivedQuery.Substring(ampPos + 1,
-														receivedQuery.Length - ampPos - 1);
-					}
-					// get umbPage out of query string (9 = "&umbPage".Length() + 1)
-					path = receivedQuery.Substring(9, ampPos - 9); //this will fail if there are < 9 characters before the &umbPage query string
-
-					// --added when refactoring--
-					uri = uri.Rewrite(path, query);
-				}
-			}
-		}
-
-		#endregion
 
 		#region IHttpModule
 
