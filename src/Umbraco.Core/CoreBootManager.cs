@@ -2,9 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Umbraco.Core.Configuration;
 using Umbraco.Core.Logging;
 using Umbraco.Core.ObjectResolution;
+using Umbraco.Core.Persistence;
+using Umbraco.Core.Persistence.Mappers;
+using Umbraco.Core.Persistence.Migrations;
+using Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionSix;
+using Umbraco.Core.Persistence.UnitOfWork;
 using Umbraco.Core.PropertyEditors;
+using Umbraco.Core.Publishing;
+using Umbraco.Core.Services;
+using MigrationsVersionFourNineZero = Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionFourNineZero;
 
 namespace Umbraco.Core
 {
@@ -14,7 +23,7 @@ namespace Umbraco.Core
 	/// <remarks>
 	/// This does not provide any startup functionality relating to web objects
 	/// </remarks>
-	internal class CoreBootManager : IBootManager
+	public class CoreBootManager : IBootManager
 	{
 
 		private DisposableTimer _timer;
@@ -32,8 +41,20 @@ namespace Umbraco.Core
 			LogHelper.Info<CoreBootManager>("Umbraco application starting");
 			_timer = DisposableTimer.Start(x => LogHelper.Info<CoreBootManager>("Umbraco application startup complete" + " (took " + x + "ms)"));
 
+			//create database and service contexts for the app context
+			var dbFactory = new DefaultDatabaseFactory(GlobalSettings.UmbracoConnectionName);
+		    Database.Mapper = new PetaPocoMapper();
+			var dbContext = new DatabaseContext(dbFactory);
+			var serviceContext = new ServiceContext(
+				new PetaPocoUnitOfWorkProvider(dbFactory), 
+				new FileUnitOfWorkProvider(), 
+				new PublishingStrategy());
+			
 			//create the ApplicationContext
-			ApplicationContext = ApplicationContext.Current = new ApplicationContext();
+			ApplicationContext = ApplicationContext.Current = new ApplicationContext(dbContext, serviceContext);
+
+            //initialize the DatabaseContext
+			dbContext.Initialize();
 
 			InitializeResolvers();
 
@@ -93,6 +114,9 @@ namespace Umbraco.Core
 		/// </summary>
 		protected virtual void InitializeResolvers()
 		{
+			RepositoryResolver.Current = new RepositoryResolver(
+				new RepositoryFactory());
+
 			CacheRefreshersResolver.Current = new CacheRefreshersResolver(
 				() => PluginManager.Current.ResolveCacheRefreshers());
 
@@ -108,12 +132,36 @@ namespace Umbraco.Core
 			ActionsResolver.Current = new ActionsResolver(
 				() => PluginManager.Current.ResolveActions());
 
+            MacroPropertyTypeResolver.Current = new MacroPropertyTypeResolver(
+                PluginManager.Current.ResolveMacroPropertyTypes());
+
+            //TODO: Y U NO WORK?
+            //MigrationResolver.Current = new MigrationResolver(
+            //    PluginManager.Current.ResolveMigrationTypes());
+            
+			//the database migration objects
+			MigrationResolver.Current = new MigrationResolver(new List<Type>
+				{
+					typeof (MigrationsVersionFourNineZero.RemoveUmbracoAppConstraints),
+					typeof (DeleteAppTables),
+					typeof (EnsureAppsTreesUpdated),
+					typeof (MoveMasterContentTypeData),
+					typeof (NewCmsContentType2ContentTypeTable),
+					typeof (RemoveMasterContentTypeColumn),
+					typeof (RenameCmsTabTable),
+					typeof (RenameTabIdColumn),
+					typeof (UpdateCmsContentTypeAllowedContentTypeTable),
+					typeof (UpdateCmsContentTypeTable),
+					typeof (UpdateCmsContentVersionTable),
+					typeof (UpdateCmsPropertyTypeGroupTable)
+				});
+
 			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
 				PluginManager.Current.ResolvePropertyEditorValueConverters());
 			//add the internal ones, these are not public currently so need to add them manually
 			PropertyEditorValueConvertersResolver.Current.AddType<DatePickerPropertyEditorValueConverter>();
 			PropertyEditorValueConvertersResolver.Current.AddType<TinyMcePropertyEditorValueConverter>();
 			PropertyEditorValueConvertersResolver.Current.AddType<YesNoPropertyEditorValueConverter>();
-		}
+        }
 	}
 }

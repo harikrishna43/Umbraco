@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Web;
 using System.Xml.Linq;
 using umbraco.DataLayer;
@@ -240,24 +239,6 @@ namespace umbraco.BusinessLogic
         /// <param name="action">The action.</param>
         public static void MakeNew(bool silent, bool initialize, byte sortOrder, string applicationAlias, string alias, string title, string iconClosed, string iconOpened, string assemblyName, string type, string action)
         {
-
-            //            SqlHelper.ExecuteNonQuery(@"insert into umbracoAppTree(treeSilent, treeInitialize, treeSortOrder, appAlias, treeAlias, treeTitle, 
-            //                                        treeIconClosed, treeIconOpen, treeHandlerAssembly, treeHandlerType, action) 
-            //                                        values(@treeSilent, @treeInitialize, @treeSortOrder, @appAlias, @treeAlias, @treeTitle, @treeIconClosed, @treeIconOpen, @treeHandlerAssembly, @treeHandlerType, @action)"
-            //                                        ,
-            //                SqlHelper.CreateParameter("@treeSilent", silent),
-            //                SqlHelper.CreateParameter("@treeInitialize", initialize),
-            //                SqlHelper.CreateParameter("@treeSortOrder", sortOrder),
-            //                SqlHelper.CreateParameter("@treeAlias", alias),
-            //                SqlHelper.CreateParameter("@appAlias", applicationAlias),
-            //                SqlHelper.CreateParameter("@treeTitle", title),
-            //                SqlHelper.CreateParameter("@treeIconClosed", iconClosed),
-            //                SqlHelper.CreateParameter("@treeIconOpen", iconOpened),
-            //                SqlHelper.CreateParameter("@treeHandlerAssembly", assemblyName),
-            //                SqlHelper.CreateParameter("@treeHandlerType", type),
-            //                SqlHelper.CreateParameter("@action", action)
-            //                );
-
             LoadXml(doc =>
             {
                 var el = doc.Root.Elements("add").SingleOrDefault(x => x.Attribute("alias").Value == alias && x.Attribute("application").Value == applicationAlias);
@@ -285,22 +266,6 @@ namespace umbraco.BusinessLogic
         /// </summary>
         public void Save()
         {
-            //            SqlHelper.ExecuteNonQuery(@"Update umbracoAppTree set treeSilent = @treeSilent, treeInitialize = @treeInitialize, treeSortOrder = @treeSortOrder, treeTitle = @treeTitle, 
-            //                                        treeIconClosed = @treeIconClosed, treeIconOpen = @treeIconOpen, treeHandlerAssembly = @treeHandlerAssembly, treeHandlerType = @treeHandlerType, action = @action 
-            //                                        where treeAlias = @treeAlias AND appAlias = @appAlias",
-            //                SqlHelper.CreateParameter("@treeSilent", this.Silent),
-            //                SqlHelper.CreateParameter("@treeInitialize", this.Initialize),
-            //                SqlHelper.CreateParameter("@treeSortOrder", this.SortOrder),
-            //                SqlHelper.CreateParameter("@treeTitle", this.Title),
-            //                SqlHelper.CreateParameter("@treeIconClosed", this.IconClosed),
-            //                SqlHelper.CreateParameter("@treeIconOpen", this.IconOpened),
-            //                SqlHelper.CreateParameter("@treeHandlerAssembly", this.AssemblyName),
-            //                SqlHelper.CreateParameter("@treeHandlerType", this.Type),
-            //                SqlHelper.CreateParameter("@treeAlias", this.Alias),
-            //                SqlHelper.CreateParameter("@appAlias", this.ApplicationAlias),
-            //                SqlHelper.CreateParameter("@action", this.Action)
-            //                );
-
             LoadXml(doc =>
             {
                 var el = doc.Root.Elements("add").SingleOrDefault(x => x.Attribute("alias").Value == this.Alias && x.Attribute("application").Value == this.ApplicationAlias);
@@ -422,28 +387,6 @@ namespace umbraco.BusinessLogic
                 {
                     var list = new List<ApplicationTree>();
 
-                    //                        using (IRecordsReader dr = SqlHelper.ExecuteReader(@"Select treeSilent, treeInitialize, treeSortOrder, appAlias, treeAlias, treeTitle, treeIconClosed, 
-                    //                                                                treeIconOpen, treeHandlerAssembly, treeHandlerType, action from umbracoAppTree order by treeSortOrder"))
-                    //                        {
-                    //                            while (dr.Read())
-                    //                            {
-
-                    //                                list.Add(new ApplicationTree(
-                    //                                    dr.GetBoolean("treeSilent"),
-                    //                                    dr.GetBoolean("treeInitialize"),
-                    //                                    dr.GetByte("treeSortOrder"),
-                    //                                    dr.GetString("appAlias"),
-                    //                                    dr.GetString("treeAlias"),
-                    //                                    dr.GetString("treeTitle"),
-                    //                                    dr.GetString("treeIconClosed"),
-                    //                                    dr.GetString("treeIconOpen"),
-                    //                                    dr.GetString("treeHandlerAssembly"),
-                    //                                    dr.GetString("treeHandlerType"),
-                    //                                    dr.GetString("action")));
-
-                    //                            }
-                    //                        }
-
                     LoadXml(doc =>
                     {
                         foreach (var addElement in doc.Root.Elements("add").OrderBy(x =>
@@ -461,7 +404,7 @@ namespace umbraco.BusinessLogic
                                              addElement.Attribute("title").Value,
                                              addElement.Attribute("iconClosed").Value,
                                              addElement.Attribute("iconOpen").Value,
-                                             addElement.Attribute("assembly").Value,
+											 (string)addElement.Attribute("assembly"), //this could be empty: http://issues.umbraco.org/issue/U4-1360
                                              addElement.Attribute("type").Value,
                                              addElement.Attribute("action") != null ? addElement.Attribute("action").Value : ""));
                         }
