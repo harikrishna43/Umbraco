@@ -298,8 +298,16 @@ namespace Umbraco.Core.Models
             return new Tuple<int, int, string>(widthTh, heightTh, newFileName);
         }
 
+		/// <summary>
+		/// Gets the <see cref="IProfile"/> for the Creator of this media item.
+		/// </summary>
+		public static IProfile GetCreatorProfile(this IMedia media)
+		{
+            return ApplicationContext.Current.Services.UserService.GetProfileById(media.CreatorId);
+        }
+
         /// <summary>
-        /// Gets the <see cref="IProfile"/> for the Creator of this content/media item.
+        /// Gets the <see cref="IProfile"/> for the Creator of this content item.
         /// </summary>
         public static IProfile GetCreatorProfile(this IContentBase content)
         {
@@ -334,11 +342,12 @@ namespace Umbraco.Core.Models
         /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
         public static XElement ToXml(this IContent content)
         {
-            //nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
-            var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
+			//nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
+			var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
 
             var x = content.ToXml(nodeName);
             x.Add(new XAttribute("nodeType", content.ContentType.Id));
+            //TODO see below, do we have the same issues with GetXxxProfile threading problems?
             x.Add(new XAttribute("creatorName", content.GetCreatorProfile().Name));
             x.Add(new XAttribute("writerName", content.GetWriterProfile().Name));
             x.Add(new XAttribute("writerID", content.WriterId));
@@ -363,7 +372,9 @@ namespace Umbraco.Core.Models
 
             var x = media.ToXml(nodeName);
             x.Add(new XAttribute("nodeType", media.ContentType.Id));
-            x.Add(new XAttribute("writerName", media.GetCreatorProfile().Name));
+            //TODO Using the GetCreatorProfile extension method seems to be causing threading/connection problems because of the way the repo is used
+            //x.Add(new XAttribute("writerName", media.GetCreatorProfile().Name));
+            x.Add(new XAttribute("writerName", string.Empty));
             x.Add(new XAttribute("writerID", media.CreatorId));
             x.Add(new XAttribute("version", media.Version));
             x.Add(new XAttribute("template", 0));
@@ -385,7 +396,7 @@ namespace Umbraco.Core.Models
         {
             var niceUrl = contentBase.Name.FormatUrl().ToLower();
 
-            var xml = new XElement(nodeName,
+			var xml = new XElement(nodeName,
                                    new XAttribute("id", contentBase.Id),
                                    new XAttribute("parentID", contentBase.Level > 1 ? contentBase.ParentId : -1),
                                    new XAttribute("level", contentBase.Level),
@@ -399,19 +410,19 @@ namespace Umbraco.Core.Models
                                    new XAttribute("isDoc", ""));
 
             foreach (var property in contentBase.Properties)
-            {
-                if (property == null) continue;
+			{
+				if (property == null) continue;
 
-                xml.Add(property.ToXml());
+				xml.Add(property.ToXml());
 
-                //Check for umbracoUrlName convention
+				//Check for umbracoUrlName convention
                 if (property.Alias == "umbracoUrlName" && property.Value != null && 
                         property.Value.ToString().Trim() != string.Empty)
-                    xml.SetAttributeValue("urlName", property.Value);
-            }
+					xml.SetAttributeValue("urlName", property.Value);
+			}
 
-            return xml;
-        }
+			return xml;
+		}
 
         /// <summary>
         /// Creates the xml representation for the <see cref="IContent"/> object

@@ -274,7 +274,7 @@ namespace Umbraco.Web.Mvc
 					//the template Alias should always be already saved with a safe name.
                     //if there are hyphens in the name and there is a hijacked route, then the Action will need to be attributed
                     // with the action name attribute.
-                    var templateName = publishedContentRequest.Template.Alias.Split('.')[0];
+					var templateName = publishedContentRequest.Template.Split('.')[0];
 					def.ActionName = templateName;
 				}
 	
@@ -282,6 +282,30 @@ namespace Umbraco.Web.Mvc
 			
 
 			return def;
+		}
+
+		internal IHttpHandler GetHandlerOnMissingTemplate(PublishedContentRequest pcr)
+		{
+            // missing template, so we're in a 404 here
+            // so the content, if any, is a custom 404 page of some sort
+
+			if (!pcr.HasPublishedContent)
+				// means the builder could not find a proper document to handle 404
+				return new PublishedContentNotFoundHandler();
+
+			if (!pcr.HasTemplate)
+				// means the engine could find a proper document, but the document has no template
+				// at that point there isn't much we can do and there is no point returning
+				// to Mvc since Mvc can't do much
+				return new PublishedContentNotFoundHandler("In addition, no template exists to render the custom 404.");
+
+            // so we have a template, so we should have a rendering engine
+            if (pcr.RenderingEngine == RenderingEngine.WebForms) // back to webforms ?                
+                return (global::umbraco.UmbracoDefault)System.Web.Compilation.BuildManager.CreateInstanceFromVirtualPath("~/default.aspx", typeof(global::umbraco.UmbracoDefault));
+            else if (pcr.RenderingEngine != RenderingEngine.Mvc) // else ?
+                return new PublishedContentNotFoundHandler("In addition, no rendering engine exists to render the custom 404.");
+
+			return null;
 		}
 
 		/// <summary>
@@ -304,13 +328,15 @@ namespace Umbraco.Web.Mvc
 			//we want to return a blank page, but we'll leave that up to the NoTemplateHandler.
 			if (!publishedContentRequest.HasTemplate && !routeDef.HasHijackedRoute)
 			{
-				var handler = publishedContentRequest.ProcessNoTemplateInMvc(requestContext.HttpContext);
-				//though this code should never execute if the ProcessNoTemplateInMvc method redirects, it seems that we should check it
-				//and return null, this could be required for unit testing as well
+				publishedContentRequest.UpdateOnMissingTemplate(); // will go 404
 				if (publishedContentRequest.IsRedirect)
 				{
+					requestContext.HttpContext.Response.Redirect(publishedContentRequest.RedirectUrl, true);
 					return null;
 				}
+				if (publishedContentRequest.Is404) // should always be the case
+					requestContext.HttpContext.Response.StatusCode = 404;
+				var handler = GetHandlerOnMissingTemplate(publishedContentRequest);
 
 				// if it's not null it can be either the PublishedContentNotFoundHandler (no document was
 				// found to handle 404, or document with no template was found) or the WebForms handler 
