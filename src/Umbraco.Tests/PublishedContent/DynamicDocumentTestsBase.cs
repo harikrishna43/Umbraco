@@ -419,7 +419,6 @@ namespace Umbraco.Tests.PublishedContent
 			Assert.AreEqual("<div>This is some content</div>", asDynamic.Content.ToString());
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Children_With_Pluralized_Alias()
 		{
