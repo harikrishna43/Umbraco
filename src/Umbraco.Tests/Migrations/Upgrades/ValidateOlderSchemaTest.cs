@@ -58,8 +58,6 @@ namespace Umbraco.Tests.Migrations.Upgrades
 
             UmbracoSettings.UseLegacyXmlSchema = false;
 
-            Resolution.Freeze();
-
             //Delete database file before continueing
             string filePath = string.Concat(Path, "\\UmbracoPetaPocoTests.sdf");
             if (File.Exists(filePath))
@@ -69,6 +67,8 @@ namespace Umbraco.Tests.Migrations.Upgrades
 
             //Get the connectionstring settings from config
             var settings = ConfigurationManager.ConnectionStrings[Core.Configuration.GlobalSettings.UmbracoConnectionName];
+
+            Resolution.Freeze();
 
             //Create the Sql CE database
             var engine = new SqlCeEngine(settings.ConnectionString);
@@ -81,7 +81,7 @@ namespace Umbraco.Tests.Migrations.Upgrades
         public virtual void TearDown()
         {
             SyntaxConfig.SqlSyntaxProvider = null;
-            Resolution.IsFrozen = false;
+            Resolution.Reset();
 
             TestHelper.CleanContentDirectories();
 
