@@ -38,4 +38,5 @@ using System.Security.Permissions;
 [assembly: InternalsVisibleTo("Umbraco.Core")]
 [assembly: InternalsVisibleTo("Umbraco.Web")]
 [assembly: InternalsVisibleTo("Umbraco.Web.UI")]
+[assembly: InternalsVisibleTo("UmbracoExamine")]
 [assembly: InternalsVisibleTo("Umbraco.Courier.Persistence")]

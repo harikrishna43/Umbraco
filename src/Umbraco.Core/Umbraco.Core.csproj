@@ -47,6 +47,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
+    <Reference Include="System.Data.Entity" />
     <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\SqlServerCE.4.0.0.0\lib\System.Data.SqlServerCe.dll</HintPath>
@@ -96,6 +97,7 @@
     </Compile>
     <Compile Include="ActivatorHelper.cs" />
     <Compile Include="ApplicationContext.cs" />
+    <Compile Include="ApplicationEventHandler.cs" />
     <Compile Include="AssemblyExtensions.cs" />
     <Compile Include="Attempt.cs" />
     <Compile Include="Auditing\AuditTrail.cs" />
@@ -201,6 +203,18 @@
     <Compile Include="Persistence\Caching\IRepositoryCacheProvider.cs" />
     <Compile Include="Persistence\Caching\NullCacheProvider.cs" />
     <Compile Include="Persistence\Caching\RuntimeCacheProvider.cs" />
+    <Compile Include="Persistence\FaultHandling\ITransientErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryingEventArgs.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryLimitExceededException.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryPolicy.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryPolicyFactory.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\ExponentialBackoff.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\FixedInterval.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\Incremental.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\NetworkConnectivityErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\SqlAzureTransientErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\ThrottlingCondition.cs" />
     <Compile Include="Persistence\Mappers\PetaPocoMapper.cs" />
     <Compile Include="Persistence\DatabaseAnnotations\ConstraintAttribute.cs" />
     <Compile Include="Persistence\DatabaseAnnotations\SpecialDbTypeAttribute.cs" />
@@ -392,6 +406,8 @@
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\UpdateCmsContentVersionTable.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\UpdateCmsPropertyTypeGroupTable.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\RenameCmsTabTable.cs" />
+    <Compile Include="Persistence\PetaPocoCommandExtensions.cs" />
+    <Compile Include="Persistence\PetaPocoConnectionExtensions.cs" />
     <Compile Include="Persistence\PetaPocoExtensions.cs" />
     <Compile Include="Persistence\PetaPocoSqlExtensions.cs" />
     <Compile Include="Persistence\Querying\PocoToSqlExpressionHelper.cs" />
@@ -440,7 +456,7 @@
     <Compile Include="Persistence\Repositories\UserTypeRepository.cs" />
     <Compile Include="Persistence\Repositories\VersionableRepositoryBase.cs" />
     <Compile Include="Persistence\RepositoryFactory.cs" />
-    <Compile Include="ObjectResolution\LazyManyObjectsResolverbase.cs" />
+    <Compile Include="ObjectResolution\LazyManyObjectsResolverBase.cs" />
     <Compile Include="Persistence\RepositoryResolver.cs" />
     <Compile Include="Persistence\SqlSyntax\ColumnInfo.cs" />
     <Compile Include="Persistence\SqlSyntax\DbTypes.cs" />
@@ -605,7 +621,7 @@
     <Compile Include="Logging\AsynchronousRollingFileAppender.cs" />
     <Compile Include="Logging\LoggingTaskExtension.cs" />
     <Compile Include="Logging\LogHelper.cs" />
-    <Compile Include="ObjectResolution\MacroFieldEditorsResolver.cs" />
+    <Compile Include="Macros\MacroFieldEditorsResolver.cs" />
     <Compile Include="Macros\PersistableMacroProperty.cs" />
     <Compile Include="ObjectExtensions.cs" />
     <Compile Include="PropertyEditors\PropertyEditorValueConvertersResolver.cs" />
