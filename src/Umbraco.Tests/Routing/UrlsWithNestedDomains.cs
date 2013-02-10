@@ -37,25 +37,24 @@ namespace Umbraco.Tests.Routing
 			Assert.AreEqual("http://domain2.com/1001-1-1/", routingContext.NiceUrlProvider.GetNiceUrl(100111, true));
 
 			// check that the proper route has been cached
-			var cachedRoutes = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedRoutes();
+			var cachedRoutes = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedRoutes();
 			Assert.AreEqual("10011/1001-1-1", cachedRoutes[100111]);
 
 			// route a rogue url
 			url = "http://domain1.com/1001-1/1001-1-1";
 			var uri = routingContext.UmbracoContext.CleanedUmbracoUrl; //very important to use the cleaned up umbraco url
-			var docreq = new PublishedContentRequest(uri, routingContext);
-			var builder = new PublishedContentRequestBuilder(docreq);
-			builder.LookupDomain();
-			Assert.IsTrue(docreq.HasDomain);
+			var pcr = new PublishedContentRequest(uri, routingContext);
+			pcr.Engine.FindDomain();
+			Assert.IsTrue(pcr.HasDomain);
 
 			// check that it's been routed
-			var lookup = new LookupByNiceUrl();
-			var result = lookup.TrySetDocument(docreq);
+			var lookup = new ContentFinderByNiceUrl();
+			var result = lookup.TryFindDocument(pcr);
 			Assert.IsTrue(result);
-			Assert.AreEqual(100111, docreq.DocumentId);
+			Assert.AreEqual(100111, pcr.PublishedContent.Id);
 
 			// has the cache been polluted?
-			cachedRoutes = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedRoutes();
+			cachedRoutes = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedRoutes();
 			Assert.AreEqual("10011/1001-1-1", cachedRoutes[100111]); // no
 			//Assert.AreEqual("1001/1001-1/1001-1-1", cachedRoutes[100111]); // yes
 
@@ -63,6 +62,14 @@ namespace Umbraco.Tests.Routing
 			Assert.AreEqual("http://domain2.com/1001-1-1/", routingContext.NiceUrlProvider.GetNiceUrl(100111)); // good
 			//Assert.AreEqual("http://domain1.com/1001-1/1001-1-1", routingContext.NiceUrlProvider.GetNiceUrl(100111, true)); // bad
 		}
+
+        public override void Initialize()
+        {
+            base.Initialize();
+
+            // ensure we can create them although the content is not in the database
+            TestHelper.DropForeignKeys("umbracoDomains");
+        }
 
 		public override void TearDown()
 		{

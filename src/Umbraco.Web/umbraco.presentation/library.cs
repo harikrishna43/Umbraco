@@ -12,6 +12,7 @@ using System.Xml.XPath;
 using Umbraco.Core;
 using Umbraco.Core.Logging;
 using Umbraco.Web;
+using Umbraco.Web.Cache;
 using Umbraco.Web.Routing;
 using Umbraco.Web.Templates;
 using umbraco.BusinessLogic;
@@ -190,9 +191,7 @@ namespace umbraco
         public static void UnPublishSingleNode(int DocumentId)
         {            
             if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.Remove(
-                    new Guid("27ab3022-3dfa-47b6-9119-5945bc88fd66"),
-                    DocumentId);
+                DistributedCache.Instance.RemovePageCache(DocumentId);
             else
                 content.Instance.ClearDocumentCache(DocumentId);
         }
@@ -205,9 +204,7 @@ namespace umbraco
         internal static void UnPublishSingleNode(Document document)
         {
             if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.Remove(
-                    new Guid("27ab3022-3dfa-47b6-9119-5945bc88fd66"),
-                    document.Id);
+                DistributedCache.Instance.RemovePageCache(document.Id);
             else
                 content.Instance.ClearDocumentCache(document);
         }
@@ -235,12 +232,7 @@ namespace umbraco
         /// </remarks>
         internal static void UpdateDocumentCache(Document doc)
         {
-            if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.Refresh(
-                    new Guid("27ab3022-3dfa-47b6-9119-5945bc88fd66"),
-                    doc.Id);
-            else
-                content.Instance.UpdateDocumentCache(doc);
+            DistributedCache.Instance.RefreshPageCache(doc.Id);
         }
 
 
@@ -253,23 +245,13 @@ namespace umbraco
         {
             UpdateDocumentCache(DocumentId);
         }
-
-
-
+        
         /// <summary>
         /// Refreshes the xml cache for all nodes
         /// </summary>
         public static void RefreshContent()
         {
-
-            if (UmbracoSettings.UseDistributedCalls)
-            {
-                dispatcher.RefreshAll(new Guid("27ab3022-3dfa-47b6-9119-5945bc88fd66"));
-            }
-            else
-            {
-                content.Instance.RefreshContentFromDatabaseAsync();
-            }
+            DistributedCache.Instance.RefreshAllPageCache();
         }
 
         /// <summary>
@@ -279,13 +261,7 @@ namespace umbraco
         [Obsolete("Please use: umbraco.library.RefreshContent")]
         public static string RePublishNodes(int nodeID)
         {
-            //PPH - added dispatcher support to this call..
-            if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.RefreshAll(new Guid("27ab3022-3dfa-47b6-9119-5945bc88fd66"));
-            else
-            {
-                content.Instance.RefreshContentFromDatabaseAsync();
-            }
+            DistributedCache.Instance.RefreshAllPageCache();
 
             return string.Empty;
         }
@@ -1854,49 +1830,28 @@ namespace umbraco
             return new CMSNode(NodeId).Relations;
         }
 
-
-
+        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMedia instead")]
         public static void ClearLibraryCacheForMedia(int mediaId)
         {
-            if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.Refresh(
-                    new Guid("B29286DD-2D40-4DDB-B325-681226589FEC"),
-                    mediaId);
-            else
-                ClearLibraryCacheForMediaDo(mediaId);
+            DistributedCache.Instance.RemoveMediaCache(mediaId);      
         }
 
+        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMedia with the allServers flag set to false instead")]
         public static void ClearLibraryCacheForMediaDo(int mediaId)
         {
-            Media m = new Media(mediaId);
-            if (m.nodeObjectType == Media._objectType)
-            {
-                foreach (string id in m.Path.Split(','))
-                {
-                    Cache.ClearCacheByKeySearch(String.Format("UL_{0}_{1}_True", GETMEDIA_CACHE_KEY, id));
-
-                    // Also clear calls that only query this specific item!
-                    if (id == m.Id.ToString())
-                        Cache.ClearCacheByKeySearch(String.Format("UL_{0}_{1}", GETMEDIA_CACHE_KEY, id));
-
-                }
-            }
+            DistributedCache.Instance.RemoveMediaCache(mediaId);
         }
 
+        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMember instead")]
         public static void ClearLibraryCacheForMember(int mediaId)
         {
-            if (UmbracoSettings.UseDistributedCalls)
-                dispatcher.Refresh(
-                    new Guid("E285DF34-ACDC-4226-AE32-C0CB5CF388DA"),
-                    mediaId);
-            else
-                ClearLibraryCacheForMemberDo(mediaId);
+            DistributedCache.Instance.RefreshMemberCache(mediaId);
         }
 
-
+        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMember with the allServers flag set to false instead")]
         public static void ClearLibraryCacheForMemberDo(int memberId)
         {
-            Cache.ClearCacheByKeySearch(String.Format("UL_{0}_{1}", GETMEMBER_CACHE_KEY, memberId));
+            DistributedCache.Instance.RefreshMemberCache(memberId);
         }
 
         /// <summary>

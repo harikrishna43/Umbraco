@@ -12,6 +12,7 @@ using Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionSix;
 using Umbraco.Core.Persistence.UnitOfWork;
 using Umbraco.Core.PropertyEditors;
 using Umbraco.Core.Publishing;
+using Umbraco.Core.Macros;
 using Umbraco.Core.Services;
 using MigrationsVersionFourNineZero = Umbraco.Core.Persistence.Migrations.Upgrades.TargetVersionFourNineZero;
 
@@ -97,6 +98,8 @@ namespace Umbraco.Core
             {
                 CanResolveBeforeFrozen = true
             };
+            //add custom types here that are internal
+            ApplicationEventsResolver.Current.AddType<PublishedContentHelper>();
         }
 
 		/// <summary>
