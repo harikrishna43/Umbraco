@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -18,6 +19,90 @@ namespace Umbraco.Core.Models
 {
     public static class ContentExtensions
     {
+        #region IContent
+        /// <summary>
+        /// Returns a list of the current contents ancestors, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Ancestors(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetAncestors(content);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents children.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Children(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetChildren(content.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents descendants, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Descendants(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetDescendants(content);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current content.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An <see cref="IContent"/> object</returns>
+        public static IContent Parent(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetById(content.ParentId);
+        }
+        #endregion
+
+        #region IMedia
+        /// <summary>
+        /// Returns a list of the current medias ancestors, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Ancestors(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetAncestors(media);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias children.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Children(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetChildren(media.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias descendants, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Descendants(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetDescendants(media);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current media.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An <see cref="IMedia"/> object</returns>
+        public static IMedia Parent(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetById(media.ParentId);
+        }
+        #endregion
+
         /// <summary>
         /// Set property values by alias with an annonymous object
         /// </summary>
@@ -298,8 +383,16 @@ namespace Umbraco.Core.Models
             return new Tuple<int, int, string>(widthTh, heightTh, newFileName);
         }
 
+		/// <summary>
+		/// Gets the <see cref="IProfile"/> for the Creator of this media item.
+		/// </summary>
+		public static IProfile GetCreatorProfile(this IMedia media)
+		{
+            return ApplicationContext.Current.Services.UserService.GetProfileById(media.CreatorId);
+        }
+
         /// <summary>
-        /// Gets the <see cref="IProfile"/> for the Creator of this content/media item.
+        /// Gets the <see cref="IProfile"/> for the Creator of this content item.
         /// </summary>
         public static IProfile GetCreatorProfile(this IContentBase content)
         {
@@ -334,8 +427,8 @@ namespace Umbraco.Core.Models
         /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
         public static XElement ToXml(this IContent content)
         {
-            //nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
-            var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
+			//nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
+			var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
 
             var x = content.ToXml(nodeName);
             x.Add(new XAttribute("nodeType", content.ContentType.Id));
@@ -385,7 +478,7 @@ namespace Umbraco.Core.Models
         {
             var niceUrl = contentBase.Name.FormatUrl().ToLower();
 
-            var xml = new XElement(nodeName,
+			var xml = new XElement(nodeName,
                                    new XAttribute("id", contentBase.Id),
                                    new XAttribute("parentID", contentBase.Level > 1 ? contentBase.ParentId : -1),
                                    new XAttribute("level", contentBase.Level),
@@ -399,19 +492,19 @@ namespace Umbraco.Core.Models
                                    new XAttribute("isDoc", ""));
 
             foreach (var property in contentBase.Properties)
-            {
-                if (property == null) continue;
+			{
+				if (property == null) continue;
 
-                xml.Add(property.ToXml());
+				xml.Add(property.ToXml());
 
-                //Check for umbracoUrlName convention
+				//Check for umbracoUrlName convention
                 if (property.Alias == "umbracoUrlName" && property.Value != null && 
                         property.Value.ToString().Trim() != string.Empty)
                     xml.SetAttributeValue("urlName", property.Value.ToString().FormatUrl().ToLower());
-            }
+			}
 
-            return xml;
-        }
+			return xml;
+		}
 
         /// <summary>
         /// Creates the xml representation for the <see cref="IContent"/> object
