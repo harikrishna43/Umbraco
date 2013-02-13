@@ -31,7 +31,7 @@ namespace Umbraco.Tests.Migrations.Upgrades
 
             UmbracoSettings.UseLegacyXmlSchema = false;
            
-			MigrationResolver.Current = new MigrationResolver(new List<Type>
+			MigrationResolver.Current = new MigrationResolver(() => new List<Type>
 				{
 					typeof (Core.Persistence.Migrations.Upgrades.TargetVersionFourNineZero.RemoveUmbracoAppConstraints),
 					typeof (DeleteAppTables),
@@ -95,7 +95,6 @@ namespace Umbraco.Tests.Migrations.Upgrades
             PluginManager.Current = null;
             SyntaxConfig.SqlSyntaxProvider = null;
 			MigrationResolver.Reset();
-	        Resolution.IsFrozen = false;
 
             TestHelper.CleanContentDirectories();
 

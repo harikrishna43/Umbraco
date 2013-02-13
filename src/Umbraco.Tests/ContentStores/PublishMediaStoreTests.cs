@@ -18,10 +18,15 @@ namespace Umbraco.Tests.ContentStores
 	{
 		public override void Initialize()
 		{
-			base.Initialize();
-			//we're going to use the same initialization as the PublishedMediaTests
-			PublishedMediaTests.DoInitialization(GetUmbracoContext("/test", 1234));			
+			base.Initialize();				
 		}
+
+        protected override void OnFreezing()
+        {
+            base.OnFreezing();
+            //we're going to use the same initialization as the PublishedMediaTests
+            PublishedMediaTests.DoInitialization(GetUmbracoContext("/test", 1234));		
+        }
 
 		public override void TearDown()
 		{
@@ -29,7 +34,6 @@ namespace Umbraco.Tests.ContentStores
 			PublishedMediaTests.DoTearDown();
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Root_Docs()
 		{
@@ -48,7 +52,6 @@ namespace Umbraco.Tests.ContentStores
 
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Item_Without_Examine()
 		{
