@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using Umbraco.Core.Configuration;
+using Umbraco.Core.Models;
 
 namespace Umbraco.Core.Sync
 {
@@ -25,19 +26,19 @@ namespace Umbraco.Core.Sync
             _xmlServers = xmlServers;
         }
 
-        private List<IServerRegistration> _addresses;
+        private List<IServerAddress> _addresses;
 
-        public IEnumerable<IServerRegistration> Registrations
+        public IEnumerable<IServerAddress> Registrations
         {
             get
             {
                 if (_addresses == null)
                 {
-                    _addresses = new List<IServerRegistration>();
+                    _addresses = new List<IServerAddress>();
                     var nodes = _xmlServers.SelectNodes("./server");
                     foreach (XmlNode n in nodes)
                      {
-                         _addresses.Add(new ConfigServerRegistration(n));
+                         _addresses.Add(new ConfigServerAddress(n));
                      }
                 }
                 return _addresses;
