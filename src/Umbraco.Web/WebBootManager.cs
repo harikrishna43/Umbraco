@@ -7,8 +7,10 @@ using Umbraco.Core;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.Dictionary;
 using Umbraco.Core.Dynamics;
+using Umbraco.Core.Logging;
 using Umbraco.Core.ObjectResolution;
 using Umbraco.Core.PropertyEditors;
+using Umbraco.Core.Sync;
 using Umbraco.Web.Dictionary;
 using Umbraco.Web.Media;
 using Umbraco.Web.Media.ThumbnailProviders;
@@ -16,8 +18,10 @@ using Umbraco.Web.Models;
 using Umbraco.Web.Mvc;
 using Umbraco.Web.PropertyEditors;
 using Umbraco.Web.Routing;
+using umbraco.BusinessLogic;
 using umbraco.businesslogic;
 using umbraco.cms.businesslogic;
+using umbraco.presentation.cache;
 
 
 namespace Umbraco.Web
@@ -81,6 +85,8 @@ namespace Umbraco.Web
             base.InitializeApplicationEventsResolver();
             ApplicationEventsResolver.Current.AddType<CacheHelperExtensions.CacheHelperApplicationEventListener>();
             ApplicationEventsResolver.Current.AddType<LegacyScheduledTasks>();
+            //We need to remove these types because we've obsoleted them and we don't want them executing:
+            ApplicationEventsResolver.Current.RemoveType<global::umbraco.LibraryCacheRefresher>();
         }
 
         /// <summary>
@@ -170,10 +176,32 @@ namespace Umbraco.Web
         {
             base.InitializeResolvers();
 
-            //TODO: This needs to be removed in future versions (i.e. 6.0 when the PublishedContentHelper can access the business logic)
-            // see the TODO noted in the PublishedContentHelper.
-            PublishedContentHelper.GetDataTypeCallback = ContentType.GetDataType;
+            //we should not proceed to change this if the app/database is not configured since there will 
+            // be no user, plus we don't need to have server messages sent if this is the case.
+            if (ApplicationContext.IsConfigured && ApplicationContext.DatabaseContext.IsDatabaseConfigured)
+            {
+                var user = User.GetUser(UmbracoSettings.DistributedCallUser);
+                try
+                {
+                    //Override the ServerMessengerResolver to set a username/password for the distributed calls
+                    ServerMessengerResolver.Current.SetServerMessenger(new DefaultServerMessenger(
+                            user.LoginName,
+                            user.GetPassword()));  
+                }
+                catch (Exception e)
+                {
+                    LogHelper.Error<WebBootManager>("An error occurred trying to set the IServerMessenger during application startup", e);   
+                }
+            }
 
+            //We are going to manually remove a few cache refreshers here because we've obsoleted them and we don't want them
+            // to be registered more than once
+            CacheRefreshersResolver.Current.RemoveType<pageRefresher>();
+            CacheRefreshersResolver.Current.RemoveType<global::umbraco.presentation.cache.MediaLibraryRefreshers>();
+            CacheRefreshersResolver.Current.RemoveType<global::umbraco.presentation.cache.MemberLibraryRefreshers>();
+            CacheRefreshersResolver.Current.RemoveType<global::umbraco.templateCacheRefresh>();
+            CacheRefreshersResolver.Current.RemoveType<global::umbraco.macroCacheRefresh>();
+            
             SurfaceControllerResolver.Current = new SurfaceControllerResolver(
                 PluginManager.Current.ResolveSurfaceControllers());
 
@@ -193,24 +221,24 @@ namespace Umbraco.Web
 						typeof (RenderControllerFactory)
 					});
 
-            // the legacy 404 will run from within LookupByNotFoundHandlers below
-            // so for the time being there is no last chance lookup
-			LastChanceLookupResolver.Current = new LastChanceLookupResolver();
+            // the legacy 404 will run from within ContentFinderByNotFoundHandlers below
+            // so for the time being there is no last chance finder
+			ContentLastChanceFinderResolver.Current = new ContentLastChanceFinderResolver();
 
-            DocumentLookupsResolver.Current = new DocumentLookupsResolver(
-                //add all known resolvers in the correct order, devs can then modify this list on application startup either by binding to events
-                //or in their own global.asax
-                new[]
+			ContentFinderResolver.Current = new ContentFinderResolver(
+				//add all known resolvers in the correct order, devs can then modify this list on application startup either by binding to events
+				//or in their own global.asax
+				new[]
 					{
-						typeof (LookupByPageIdQuery),
-						typeof (LookupByNiceUrl),
-						typeof (LookupByIdPath),
-                        // these will be handled by LookupByNotFoundHandlers
+						typeof (ContentFinderByPageIdQuery),
+						typeof (ContentFinderByNiceUrl),
+						typeof (ContentFinderByIdPath),
+                        // these will be handled by ContentFinderByNotFoundHandlers
                         // so they can be enabled/disabled even though resolvers are not public yet
-						//typeof (LookupByNiceUrlAndTemplate),
-						//typeof (LookupByProfile),
-						//typeof (LookupByAlias),
-                        typeof (LookupByNotFoundHandlers)
+						//typeof (ContentFinderByNiceUrlAndTemplate),
+						//typeof (ContentFinderByProfile),
+						//typeof (ContentFinderByUrlAlias),
+                        typeof (ContentFinderByNotFoundHandlers)
 					});
 
             RoutesCacheResolver.Current = new RoutesCacheResolver(new DefaultRoutesCache(_isForTesting == false));
