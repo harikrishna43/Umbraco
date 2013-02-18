@@ -42,6 +42,7 @@ namespace Umbraco.Tests.ContentStores
 			PublishedMediaTests.DoTearDown();
 		}
 
+        [Ignore]
 		[Test]
 		public void Get_Root_Docs()
 		{
@@ -60,6 +61,7 @@ namespace Umbraco.Tests.ContentStores
 
 		}
 
+        [Ignore]
 		[Test]
 		public void Get_Item_Without_Examine()
 		{
