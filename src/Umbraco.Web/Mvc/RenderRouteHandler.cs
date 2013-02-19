@@ -178,16 +178,14 @@ namespace Umbraco.Web.Mvc
 		/// <param name="routeDefinition">The original route definition that would normally be used to route if it were not a POST</param>
 		private IHttpHandler HandlePostedValues(RequestContext requestContext, PostedDataProxyInfo postedInfo, RouteDefinition routeDefinition)
 		{
-			var standardArea = Umbraco.Core.Configuration.GlobalSettings.UmbracoMvcArea;
-
 			//set the standard route values/tokens
 			requestContext.RouteData.Values["controller"] = postedInfo.ControllerName;
 			requestContext.RouteData.Values["action"] = postedInfo.ActionName;
-			requestContext.RouteData.DataTokens["area"] = postedInfo.Area;
 
             IHttpHandler handler;
             
             //get the route from the defined routes
+			if (!postedInfo.Area.IsNullOrWhiteSpace())
 		    using (RouteTable.Routes.GetReadLock())
 		    {
 		        Route surfaceRoute;
@@ -206,13 +204,16 @@ namespace Umbraco.Web.Mvc
 		            surfaceRoute = RouteTable.Routes.OfType<Route>()
 		                                         .SingleOrDefault(x => x.Defaults != null &&
 		                                                               x.Defaults.ContainsKey("controller") &&
-		                                                               x.Defaults["controller"].ToString() == postedInfo.ControllerName &&
+						                      x.Defaults["controller"].ToString().InvariantEquals(postedInfo.ControllerName) &&
 		                                                               x.DataTokens.ContainsKey("area") &&
-		                                                               x.DataTokens["area"].ToString() == postedInfo.Area);		            
+						                      x.DataTokens["area"].ToString().InvariantEquals(postedInfo.Area));
 		        }
 
                 if (surfaceRoute == null)
                     throw new InvalidOperationException("Could not find a Surface controller route in the RouteTable for controller name " + postedInfo.ControllerName);
+                    
+                    requestContext.RouteData.DataTokens["area"] = surfaceRoute.DataTokens["area"];
+                    
                 //set the 'Namespaces' token so the controller factory knows where to look to construct it
                 if (surfaceRoute.DataTokens.ContainsKey("Namespaces"))
                 {
@@ -222,8 +223,6 @@ namespace Umbraco.Web.Mvc
 
 		    }
 
-		    //store the original URL this came in on
-			requestContext.RouteData.DataTokens["umbraco-item-url"] = requestContext.HttpContext.Request.Url.AbsolutePath;
 			//store the original route definition
 			requestContext.RouteData.DataTokens["umbraco-route-def"] = routeDefinition;
 

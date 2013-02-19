@@ -117,7 +117,7 @@ namespace Umbraco.Web
             //Create the front-end route
             var defaultRoute = RouteTable.Routes.MapRoute(
                 "Umbraco_default",
-                "Umbraco/RenderMvc/{action}/{id}",
+                umbracoPath + "/RenderMvc/{action}/{id}",
                 new { controller = "RenderMvc", action = "Index", id = UrlParameter.Optional }
                 );
             defaultRoute.RouteHandler = new RenderRouteHandler(ControllerBuilder.Current.GetControllerFactory());
@@ -133,9 +133,9 @@ namespace Umbraco.Web
             //Create the REST/web/script service routes
             var webServiceRoutes = RouteTable.Routes.MapRoute(
                 "Umbraco_web_services",
-                "Umbraco/RestServices/{controller}/{action}/{id}",
-                new {controller = "SaveFileController", action = "Index", id = UrlParameter.Optional},
-                //VERY IMPORTANT! for this route, only match controllers in this namespace!
+                umbracoPath + "/RestServices/{controller}/{action}/{id}",
+                new { controller = "SaveFileController", action = "Index", id = UrlParameter.Optional },
+                //look in this namespace for controllers
                 new string[] { "Umbraco.Web.WebServices" }
                 );
             webServiceRoutes.DataTokens.Add("area", umbracoPath);
