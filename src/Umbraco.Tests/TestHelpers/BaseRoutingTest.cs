@@ -3,10 +3,10 @@ using System.Linq;
 using System.Web.Routing;
 using NUnit.Framework;
 using Umbraco.Core.Configuration;
+using Umbraco.Core.Models;
 using Umbraco.Tests.Stubs;
 using Umbraco.Web;
 using Umbraco.Web.Routing;
-using umbraco.cms.businesslogic.template;
 
 namespace Umbraco.Tests.TestHelpers
 {
@@ -25,30 +25,35 @@ namespace Umbraco.Tests.TestHelpers
 			ConfigurationManager.AppSettings.Set("umbracoHideTopLevelNodeFromPath", "");					
 		}
 
-		/// <summary>
-		/// Return a new RoutingContext
-		/// </summary>
-		/// <param name="url"></param>
-		/// <param name="templateId">
-		/// The template Id to insert into the Xml cache file for each node, this is helpful for unit testing with templates but you		 
-		/// should normally create the template in the database with this id
-		///</param>
-		/// <param name="routeData"></param>
-		/// <returns></returns>
-		protected RoutingContext GetRoutingContext(string url, int templateId, RouteData routeData = null)
+	    ///  <summary>
+	    ///  Return a new RoutingContext
+	    ///  </summary>
+	    ///  <param name="url"></param>
+	    ///  <param name="templateId">
+	    ///  The template Id to insert into the Xml cache file for each node, this is helpful for unit testing with templates but you		 
+	    ///  should normally create the template in the database with this id
+	    /// </param>
+	    ///  <param name="routeData"></param>
+	    /// <param name="setUmbracoContextCurrent">set to true to also set the singleton UmbracoContext.Current to the context created with this method</param>
+	    /// <returns></returns>
+	    protected RoutingContext GetRoutingContext(string url, int templateId, RouteData routeData = null, bool setUmbracoContextCurrent = false)
 		{
 			var umbracoContext = GetUmbracoContext(url, templateId, routeData);
 			var contentStore = new DefaultPublishedContentStore();
 			var niceUrls = new NiceUrlProvider(contentStore, umbracoContext);
 			var routingContext = new RoutingContext(
 				umbracoContext,
-				Enumerable.Empty<IPublishedContentLookup>(),
-				new FakeLastChanceLookup(),
+				Enumerable.Empty<IContentFinder>(),
+				new FakeLastChanceFinder(),
 				contentStore,
-				niceUrls);
+				niceUrls,
+                GetRoutesCache());
 
 			//assign the routing context back to the umbraco context
 			umbracoContext.RoutingContext = routingContext;
+
+	        if (setUmbracoContextCurrent)
+	            UmbracoContext.Current = umbracoContext;
 
 			return routingContext;
 		}

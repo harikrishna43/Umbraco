@@ -55,8 +55,7 @@ namespace Umbraco.Tests.Persistence
 
             //reset the app context
             ApplicationContext.Current = null;
-            Resolution.IsFrozen = false;
-
+			
             RepositoryResolver.Reset();
         }
 
