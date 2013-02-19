@@ -47,8 +47,8 @@ namespace Umbraco.Tests.Routing
 		/// <summary>
 		/// This checks that when we retreive a NiceUrl for multiple items that there are no issues with cache overlap 
 		/// and that they are all cached correctly.
-		/// </summary>
-		[Ignore]
+        /// </summary>
+        [Ignore]
 		[Test]
 		public void Ensure_Cache_Is_Correct()
 		{
@@ -108,7 +108,6 @@ namespace Umbraco.Tests.Routing
 		[TestCase(1178, "/home/sub1/custom-sub-2/")]
 		[TestCase(1175, "/home/sub-2/")]
 		[TestCase(1172, "/test-page/")]
-
 		public void Get_Nice_Url_Not_Hiding_Top_Level(int nodeId, string niceUrlMatch)
 		{
 			var routingContext = GetRoutingContext("/test", 1111);
@@ -132,7 +131,6 @@ namespace Umbraco.Tests.Routing
 		[TestCase(1178, "/sub1/custom-sub-2/")]
 		[TestCase(1175, "/sub-2/")]
 		[TestCase(1172, "/test-page/")] // not hidden because not first root
-
 		public void Get_Nice_Url_Hiding_Top_Level(int nodeId, string niceUrlMatch)
 		{
 			var routingContext = GetRoutingContext("/test", 1111);
