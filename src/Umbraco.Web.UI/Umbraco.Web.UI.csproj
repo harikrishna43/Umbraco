@@ -259,18 +259,92 @@
     <Compile Include="Install\Default.aspx.designer.cs">
       <DependentUpon>default.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Install\Steps\Skinning\loadStarterKitDesigns.ascx.cs">
-      <DependentUpon>loadStarterKitDesigns.ascx</DependentUpon>
+    <Compile Include="Install\InstallerRestService.aspx.cs">
+      <DependentUpon>InstallerRestService.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\InstallerRestService.aspx.designer.cs">
+      <DependentUpon>InstallerRestService.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\Database.ascx.cs">
+      <DependentUpon>database.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\Database.ascx.designer.cs">
+      <DependentUpon>database.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\DefaultUser.ascx.cs">
+      <DependentUpon>defaultUser.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\DefaultUser.ascx.designer.cs">
+      <DependentUpon>defaultUser.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\License.ascx.cs">
+      <DependentUpon>license.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\License.ascx.designer.cs">
+      <DependentUpon>license.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\Renaming.ascx.cs">
+      <DependentUpon>renaming.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\Renaming.ascx.designer.cs">
+      <DependentUpon>renaming.ascx</DependentUpon>
     </Compile>
     <Compile Include="Install\Steps\Skinning\loadStarterKitDesigns.ascx.designer.cs">
       <DependentUpon>loadStarterKitDesigns.ascx</DependentUpon>
     </Compile>
     <Compile Include="Install\Steps\Skinning\LoadStarterKits.ascx.cs">
+      <DependentUpon>loadStarterKits.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Install\Steps\Skinning\LoadStarterKits.ascx.designer.cs">
       <DependentUpon>loadStarterKits.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\StarterKits.ascx.cs">
+      <DependentUpon>StarterKits.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\StarterKits.ascx.designer.cs">
+      <DependentUpon>StarterKits.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\Skinning\loadStarterKitDesigns.ascx.cs">
+      <DependentUpon>loadStarterKitDesigns.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\StepUserControl.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\TheEnd.ascx.cs">
+      <DependentUpon>theend.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\TheEnd.ascx.designer.cs">
+      <DependentUpon>theend.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\ValidatePermissions.ascx.cs">
+      <DependentUpon>validatePermissions.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\ValidatePermissions.ascx.designer.cs">
+      <DependentUpon>validatePermissions.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Steps\Welcome.ascx.cs">
+      <DependentUpon>welcome.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Steps\Welcome.ascx.designer.cs">
+      <DependentUpon>welcome.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Install\Title.ascx.cs">
+      <DependentUpon>Title.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Install\Title.ascx.designer.cs">
+      <DependentUpon>Title.ascx</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Umbraco\Create\PartialViewMacro.ascx.cs">
@@ -300,6 +374,13 @@
     </Compile>
     <Compile Include="Umbraco\Dialogs\EditMacro.aspx.designer.cs">
       <DependentUpon>EditMacro.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Umbraco\Dialogs\Publish.aspx.cs">
+      <DependentUpon>publish.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Umbraco\Dialogs\Publish.aspx.designer.cs">
+      <DependentUpon>publish.aspx</DependentUpon>
     </Compile>
     <Compile Include="Umbraco\Masterpages\UmbracoDialog.master.cs">
       <SubType>ASPXCodeBehind</SubType>
@@ -345,7 +426,7 @@
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Umbraco\Umbraco.aspx.designer.cs">
-      <DependentUpon>Umbraco.aspx</DependentUpon>
+      <DependentUpon>umbraco.aspx</DependentUpon>
     </Compile>
     <Content Include="Config\Splashes\booting.aspx" />
     <Content Include="Config\Splashes\noNodes.aspx" />
@@ -379,6 +460,7 @@
     </None>
     <None Include="Config\umbracoSettings.Release.config">
       <DependentUpon>umbracoSettings.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Config\trees.Release.config">
       <DependentUpon>trees.config</DependentUpon>
@@ -406,6 +488,7 @@
     </None>
     <None Include="Config\ExamineIndex.Release.config">
       <DependentUpon>ExamineIndex.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Config\Dashboard.Release.config">
       <DependentUpon>Dashboard.config</DependentUpon>
@@ -638,6 +721,8 @@
     <Content Include="Umbraco_Client\Dialogs\CreateDialog.css" />
     <Content Include="Umbraco_Client\Dialogs\EditMacro.css" />
     <Content Include="Umbraco_Client\Dialogs\EditMacro.js" />
+    <Content Include="Umbraco_Client\Dialogs\PublishDialog.css" />
+    <Content Include="Umbraco_Client\Dialogs\PublishDialog.js" />
     <Content Include="Umbraco_Client\Dialogs\UmbracoField.js" />
     <Content Include="Umbraco_Client\Editors\EditMacro.css" />
     <Content Include="Umbraco_Client\Editors\EditView.js" />
@@ -1402,11 +1487,11 @@
     <Content Include="Umbraco_Client\Installer\Js\jquery.ui.selectmenu.js" />
     <Content Include="Install\Steps\database.ascx" />
     <Content Include="Install\Steps\renaming.ascx" />
-    <Content Include="Install\Steps\skinning.ascx" />
+    <Content Include="Install\Steps\StarterKits.ascx" />
     <Content Include="Install\Steps\Skinning\loadStarterKitDesigns.ascx" />
     <Content Include="Install\Steps\Skinning\loadStarterKits.ascx" />
     <Content Include="Install\Title.ascx" />
-    <Content Include="Install\Utills\p.aspx" />
+    <Content Include="Install\InstallerRestService.aspx" />
     <Content Include="Umbraco\Config\Lang\ko.xml" />
     <Content Include="Umbraco\Dashboard\ChangePassword.ascx" />
     <Content Include="Umbraco\Dashboard\DeveloperDashboardIntro.ascx" />
@@ -1820,7 +1905,9 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Config\ExamineSettings.config" />
-    <Content Include="Config\ExamineIndex.config" />
+    <Content Include="Config\ExamineIndex.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Config\scripting.config" />
     <Content Include="Config\Skinning.config" />
     <Content Include="Config\feedProxy.config" />
@@ -2161,7 +2248,6 @@
     <Content Include="Umbraco\Settings\Stylesheet\editstylesheet.aspx" />
     <Content Include="Umbraco\Settings\Stylesheet\Property\EditStyleSheetProperty.aspx" />
     <Content Include="Umbraco\Dialogs\sort.aspx" />
-    <Content Include="Umbraco\test.aspx" />
     <Content Include="Umbraco\tree.aspx" />
     <Content Include="Umbraco\treeInit.aspx" />
     <Content Include="Umbraco\umbraco.aspx" />
@@ -2285,7 +2371,9 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Config\tinyMceConfig.config" />
-    <Content Include="Config\umbracoSettings.config" />
+    <Content Include="Config\umbracoSettings.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Config\xsltExtensions.config" />
     <Content Include="Config\UrlRewriting.config" />
     <Content Include="Config\log4net.config" />

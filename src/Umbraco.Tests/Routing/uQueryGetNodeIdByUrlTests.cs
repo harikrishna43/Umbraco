@@ -16,14 +16,6 @@ namespace Umbraco.Tests.Routing
 	[TestFixture]
 	public class uQueryGetNodeIdByUrlTests : BaseRoutingTest
 	{
-		public override void TearDown()
-		{
-			base.TearDown();
-
-			ConfigurationManager.AppSettings.Set("umbracoUseDirectoryUrls", "");
-			ConfigurationManager.AppSettings.Set("umbracoHideTopLevelNodeFromPath", "");
-		}
-
 		internal override IRoutesCache GetRoutesCache()
 		{
 			return new DefaultRoutesCache(false);
@@ -35,8 +27,8 @@ namespace Umbraco.Tests.Routing
 
 			var url = "/test";
 			
-			var lookup = new Umbraco.Web.Routing.LookupByNiceUrl();
-			var lookups = new Umbraco.Web.Routing.IPublishedContentLookup[] { lookup };
+			var lookup = new Umbraco.Web.Routing.ContentFinderByNiceUrl();
+			var lookups = new Umbraco.Web.Routing.IContentFinder[] { lookup };
 
 			var t = Template.MakeNew("test", new User(0));
 
@@ -46,9 +38,10 @@ namespace Umbraco.Tests.Routing
 			var routingContext = new RoutingContext(
 				umbracoContext,
 				lookups,
-				new FakeLastChanceLookup(),
+				new FakeLastChanceFinder(),
 				contentStore,
-				niceUrls);
+				niceUrls,
+                GetRoutesCache());
 
 			//assign the routing context back to the umbraco context
 			umbracoContext.RoutingContext = routingContext;
@@ -70,10 +63,9 @@ namespace Umbraco.Tests.Routing
 
 		public void GetNodeIdByUrl_Not_Hiding_Top_Level_Absolute(int nodeId, string url)
 		{
-			
-			ConfigurationManager.AppSettings.Set("umbracoUseDirectoryUrls", "true");
-			ConfigurationManager.AppSettings.Set("umbracoHideTopLevelNodeFromPath", "false");
-			Umbraco.Core.Configuration.UmbracoSettings.UseDomainPrefixes = false;
+		    SettingsForTests.UseDirectoryUrls = true;
+		    SettingsForTests.HideTopLevelNodeFromPath = false;
+		    SettingsForTests.UseDomainPrefixes = false;
 
 			Assert.AreEqual(nodeId, global::umbraco.uQuery.GetNodeIdByUrl("http://example.com" + url));
 		}
@@ -89,9 +81,9 @@ namespace Umbraco.Tests.Routing
 
 		public void GetNodeIdByUrl_Not_Hiding_Top_Level_Relative(int nodeId, string url)
 		{
-			ConfigurationManager.AppSettings.Set("umbracoUseDirectoryUrls", "true");
-			ConfigurationManager.AppSettings.Set("umbracoHideTopLevelNodeFromPath", "false");
-			Umbraco.Core.Configuration.UmbracoSettings.UseDomainPrefixes = false;
+            SettingsForTests.UseDirectoryUrls = true;
+            SettingsForTests.HideTopLevelNodeFromPath = false;
+            SettingsForTests.UseDomainPrefixes = false;
 
 			Assert.AreEqual(nodeId, global::umbraco.uQuery.GetNodeIdByUrl(url));
 		}
