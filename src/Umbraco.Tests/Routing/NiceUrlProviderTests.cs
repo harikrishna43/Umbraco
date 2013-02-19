@@ -48,12 +48,12 @@ namespace Umbraco.Tests.Routing
 		/// This checks that when we retreive a NiceUrl for multiple items that there are no issues with cache overlap 
 		/// and that they are all cached correctly.
         /// </summary>
-        [Ignore]
 		[Test]
 		public void Ensure_Cache_Is_Correct()
 		{
 			var routingContext = GetRoutingContext("/test", 1111);
 			ConfigurationManager.AppSettings.Set("umbracoUseDirectoryUrls", "true");
+            Umbraco.Core.Configuration.UmbracoSettings.AddTrailingSlash = false;
 
 			var samples = new Dictionary<int, string> {
 				{ 1046, "/home" },
@@ -79,7 +79,7 @@ namespace Umbraco.Tests.Routing
 				Assert.AreEqual(randomSample.Value, result);
 			}
 
-			var cachedRoutes = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedRoutes();
+			var cachedRoutes = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedRoutes();
 			Assert.AreEqual(8, cachedRoutes.Count);
 
 			foreach (var sample in samples)
@@ -88,7 +88,7 @@ namespace Umbraco.Tests.Routing
 				Assert.AreEqual(sample.Value, cachedRoutes[sample.Key]);
 			}
 
-			var cachedIds = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedIds();
+			var cachedIds = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedIds();
 			Assert.AreEqual(8, cachedIds.Count);
 
 			foreach (var sample in samples)

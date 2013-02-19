@@ -14,6 +14,14 @@ namespace Umbraco.Tests.Routing
 	[TestFixture]
 	public class NiceUrlsProviderWithDomainsTests : BaseRoutingTest
 	{
+        public override void Initialize()
+        {
+            base.Initialize();
+
+            // ensure we can create them although the content is not in the database
+            TestHelper.DropForeignKeys("umbracoDomains");
+        }
+
 		public override void TearDown()
 		{
 			base.TearDown();
@@ -309,10 +317,10 @@ namespace Umbraco.Tests.Routing
 			ignore = routingContext.NiceUrlProvider.GetNiceUrl(100111, new Uri("http://domain2.com"), false);
 			ignore = routingContext.NiceUrlProvider.GetNiceUrl(1002, new Uri("http://domain2.com"), false);
 
-			var cachedRoutes = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedRoutes();
+			var cachedRoutes = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedRoutes();
 			Assert.AreEqual(7, cachedRoutes.Count);
 
-			var cachedIds = ((DefaultRoutesCache)routingContext.UmbracoContext.RoutesCache).GetCachedIds();
+			var cachedIds = ((DefaultRoutesCache)routingContext.RoutesCache).GetCachedIds();
 			Assert.AreEqual(7, cachedIds.Count);
 
 			CheckRoute(cachedRoutes, cachedIds, 1001, "1001/");
