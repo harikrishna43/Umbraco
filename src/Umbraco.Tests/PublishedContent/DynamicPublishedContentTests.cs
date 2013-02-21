@@ -16,10 +16,8 @@ namespace Umbraco.Tests.PublishedContent
 	{
 		public override void Initialize()
 		{
-			base.Initialize();
-
-			PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
-				new[]
+            PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
+                new[]
 					{
 						typeof(DatePickerPropertyEditorValueConverter),
 						typeof(TinyMcePropertyEditorValueConverter),
@@ -28,20 +26,24 @@ namespace Umbraco.Tests.PublishedContent
 
             UmbracoSettings.SettingsFilePath = Core.IO.IOHelper.MapPath(Core.IO.SystemDirectories.Config + Path.DirectorySeparatorChar, false);
 
-			//need to specify a custom callback for unit tests
-			PublishedContentHelper.GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
-				{
-					if (propertyAlias == "content")
-					{
-						//return the rte type id
-						return Guid.Parse("5e9b75ae-face-41c8-b47e-5f4b0fd82f83");
-					}
-					return Guid.Empty;
-				};
+            PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(new DefaultPublishedContentStore());
+
+            //need to specify a custom callback for unit tests
+            PublishedContentHelper.GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
+                {
+                    if (propertyAlias == "content")
+                    {
+                        //return the rte type id
+                        return Guid.Parse("5e9b75ae-face-41c8-b47e-5f4b0fd82f83");
+                    }
+                    return Guid.Empty;
+                };
+
+            base.Initialize();
 
 			var rCtx = GetRoutingContext("/test", 1234);
 			UmbracoContext.Current = rCtx.UmbracoContext;
-			PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(new DefaultPublishedContentStore());
+			
 		}
 
 		public override void TearDown()
