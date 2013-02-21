@@ -24,7 +24,9 @@ namespace umbraco.cms.businesslogic.datatype
         private Guid _controlId;
 
         private static Guid _objectType = new Guid("30a2a501-1978-4ddb-a57b-f7efed43ba3c");
-        #endregion
+	    private string _dbType;
+
+	    #endregion
 
         #region Constructors
 
@@ -74,7 +76,11 @@ namespace umbraco.cms.businesslogic.datatype
                     SqlHelper.CreateParameter("@id", value.Id));
                 _controlId = value.Id;
             }
-        }
+        } 
+	    internal string DbType
+	    {
+            get { return _dbType; }
+        } 
         #endregion
 
         #region Public methods
@@ -332,6 +338,7 @@ namespace umbraco.cms.businesslogic.datatype
                 if (dr.Read())
                 {
                     _controlId = dr.GetGuid("controlId");
+                    _dbType = dr.GetString("dbType");
                 }
                 else
                     throw new ArgumentException("No dataType with id = " + this.Id.ToString() + " found");
