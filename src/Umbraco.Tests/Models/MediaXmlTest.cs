@@ -17,7 +17,7 @@ namespace Umbraco.Tests.Models
         [SetUp]
         public override void Initialize()
         {
-            Resolution.IsFrozen = false;
+            Resolution.Reset();
 
             //this ensures its reset
             PluginManager.Current = new PluginManager();

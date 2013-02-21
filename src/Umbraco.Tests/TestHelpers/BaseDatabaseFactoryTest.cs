@@ -43,7 +43,7 @@ namespace Umbraco.Tests.TestHelpers
             if(ApplicationContext != null && DatabaseContext != null)
                 DatabaseContext.Database.Dispose();
             SqlCeContextGuardian.CloseBackgroundConnection();
-			
+
             try
             {
                 //Delete database file before continueing
@@ -73,15 +73,21 @@ namespace Umbraco.Tests.TestHelpers
             //Create the Sql CE database
             var engine = new SqlCeEngine(settings.ConnectionString);
             engine.CreateDatabase();
-
-            Resolution.Freeze();
+            
             ApplicationContext.Current = new ApplicationContext(
 				//assign the db context
 				new DatabaseContext(new DefaultDatabaseFactory()),
 				//assign the service context
 				new ServiceContext(new PetaPocoUnitOfWorkProvider(), new FileUnitOfWorkProvider(), new PublishingStrategy())) { IsReady = true };
 
+            FreezeResolution();
+
             InitializeDatabase();
+        }
+
+        protected virtual void FreezeResolution()
+        {
+            Resolution.Freeze();
         }
 
         protected virtual void InitializeDatabase()
@@ -105,17 +111,19 @@ namespace Umbraco.Tests.TestHelpers
 			SqlCeContextGuardian.CloseBackgroundConnection();
 			
 			ApplicationContext.Current = null;
-			Resolution.IsFrozen = false;
+			
 			RepositoryResolver.Reset();
+            Resolution.Reset();
 
             TestHelper.CleanContentDirectories();
 			
             string path = TestHelper.CurrentAssemblyDirectory;
             AppDomain.CurrentDomain.SetData("DataDirectory", null);
 
+            PluginManager.Current = null;
             SettingsForTests.Reset();
             UmbracoSettings.ResetSetters();
-
+            
             try
             {
                 string filePath = string.Concat(path, "\\UmbracoPetaPocoTests.sdf");
@@ -130,7 +138,7 @@ namespace Umbraco.Tests.TestHelpers
 
                 //We will swallow this exception! That's because a sub class might require further teardown logic.
             }
-
+                            
         }
 
 	    protected ApplicationContext ApplicationContext
@@ -152,8 +160,7 @@ namespace Umbraco.Tests.TestHelpers
         {
             var ctx = new UmbracoContext(
                 GetHttpContextFactory(url, routeData).HttpContext,
-                ApplicationContext,
-                GetRoutesCache());
+                ApplicationContext);
             SetupUmbracoContextForTest(ctx, templateId);
             return ctx;
         }

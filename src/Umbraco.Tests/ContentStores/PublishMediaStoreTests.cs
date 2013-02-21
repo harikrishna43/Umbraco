@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Xml;
 using Examine;
@@ -19,22 +18,16 @@ namespace Umbraco.Tests.ContentStores
 	{
 		public override void Initialize()
 		{
-			base.Initialize();
-            
-            var currDir = new DirectoryInfo(TestHelper.CurrentAssemblyDirectory);
-            System.IO.File.Copy(
-                currDir.Parent.Parent.Parent.GetDirectories("Umbraco.Web.UI")
-                    .First()
-                    .GetDirectories("config").First()
-                    .GetFiles("umbracoSettings.Release.config").First().FullName,
-                Path.Combine(currDir.Parent.Parent.FullName, "config", "umbracoSettings.config"),
-                true);
-
-            Core.Configuration.UmbracoSettings.SettingsFilePath = Core.IO.IOHelper.MapPath(Core.IO.SystemDirectories.Config + Path.DirectorySeparatorChar, false);
-		
-            //we're going to use the same initialization as the PublishedMediaTests
-			PublishedMediaTests.DoInitialization(GetUmbracoContext("/test", 1234));			
+			base.Initialize();				
 		}
+
+        protected override void FreezeResolution()
+        {
+            //we're going to use the same initialization as the PublishedMediaTests
+            PublishedMediaTests.DoInitialization(GetUmbracoContext("/test", 1234));		
+            
+            base.FreezeResolution();            
+        }
 
 		public override void TearDown()
 		{
@@ -42,7 +35,6 @@ namespace Umbraco.Tests.ContentStores
 			PublishedMediaTests.DoTearDown();
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Root_Docs()
 		{
@@ -61,7 +53,6 @@ namespace Umbraco.Tests.ContentStores
 
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Item_Without_Examine()
 		{
