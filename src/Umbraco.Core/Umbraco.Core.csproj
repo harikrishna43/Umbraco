@@ -47,6 +47,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
+    <Reference Include="System.Data.Entity" />
     <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\SqlServerCE.4.0.0.0\lib\System.Data.SqlServerCe.dll</HintPath>
@@ -60,6 +61,7 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Web.Helpers, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.Helpers.dll</HintPath>
@@ -72,6 +74,7 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.Razor.2.0.20715.0\lib\net40\System.Web.Razor.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web.Services" />
     <Reference Include="System.Web.WebPages, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.WebPages.dll</HintPath>
@@ -96,6 +99,7 @@
     </Compile>
     <Compile Include="ActivatorHelper.cs" />
     <Compile Include="ApplicationContext.cs" />
+    <Compile Include="ApplicationEventHandler.cs" />
     <Compile Include="AssemblyExtensions.cs" />
     <Compile Include="Attempt.cs" />
     <Compile Include="Auditing\AuditTrail.cs" />
@@ -166,6 +170,7 @@
     <Compile Include="Models\IDictionaryTranslation.cs" />
     <Compile Include="Models\IFile.cs" />
     <Compile Include="Models\ILanguage.cs" />
+    <Compile Include="Models\ServerRegistration.cs" />
     <Compile Include="Models\ITemplate.cs" />
     <Compile Include="Models\Language.cs" />
     <Compile Include="Models\Media.cs" />
@@ -190,6 +195,7 @@
     <Compile Include="Models\PublishedState.cs" />
     <Compile Include="Models\Rdbms\ContentType2ContentTypeDto.cs" />
     <Compile Include="Models\Rdbms\PropertyTypeGroupDto.cs" />
+    <Compile Include="Models\Rdbms\ServerRegistrationDto.cs" />
     <Compile Include="Models\Relation.cs" />
     <Compile Include="Models\RelationType.cs" />
     <Compile Include="Models\Script.cs" />
@@ -202,6 +208,19 @@
     <Compile Include="Persistence\Caching\IRepositoryCacheProvider.cs" />
     <Compile Include="Persistence\Caching\NullCacheProvider.cs" />
     <Compile Include="Persistence\Caching\RuntimeCacheProvider.cs" />
+    <Compile Include="Persistence\Factories\ServerRegistrationFactory.cs" />
+    <Compile Include="Persistence\FaultHandling\ITransientErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryingEventArgs.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryLimitExceededException.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryPolicy.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryPolicyFactory.cs" />
+    <Compile Include="Persistence\FaultHandling\RetryStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\ExponentialBackoff.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\FixedInterval.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\Incremental.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\NetworkConnectivityErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\Strategies\SqlAzureTransientErrorDetectionStrategy.cs" />
+    <Compile Include="Persistence\FaultHandling\ThrottlingCondition.cs" />
     <Compile Include="Persistence\Mappers\PetaPocoMapper.cs" />
     <Compile Include="Persistence\DatabaseAnnotations\ConstraintAttribute.cs" />
     <Compile Include="Persistence\DatabaseAnnotations\SpecialDbTypeAttribute.cs" />
@@ -262,6 +281,7 @@
     <Compile Include="Persistence\Mappers\PropertyTypeMapper.cs" />
     <Compile Include="Persistence\Mappers\RelationMapper.cs" />
     <Compile Include="Persistence\Mappers\RelationTypeMapper.cs" />
+    <Compile Include="Persistence\Mappers\ServerRegistrationMapper.cs" />
     <Compile Include="Persistence\Mappers\UserMapper.cs" />
     <Compile Include="Persistence\Mappers\UserTypeMapper.cs" />
     <Compile Include="Persistence\Migrations\IMigration.cs" />
@@ -382,6 +402,7 @@
     <Compile Include="Persistence\Migrations\Syntax\Update\UpdateBuilder.cs" />
     <Compile Include="Persistence\Migrations\Syntax\Update\UpdateDataBuilder.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionFourNineZero\RemoveUmbracoAppConstraints.cs" />
+    <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSixOneZero\CreateServerRegistryTable.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\DeleteAppTables.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\EnsureAppsTreesUpdated.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\MoveMasterContentTypeData.cs" />
@@ -393,6 +414,8 @@
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\UpdateCmsContentVersionTable.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\UpdateCmsPropertyTypeGroupTable.cs" />
     <Compile Include="Persistence\Migrations\Upgrades\TargetVersionSix\RenameCmsTabTable.cs" />
+    <Compile Include="Persistence\PetaPocoCommandExtensions.cs" />
+    <Compile Include="Persistence\PetaPocoConnectionExtensions.cs" />
     <Compile Include="Persistence\PetaPocoExtensions.cs" />
     <Compile Include="Persistence\PetaPocoSqlExtensions.cs" />
     <Compile Include="Persistence\Querying\PocoToSqlExpressionHelper.cs" />
@@ -435,13 +458,14 @@
     <Compile Include="Persistence\Repositories\RelationTypeRepository.cs" />
     <Compile Include="Persistence\Repositories\RepositoryBase.cs" />
     <Compile Include="Persistence\Repositories\ScriptRepository.cs" />
+    <Compile Include="Persistence\Repositories\ServerRegistrationRepository.cs" />
     <Compile Include="Persistence\Repositories\StylesheetRepository.cs" />
     <Compile Include="Persistence\Repositories\TemplateRepository.cs" />
     <Compile Include="Persistence\Repositories\UserRepository.cs" />
     <Compile Include="Persistence\Repositories\UserTypeRepository.cs" />
     <Compile Include="Persistence\Repositories\VersionableRepositoryBase.cs" />
     <Compile Include="Persistence\RepositoryFactory.cs" />
-    <Compile Include="ObjectResolution\LazyManyObjectsResolverbase.cs" />
+    <Compile Include="ObjectResolution\LazyManyObjectsResolverBase.cs" />
     <Compile Include="Persistence\RepositoryResolver.cs" />
     <Compile Include="Persistence\SqlSyntax\ColumnInfo.cs" />
     <Compile Include="Persistence\SqlSyntax\DbTypes.cs" />
@@ -606,7 +630,7 @@
     <Compile Include="Logging\AsynchronousRollingFileAppender.cs" />
     <Compile Include="Logging\LoggingTaskExtension.cs" />
     <Compile Include="Logging\LogHelper.cs" />
-    <Compile Include="ObjectResolution\MacroFieldEditorsResolver.cs" />
+    <Compile Include="Macros\MacroFieldEditorsResolver.cs" />
     <Compile Include="Macros\PersistableMacroProperty.cs" />
     <Compile Include="ObjectExtensions.cs" />
     <Compile Include="PropertyEditors\PropertyEditorValueConvertersResolver.cs" />
@@ -621,6 +645,8 @@
     <Compile Include="Publishing\BasePublishingStrategy.cs" />
     <Compile Include="Publishing\IPublishingStrategy.cs" />
     <Compile Include="Publishing\PublishingStrategy.cs" />
+    <Compile Include="Publishing\PublishStatus.cs" />
+    <Compile Include="Publishing\PublishStatusType.cs" />
     <Compile Include="RenderingEngine.cs" />
     <Compile Include="Serialization\AbstractSerializationService.cs" />
     <Compile Include="Serialization\Formatter.cs" />
@@ -648,8 +674,23 @@
     <Compile Include="Services\LocalizationService.cs" />
     <Compile Include="Services\MacroService.cs" />
     <Compile Include="Services\MediaService.cs" />
+    <Compile Include="Services\ServerRegistrationService.cs" />
     <Compile Include="Services\ServiceContext.cs" />
     <Compile Include="Services\UserService.cs" />
+    <Compile Include="Sync\DatabaseServerRegistrar.cs" />
+    <Compile Include="Sync\DefaultServerMessenger.cs" />
+    <Compile Include="Sync\ICacheRefresher.cs" />
+    <Compile Include="Sync\ServerSyncWebServiceClient.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Sync\ConfigServerAddress.cs" />
+    <Compile Include="Sync\IServerMessenger.cs" />
+    <Compile Include="Sync\IServerRegistrar.cs" />
+    <Compile Include="Sync\IServerAddress.cs" />
+    <Compile Include="Sync\MessageType.cs" />
+    <Compile Include="Sync\ServerMessengerResolver.cs" />
+    <Compile Include="Sync\ServerRegistrarResolver.cs" />
+    <Compile Include="Sync\ConfigServerRegistrar.cs" />
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="ReadLock.cs" />
     <Compile Include="TypeFinder.cs" />
