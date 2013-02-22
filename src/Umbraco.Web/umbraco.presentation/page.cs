@@ -98,7 +98,7 @@ namespace umbraco
 		internal page(PublishedContentRequest docreq)
 		{
 
-			if (!docreq.HasNode)
+			if (!docreq.HasPublishedContent)
 				throw new ArgumentException("Document request has no node.", "docreq");
 			
 			populatePageData(docreq.PublishedContent.Id,
@@ -109,7 +109,7 @@ namespace umbraco
 			if (docreq.HasTemplate)
 			{
 
-				this._template = docreq.Template.Id;
+				this._template = docreq.TemplateModel.Id;
 				_elements["template"] = _template.ToString();				
 			}
 
