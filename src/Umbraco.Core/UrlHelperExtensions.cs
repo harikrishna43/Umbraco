@@ -23,5 +23,26 @@ namespace Umbraco.Core
 			return result.TrimEnd("SavePartialView");
 		}
 
+        /// <summary>
+        /// Returns the base path (not including the 'action') of the MVC controller "BulkPublishController"
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string GetBulkPublishServicePath(this UrlHelper url)
+        {
+            var result = url.Action("PublishDocument", "BulkPublish", new { area = GlobalSettings.UmbracoMvcArea });
+            return result.TrimEnd("PublishDocument");
+        }
+
+        /// <summary>
+        /// Returns the base path (not including the 'action') of the MVC controller "CoreStringsController"
+        /// </summary>
+        /// <param name="url">The url helper.</param>
+        /// <returns>The base path of the controller.</returns>
+        public static string GetCoreStringsControllerPath(this UrlHelper url)
+        {
+            var result = url.Action("ToSafeAlias", "CoreStrings", new { area = GlobalSettings.UmbracoMvcArea });
+            return result.TrimEnd("ToSafeAlias");
+        }
 	}
 }
