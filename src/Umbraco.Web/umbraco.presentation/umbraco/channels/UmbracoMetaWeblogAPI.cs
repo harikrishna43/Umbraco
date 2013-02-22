@@ -47,8 +47,8 @@ namespace umbraco.presentation.channels
             if (validateUser(username, password))
             {
                 Channel userChannel = new Channel(username);
-                new Document(int.Parse(postid)).delete();
-                library.UnPublishSingleNode(int.Parse(postid));
+                new Document(int.Parse(postid))
+                    .delete();
                 return true;
             }
             return false;
@@ -83,8 +83,7 @@ namespace umbraco.presentation.channels
 
                 if (publish)
                 {
-                    doc.Publish(new User(username));
-                    library.UpdateDocumentCache(doc);
+                    doc.SaveAndPublish(new User(username));
                 }
                 return true;
             }
@@ -402,8 +401,7 @@ namespace umbraco.presentation.channels
 
                 if (publish)
                 {
-                    doc.Publish(new User(username));
-                    library.UpdateDocumentCache(doc);
+                    doc.SaveAndPublish(new User(username));
                 }
                 return doc.Id.ToString();
             }
