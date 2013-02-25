@@ -100,9 +100,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\xmlrpcnet.2.5.0\lib\net20\CookComputing.XmlRpcV2.dll</HintPath>
     </Reference>
-    <Reference Include="Examine, Version=0.1.43.2941, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Examine, Version=0.1.48.2941, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Examine.0.1.43.2941\lib\Examine.dll</HintPath>
+      <HintPath>..\packages\Examine.0.1.48.2941\lib\Examine.dll</HintPath>
     </Reference>
     <Reference Include="HtmlAgilityPack, Version=1.4.5.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -121,8 +121,12 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Web.Mvc.FixedDisplayModes">
-      <HintPath>..\packages\Microsoft.AspNet.Mvc.FixedDisplayModes.1.0.0\lib\net40\Microsoft.Web.Mvc.FixedDisplayModes.dll</HintPath>
+    <Reference Include="Microsoft.Web.Mvc.FixedDisplayModes, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.FixedDisplayModes.1.0.1\lib\net40\Microsoft.Web.Mvc.FixedDisplayModes.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NuGet.Core, Version=1.0.11220.104, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
@@ -150,6 +154,15 @@
       <Name>System.Drawing</Name>
     </Reference>
     <Reference Include="System.EnterpriseServices" />
+    <Reference Include="System.Net.Http, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Net.Http.2.0.20710.0\lib\net40\System.Net.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.Formatting, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.4.0.20710.0\lib\net40\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Net.Http.2.0.20710.0\lib\net40\System.Net.Http.WebRequest.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Abstractions">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -162,6 +175,12 @@
     <Reference Include="System.Web.Helpers, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.4.0.20710.0\lib\net40\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.4.0.20710.0\lib\net40\System.Web.Http.WebHost.dll</HintPath>
     </Reference>
     <Reference Include="System.Web.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
@@ -244,7 +263,6 @@
     </Compile>
     <Compile Include="ApplicationContextExtensions.cs" />
     <Compile Include="CacheHelperExtensions.cs" />
-    <Compile Include="Cache\CacheRefresherClient.cs" />
     <Compile Include="Cache\DistributedCache.cs" />
     <Compile Include="Cache\DistributedCacheExtensions.cs" />
     <Compile Include="Cache\CacheRefresherEventHandler.cs" />
@@ -253,6 +271,7 @@
     <Compile Include="Cache\MemberCacheRefresher.cs" />
     <Compile Include="Cache\PageCacheRefresher.cs" />
     <Compile Include="Cache\TemplateCacheRefresher.cs" />
+    <Compile Include="Cache\UserCacheRefresher.cs" />
     <Compile Include="Dynamics\DynamicExpression.cs" />
     <Compile Include="Dynamics\DynamicGrouping.cs" />
     <Compile Include="Dynamics\DynamicPublishedContentIdEqualityComparer.cs" />
@@ -302,9 +321,14 @@
     <Compile Include="Dictionary\UmbracoCultureDictionaryFactory.cs" />
     <Compile Include="Mvc\SurfaceAuthorizeAttribute.cs">
       <SubType>Code</SubType>
+    <Compile Include="Mvc\ControllerFactoryExtensions.cs" />
+    <Compile Include="Mvc\SurfaceRouteHandler.cs" />
     </Compile>
     <Compile Include="Mvc\UmbracoAuthorizeAttribute.cs" />
     <Compile Include="Mvc\UmbracoAuthorizedController.cs" />
+    <Compile Include="Mvc\UmbracoController.cs" />
+    <Compile Include="Mvc\UmbracoControllerFactory.cs" />
+    <Compile Include="Mvc\UmbracoMvcHandler.cs" />
     <Compile Include="Mvc\UmbracoViewPage.cs" />
     <Compile Include="PublishedContentExtensions.cs" />
     <Compile Include="ExamineExtensions.cs" />
@@ -353,8 +377,12 @@
     <Compile Include="Routing\ContentFinderByPageIdQuery.cs" />
     <Compile Include="Mvc\SurfaceControllerResolver.cs" />
     <Compile Include="Routing\ContentFinderByNotFoundHandlers.cs" />
+    <Compile Include="Routing\RoutableAttemptEventArgs.cs" />
     <Compile Include="Routing\NotFoundHandlerHelper.cs" />
+    <Compile Include="Routing\EnsureRoutableOutcome.cs" />
     <Compile Include="Routing\PublishedContentRequestEngine.cs" />
+    <Compile Include="Routing\WebServicesRouteConstraint.cs" />
+    <Compile Include="Search\ExamineDetailsModel.cs" />
     <Compile Include="Search\ExamineEvents.cs" />
     <Compile Include="Security\WebSecurity.cs" />
     <Compile Include="Strategies\DataTypes\LegacyUploadFieldWorkaround.cs" />
@@ -362,11 +390,13 @@
     <Compile Include="Strategies\Publishing\UpdateCacheAfterPublish.cs" />
     <Compile Include="Strategies\Publishing\UpdateCacheAfterUnPublish.cs" />
     <Compile Include="Strategies\Migrations\EnsureAppsTreesUpdatedOnUpgrade.cs" />
+    <Compile Include="Strategies\ServerRegistrationEventHandler.cs" />
     <Compile Include="Templates\TemplateRenderer.cs" />
     <Compile Include="Templates\TemplateUtilities.cs" />
     <Compile Include="Trees\PartialViewMacrosTree.cs" />
     <Compile Include="Trees\PartialViewsTree.cs" />
     <Compile Include="UI\Controls\InsertMacroSplitButton.cs" />
+    <Compile Include="UI\Controls\ProgressBar.cs" />
     <Compile Include="UI\Controls\UmbracoControl.cs" />
     <Compile Include="UI\Controls\UmbracoUserControl.cs">
       <SubType>ASPXCodeBehind</SubType>
@@ -409,6 +439,9 @@
     <Compile Include="umbraco.presentation\umbraco\dashboard.aspx.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
+    <Compile Include="umbraco.presentation\umbraco\dialogs\publish.aspx.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="umbraco.presentation\umbraco\editContent.aspx.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -429,6 +462,9 @@
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="umbraco.presentation\umbraco\macroResultWrapper.aspx.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="umbraco.presentation\umbraco\masterpages\default.Master.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="umbraco.presentation\umbraco\publishStatus.aspx.cs">
@@ -505,6 +541,7 @@
     <Compile Include="umbraco.presentation\umbraco\nodeFactory\Node.cs" />
     <Compile Include="umbraco.presentation\umbraco\nodeFactory\Nodes.cs" />
     <Compile Include="umbraco.presentation\umbraco\nodeFactory\Property.cs" />
+    <Compile Include="Routing\UmbracoRequestEventArgs.cs" />
     <Compile Include="UmbracoUserControl.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -857,13 +894,6 @@
     </Compile>
     <Compile Include="umbraco.presentation\umbraco\dialogs\TemplateSkinning.aspx.designer.cs">
       <DependentUpon>TemplateSkinning.aspx</DependentUpon>
-    </Compile>
-    <Compile Include="umbraco.presentation\umbraco\js\UmbracoCasingRules.aspx.cs">
-      <DependentUpon>UmbracoCasingRules.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="umbraco.presentation\umbraco\js\UmbracoCasingRules.aspx.designer.cs">
-      <DependentUpon>UmbracoCasingRules.aspx</DependentUpon>
     </Compile>
     <Compile Include="umbraco.presentation\umbraco\LiveEditing\CanvasClientDependencyProvider.cs">
       <SubType>Code</SubType>
@@ -1233,13 +1263,6 @@
     <Compile Include="umbraco.presentation\umbraco\dialogs\protectPage.aspx.designer.cs">
       <DependentUpon>protectPage.aspx</DependentUpon>
     </Compile>
-    <Compile Include="umbraco.presentation\umbraco\dialogs\publish.aspx.cs">
-      <DependentUpon>publish.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="umbraco.presentation\umbraco\dialogs\publish.aspx.designer.cs">
-      <DependentUpon>publish.aspx</DependentUpon>
-    </Compile>
     <Compile Include="umbraco.presentation\umbraco\dialogs\RegexWs.aspx.cs">
       <DependentUpon>RegexWs.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -1304,13 +1327,6 @@
     <Compile Include="umbraco.presentation\umbraco\LiveEditing\Updates\IUpdateList.cs" />
     <Compile Include="umbraco.presentation\umbraco\LiveEditing\Modules\MacroModule\TemplateUpdate.cs" />
     <Compile Include="umbraco.presentation\umbraco\LiveEditing\Utility.cs" />
-    <Compile Include="umbraco.presentation\umbraco\masterpages\default.Master.cs">
-      <DependentUpon>default.Master</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="umbraco.presentation\umbraco\masterpages\default.Master.designer.cs">
-      <DependentUpon>default.Master</DependentUpon>
-    </Compile>
     <Compile Include="umbraco.presentation\umbraco\members\EditMember.aspx.cs">
       <DependentUpon>EditMember.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -1736,6 +1752,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.map</DependentUpon>
     </Compile>
+    <Compile Include="WebServices\BulkPublishController.cs" />
+    <Compile Include="WebServices\CoreStringsController.cs" />
+    <Compile Include="WebServices\ExamineManagementController.cs" />
     <Compile Include="WebServices\FolderBrowserService.cs" />
     <Compile Include="WebServices\SaveFileController.cs" />
     <Content Include="umbraco.presentation\umbracobase\readme.txt" />
@@ -1767,10 +1786,11 @@
     <Content Include="umbraco.presentation\umbraco\LiveEditing\Modules\SkinModule\ModuleSelector.ascx" />
     <Content Include="umbraco.presentation\umbraco\LiveEditing\Modules\SkinModule\SkinCustomizer.ascx" />
     <Content Include="umbraco.presentation\umbraco\members\MemberSearch.ascx" />
-    <Content Include="umbraco.presentation\umbraco\js\UmbracoCasingRules.aspx" />
     <Content Include="umbraco.presentation\umbraco\dialogs\Preview.aspx" />
     <Content Include="umbraco.presentation\umbraco\controls\passwordChanger.ascx" />
-    <Content Include="umbraco.presentation\umbraco\controls\ProgressBar.ascx" />
+    <Content Include="umbraco.presentation\umbraco\controls\ProgressBar.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\controls\ContentTypeControlNew.ascx">
       <SubType>ASPXCodeBehind</SubType>
     </Content>
@@ -1833,7 +1853,6 @@
     <Content Include="umbraco.presentation\umbraco\dialogs\notifications.aspx" />
     <Content Include="umbraco.presentation\umbraco\developer\Packages\installer.aspx" />
     <Content Include="umbraco.presentation\umbraco\dialogs\protectPage.aspx" />
-    <Content Include="umbraco.presentation\umbraco\dialogs\publish.aspx" />
     <Content Include="umbraco.presentation\umbraco\dialogs\RegexWs.aspx" />
     <Content Include="umbraco.presentation\umbraco\dialogs\rollBack.aspx" />
     <Content Include="umbraco.presentation\umbraco\dialogs\sendToTranslation.aspx" />
@@ -1948,7 +1967,6 @@
     </Content>
     <Content Include="umbraco.presentation\umbraco\webservices\templates.asmx" />
     <Content Include="umbraco.presentation\umbraco\webservices\trashcan.asmx" />
-    <Content Include="umbraco.presentation\umbraco\masterpages\default.Master" />
     <Content Include="umbraco.presentation\umbraco\webservices\TreeDataService.ashx" />
     <None Include="umbraco.presentation\umbraco\Trees\Trees.cd" />
     <None Include="umbraco.presentation\umbraco\Trees\XmlTree.xsd">

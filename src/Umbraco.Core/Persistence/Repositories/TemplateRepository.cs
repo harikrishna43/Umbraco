@@ -12,6 +12,7 @@ using Umbraco.Core.Persistence.Caching;
 using Umbraco.Core.Persistence.Factories;
 using Umbraco.Core.Persistence.Querying;
 using Umbraco.Core.Persistence.UnitOfWork;
+using Umbraco.Core.Sync;
 
 namespace Umbraco.Core.Persistence.Repositories
 {
@@ -26,13 +27,13 @@ namespace Umbraco.Core.Persistence.Repositories
         public TemplateRepository(IDatabaseUnitOfWork work)
             : base(work)
         {
-            EnsureDepedencies();
+            EnsureDependencies();
         }
 
         public TemplateRepository(IDatabaseUnitOfWork work, IRepositoryCacheProvider cache)
             : base(work, cache)
         {
-            EnsureDepedencies();
+            EnsureDependencies();
         }
 
         internal TemplateRepository(IDatabaseUnitOfWork work, IRepositoryCacheProvider cache, IFileSystem masterpageFileSystem, IFileSystem viewFileSystem)
@@ -42,7 +43,7 @@ namespace Umbraco.Core.Persistence.Repositories
             _viewsFileSystem = viewFileSystem;
         }
 
-        private void EnsureDepedencies()
+        private void EnsureDependencies()
         {
             _masterpagesFileSystem = new PhysicalFileSystem(SystemDirectories.Masterpages);
             _viewsFileSystem = new PhysicalFileSystem(SystemDirectories.MvcViews);

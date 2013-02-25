@@ -61,15 +61,45 @@ namespace Umbraco.Tests.UmbracoExamine {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Converting_file_to_PDF {
+            get {
+                object obj = ResourceManager.GetObject("Converting_file_to_PDF", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
         ///&lt;media&gt;
         ///	&lt;node id=&quot;1111&quot; version=&quot;902e13f7-5793-482a-9e06-cd94eebd1de0&quot; parentID=&quot;-1&quot; level=&quot;1&quot; writerID=&quot;0&quot; nodeType=&quot;1031&quot; template=&quot;0&quot; sortOrder=&quot;2&quot; createDate=&quot;2010-05-19T15:26:08&quot; updateDate=&quot;2010-05-19T15:26:09&quot; nodeName=&quot;Product Images&quot; urlName=&quot;productimages&quot; writerName=&quot;Administrator&quot; nodeTypeAlias=&quot;Folder&quot; path=&quot;-1,1111&quot;&gt;
         ///		&lt;data alias=&quot;contents&quot;&gt;&lt;/data&gt;
-        ///		&lt;node id=&quot;2222&quot; version=&quot;902e13f7-5793-482a-9e06-cd94eebd1de0&quot; parentID=&quot;1111&quot; level=&quot;1&quot; writerID=&quot;0 [rest of string was truncated]&quot;;.
+        ///		&lt;node id=&quot;2222&quot; version=&quot;902e13f7-5793-482a-9e06-cd94eebd1de0&quot; parentID=&quot;1111&quot; level=&quot;2&quot; writerID=&quot;0 [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string media {
             get {
                 return ResourceManager.GetString("media", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] PDFStandards {
+            get {
+                object obj = ResourceManager.GetObject("PDFStandards", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] SurviorFlipCup {
+            get {
+                object obj = ResourceManager.GetObject("SurviorFlipCup", resourceCulture);
+                return ((byte[])(obj));
             }
         }
         
@@ -93,6 +123,39 @@ namespace Umbraco.Tests.UmbracoExamine {
         internal static string umbraco {
             get {
                 return ResourceManager.GetString("umbraco", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;!DOCTYPE root[ 
+        ///&lt;!ELEMENT CWS_Contact ANY&gt;
+        ///&lt;!ATTLIST CWS_Contact id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_EmailAFriend ANY&gt;
+        ///&lt;!ATTLIST CWS_EmailAFriend id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_EventItem ANY&gt;
+        ///&lt;!ATTLIST CWS_EventItem id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_Galleries ANY&gt;
+        ///&lt;!ATTLIST CWS_Galleries id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_Gallery ANY&gt;
+        ///&lt;!ATTLIST CWS_Gallery id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_Home ANY&gt;
+        ///&lt;!ATTLIST CWS_Home id ID #REQUIRED&gt;
+        ///&lt;!ELEMENT CWS_NewsEventsList ANY&gt;        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string umbraco_sort {
+            get {
+                return ResourceManager.GetString("umbraco_sort", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] windows_vista {
+            get {
+                object obj = ResourceManager.GetObject("windows_vista", resourceCulture);
+                return ((byte[])(obj));
             }
         }
     }

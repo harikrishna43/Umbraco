@@ -192,6 +192,20 @@ namespace umbraco.cms.businesslogic.media
             }
         }
 
+        [Obsolete("Obsolete, Use Name property on Umbraco.Core.Models.Content", false)]
+        public override string Text
+        {
+            get
+            {
+                return MediaItem.Name;
+            }
+            set
+            {
+                value = value.Trim();
+                MediaItem.Name = value;
+            }
+        }
+
         /// <summary>
         /// Retrieve a list of all medias underneath the current
         /// </summary>
@@ -206,7 +220,8 @@ namespace umbraco.cms.businesslogic.media
                 var children = ApplicationContext.Current.Services.MediaService.GetChildren(Id).OrderBy(c => c.SortOrder);
                 return children.Select(x => new Media(x)).ToArray();
             }
-        } 
+        }
+        
         #endregion
 
         #region Public methods

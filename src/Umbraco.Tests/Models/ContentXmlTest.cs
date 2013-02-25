@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Umbraco.Core;
 using Umbraco.Core.ObjectResolution;
 using Umbraco.Core.Models;
+using Umbraco.Core.Strings;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Tests.TestHelpers.Entities;
 using umbraco.editorControls.tinyMCE3;
@@ -17,8 +18,6 @@ namespace Umbraco.Tests.Models
         [SetUp]
         public override void Initialize()
         {
-            Resolution.Reset();
-
             //this ensures its reset
             PluginManager.Current = new PluginManager();
 
@@ -29,9 +28,11 @@ namespace Umbraco.Tests.Models
                     typeof(tinyMCE3dataType).Assembly
 				};
 
-            DataTypesResolver.Reset();
             DataTypesResolver.Current = new DataTypesResolver(
                 () => PluginManager.Current.ResolveDataTypes());
+
+            UrlSegmentProviderResolver.Reset();
+            UrlSegmentProviderResolver.Current = new UrlSegmentProviderResolver(typeof(DefaultUrlSegmentProvider));
 
             base.Initialize();
         }
@@ -43,6 +44,7 @@ namespace Umbraco.Tests.Models
 
             //reset the app context
             DataTypesResolver.Reset();
+			UrlSegmentProviderResolver.Reset();
         }
         [Test]
         public void Can_Generate_Xml_Representation_Of_Content()
@@ -55,6 +57,7 @@ namespace Umbraco.Tests.Models
             ServiceContext.ContentService.Save(content, 0);
 
             var nodeName = content.ContentType.Alias.ToSafeAliasWithForcingCheck();
+            var urlName = content.GetUrlSegment();
 
             // Act
             XElement element = content.ToXml();
@@ -70,7 +73,7 @@ namespace Umbraco.Tests.Models
             Assert.AreEqual(content.CreateDate.ToString("s"), (string)element.Attribute("createDate"));
             Assert.AreEqual(content.UpdateDate.ToString("s"), (string)element.Attribute("updateDate"));
             Assert.AreEqual(content.Name, (string)element.Attribute("nodeName"));
-            Assert.AreEqual(content.Name.FormatUrl().ToLower(), (string)element.Attribute("urlName"));
+            Assert.AreEqual(urlName, (string)element.Attribute("urlName"));
             Assert.AreEqual(content.Path, (string)element.Attribute("path"));
             Assert.AreEqual("", (string)element.Attribute("isDoc"));
             Assert.AreEqual(content.ContentType.Id.ToString(), (string)element.Attribute("nodeType"));

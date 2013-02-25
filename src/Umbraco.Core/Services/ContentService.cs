@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Web;
 using System.Xml.Linq;
@@ -17,7 +18,7 @@ using Umbraco.Core.Publishing;
 
 namespace Umbraco.Core.Services
 {
-	/// <summary>
+    /// <summary>
 	/// Represents the Content Service, which is an easy access to operations involving <see cref="IContent"/>
 	/// </summary>
 	public class ContentService : IContentService
@@ -44,8 +45,11 @@ namespace Umbraco.Core.Services
 
 	    public ContentService(IDatabaseUnitOfWorkProvider provider, RepositoryFactory repositoryFactory, IPublishingStrategy publishingStrategy)
 		{
-			_uowProvider = provider;
-			_publishingStrategy = publishingStrategy;
+	        if (provider == null) throw new ArgumentNullException("provider");
+	        if (repositoryFactory == null) throw new ArgumentNullException("repositoryFactory");
+	        if (publishingStrategy == null) throw new ArgumentNullException("publishingStrategy");
+	        _uowProvider = provider;
+	        _publishingStrategy = publishingStrategy;
             _repositoryFactory = repositoryFactory;
 		}
 
@@ -228,7 +232,35 @@ namespace Umbraco.Core.Services
             }
         }
 
-		/// <summary>
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects, which are ancestors of the current content.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        public IEnumerable<IContent> GetAncestors(int id)
+        {
+            var content = GetById(id);
+            return GetAncestors(content);
+        }
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects, which are ancestors of the current content.
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+	    public IEnumerable<IContent> GetAncestors(IContent content)
+	    {
+	        var ids = content.Path.Split(',').Where(x => x != "-1" && x != content.Id.ToString(CultureInfo.InvariantCulture)).Select(int.Parse).ToArray();
+            if (ids.Any() == false)
+                return new List<IContent>();
+
+            using (var repository = _repositoryFactory.CreateContentRepository(_uowProvider.GetUnitOfWork()))
+            {
+                return repository.GetAll(ids);
+            }
+	    }
+
+	    /// <summary>
 		/// Gets a collection of <see cref="IContent"/> objects by Parent Id
 		/// </summary>
 		/// <param name="id">Id of the Parent to retrieve Children from</param>
@@ -289,6 +321,30 @@ namespace Umbraco.Core.Services
         }
 
         /// <summary>
+        /// Gets the parent of the current content as an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IContent"/> object</returns>
+        public IContent GetParent(int id)
+        {
+            var content = GetById(id);
+            return GetParent(content);
+        }
+
+        /// <summary>
+        /// Gets the parent of the current content as an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IContent"/> object</returns>
+        public IContent GetParent(IContent content)
+        {
+            if (content.ParentId == -1 || content.ParentId == -20)
+                return null;
+
+            return GetById(content.ParentId);
+        }
+
+	    /// <summary>
         /// Gets the published version of an <see cref="IContent"/> item
         /// </summary>
         /// <param name="id">Id of the <see cref="IContent"/> to retrieve version from</param>
@@ -414,7 +470,7 @@ namespace Umbraco.Core.Services
 	    /// <returns>True if publishing succeeded, otherwise False</returns>
 	    public bool RePublishAll(int userId = 0)
 	    {
-	        return RePublishAllDo(false, userId);
+	        return RePublishAllDo(userId);
 	    }
 
 	    /// <summary>
@@ -425,7 +481,8 @@ namespace Umbraco.Core.Services
         /// <returns>True if publishing succeeded, otherwise False</returns>
         public bool Publish(IContent content, int userId = 0)
         {
-            return SaveAndPublishDo(content, false, userId);
+            var result = SaveAndPublishDo(content, userId);
+	        return result.Success;
         }
 
 	    /// <summary>
@@ -436,7 +493,14 @@ namespace Umbraco.Core.Services
 	    /// <returns>True if publishing succeeded, otherwise False</returns>
 	    public bool PublishWithChildren(IContent content, int userId = 0)
 	    {
-	        return PublishWithChildrenDo(content, false, userId);
+            var result = PublishWithChildrenDo(content, userId, true);
+            
+            //This used to just return false only when the parent content failed, otherwise would always return true so we'll
+            // do the same thing for the moment
+	        if (!result.Any(x => x.Result.ContentItem.Id == content.Id))
+	            return false;
+
+	        return result.Single(x => x.Result.ContentItem.Id == content.Id).Success;	        
 	    }
 
 	    /// <summary>
@@ -459,7 +523,8 @@ namespace Umbraco.Core.Services
 	    /// <returns>True if publishing succeeded, otherwise False</returns>
         public bool SaveAndPublish(IContent content, int userId = 0, bool raiseEvents = true)
 	    {
-			return SaveAndPublishDo(content, false, userId, raiseEvents);
+            var result = SaveAndPublishDo(content, userId, raiseEvents);
+	        return result.Success;
 	    }
 
 	    /// <summary>
@@ -807,8 +872,8 @@ namespace Umbraco.Core.Services
 			var uow = _uowProvider.GetUnitOfWork();
 			using (var repository = _repositoryFactory.CreateContentRepository(uow))
 			{
-				var query = Query<IContent>.Builder.Where(x => x.ParentId == -20);
-				var contents = repository.GetByQuery(query);
+				var query = Query<IContent>.Builder.Where(x => x.Path.Contains("-20"));
+				var contents = repository.GetByQuery(query).OrderByDescending(x => x.ParentId);
 
 				foreach (var content in contents)
 				{
@@ -994,64 +1059,41 @@ namespace Umbraco.Core.Services
 	    }
 
         #region Internal Methods
-        /// <summary>
-        /// Internal method to Re-Publishes all Content for legacy purposes.
-        /// </summary>
-        /// <param name="userId">Optional Id of the User issueing the publishing</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this RePublish method. By default this method will not update the cache.</param>
-        /// <returns>True if publishing succeeded, otherwise False</returns>
-        internal bool RePublishAll(bool omitCacheRefresh = true, int userId = 0)
-        {
-            return RePublishAllDo(omitCacheRefresh, userId);
-        }
-
+      
         /// <summary>
         /// Internal method that Publishes a single <see cref="IContent"/> object for legacy purposes.
         /// </summary>
         /// <param name="content">The <see cref="IContent"/> to publish</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will not update the cache.</param>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        internal bool Publish(IContent content, bool omitCacheRefresh = true, int userId = 0)
+        internal Attempt<PublishStatus> PublishInternal(IContent content, int userId = 0)
         {
-            return SaveAndPublishDo(content, omitCacheRefresh, userId);
+            return SaveAndPublishDo(content, userId);
         }
 
-        /// <summary>
-        /// Internal method that Publishes a <see cref="IContent"/> object and all its children for legacy purposes.
-        /// </summary>
-        /// <param name="content">The <see cref="IContent"/> to publish along with its children</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will not update the cache.</param>
-        /// <param name="userId">Optional Id of the User issueing the publishing</param>
-        /// <returns>True if publishing succeeded, otherwise False</returns>
-        internal bool PublishWithChildren(IContent content, bool omitCacheRefresh = true, int userId = 0)
+	    /// <summary>
+	    /// Internal method that Publishes a <see cref="IContent"/> object and all its children for legacy purposes.
+	    /// </summary>
+	    /// <param name="content">The <see cref="IContent"/> to publish along with its children</param>
+	    /// <param name="userId">Optional Id of the User issueing the publishing</param>
+	    /// <param name="includeUnpublished">If set to true, this will also publish descendants that are completely unpublished, normally this will only publish children that have previously been published</param>
+	    /// <returns>True if publishing succeeded, otherwise False</returns>
+	    internal IEnumerable<Attempt<PublishStatus>> PublishWithChildrenInternal(
+            IContent content, int userId = 0, bool includeUnpublished = false)
         {
-            return PublishWithChildrenDo(content, omitCacheRefresh, userId);
-        }
-
-        /// <summary>
-        /// Internal method that UnPublishes a single <see cref="IContent"/> object for legacy purposes.
-        /// </summary>
-        /// <param name="content">The <see cref="IContent"/> to publish</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Unpublish method. By default this method will not update the cache.</param>
-        /// <param name="userId">Optional Id of the User issueing the publishing</param>
-        /// <returns>True if unpublishing succeeded, otherwise False</returns>
-        internal bool UnPublish(IContent content, bool omitCacheRefresh = true, int userId = 0)
-        {
-            return UnPublishDo(content, omitCacheRefresh, userId);
+            return PublishWithChildrenDo(content, userId, includeUnpublished);
         }
 
 	    /// <summary>
 	    /// Saves and Publishes a single <see cref="IContent"/> object
 	    /// </summary>
 	    /// <param name="content">The <see cref="IContent"/> to save and publish</param>
-	    /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will not update the cache.</param>
 	    /// <param name="userId">Optional Id of the User issueing the publishing</param>
         /// <param name="raiseEvents">Optional boolean indicating whether or not to raise save events.</param>
 	    /// <returns>True if publishing succeeded, otherwise False</returns>
-	    internal bool SaveAndPublish(IContent content, bool omitCacheRefresh = true, int userId = 0, bool raiseEvents = true)
+        internal Attempt<PublishStatus> SaveAndPublishInternal(IContent content, int userId = 0, bool raiseEvents = true)
         {
-            return SaveAndPublishDo(content, omitCacheRefresh, userId, raiseEvents);
+            return SaveAndPublishDo(content, userId, raiseEvents);
         }
 
         /// <summary>
@@ -1078,9 +1120,8 @@ namespace Umbraco.Core.Services
         /// Re-Publishes all Content
         /// </summary>
         /// <param name="userId">Optional Id of the User issueing the publishing</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this RePublish method. By default this method will update the cache.</param>
         /// <returns>True if publishing succeeded, otherwise False</returns>
-        private bool RePublishAllDo(bool omitCacheRefresh = false, int userId = 0)
+        private bool RePublishAllDo(int userId = 0)
         {
             var list = new List<IContent>();
             var updated = new List<IContent>();
@@ -1126,9 +1167,8 @@ namespace Umbraco.Core.Services
                                          : Convert.ToInt32(uow.Database.Insert(poco));
                     }
                 }
-                //Updating content to published state is finished, so we fire event through PublishingStrategy to have cache updated
-                if (omitCacheRefresh == false)
-                    _publishingStrategy.PublishingFinalized(updated, true);
+                
+                _publishingStrategy.PublishingFinalized(updated, true);
             }
 
             Audit.Add(AuditTypes.Publish, "RePublish All performed by user", userId, -1);
@@ -1136,15 +1176,24 @@ namespace Umbraco.Core.Services
             return published;
         }
 
-        /// <summary>
-        /// Publishes a <see cref="IContent"/> object and all its children
-        /// </summary>
-        /// <param name="content">The <see cref="IContent"/> to publish along with its children</param>
-        /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will update the cache.</param>
-        /// <param name="userId">Optional Id of the User issueing the publishing</param>
-        /// <returns>True if publishing succeeded, otherwise False</returns>
-        private bool PublishWithChildrenDo(IContent content, bool omitCacheRefresh = false, int userId = 0)
+	    /// <summary>
+	    /// Publishes a <see cref="IContent"/> object and all its children
+	    /// </summary>
+	    /// <param name="content">The <see cref="IContent"/> to publish along with its children</param>
+	    /// <param name="userId">Optional Id of the User issueing the publishing</param>
+	    /// <param name="includeUnpublished">If set to true, this will also publish descendants that are completely unpublished, normally this will only publish children that have previously been published</param>	    
+	    /// <returns>
+	    /// A list of publish statues. If the parent document is not valid or cannot be published because it's parent(s) is not published
+	    /// then the list will only contain one status item, otherwise it will contain status items for it and all of it's descendants that
+	    /// are to be published.
+	    /// </returns>
+	    private IEnumerable<Attempt<PublishStatus>> PublishWithChildrenDo(
+            IContent content, int userId = 0, bool includeUnpublished = false)
         {
+	        if (content == null) throw new ArgumentNullException("content");
+
+	        var result = new List<Attempt<PublishStatus>>();
+
             //Check if parent is published (although not if its a root node) - if parent isn't published this Content cannot be published
             if (content.ParentId != -1 && content.ParentId != -20 && IsPublishable(content) == false)
             {
@@ -1152,7 +1201,8 @@ namespace Umbraco.Core.Services
                     string.Format(
                         "Content '{0}' with Id '{1}' could not be published because its parent or one of its ancestors is not published.",
                         content.Name, content.Id));
-                return false;
+                result.Add(new Attempt<PublishStatus>(false, new PublishStatus(content, PublishStatusType.FailedPathNotPublished)));
+                return result;
             }
 
             //Content contains invalid property values and can therefore not be published - fire event?
@@ -1161,7 +1211,8 @@ namespace Umbraco.Core.Services
                 LogHelper.Info<ContentService>(
                     string.Format("Content '{0}' with Id '{1}' could not be published because of invalid properties.",
                                   content.Name, content.Id));
-                return false;
+                result.Add(new Attempt<PublishStatus>(false, new PublishStatus(content, PublishStatusType.FailedContentInvalid)));
+                return result;
             }
 
             //Consider creating a Path query instead of recursive method:
@@ -1169,45 +1220,48 @@ namespace Umbraco.Core.Services
 
             var updated = new List<IContent>();
             var list = new List<IContent>();
-            list.Add(content);
+            list.Add(content); //include parent item
             list.AddRange(GetDescendants(content));
 
+            var internalStrategy = (PublishingStrategy)_publishingStrategy;
+
             //Publish and then update the database with new status
-            var published = _publishingStrategy.PublishWithChildren(list, userId);
-            if (published)
+            var publishedOutcome = internalStrategy.PublishWithChildrenInternal(list, userId, includeUnpublished).ToArray();
+            
+            var uow = _uowProvider.GetUnitOfWork();
+            using (var repository = _repositoryFactory.CreateContentRepository(uow))
             {
-                var uow = _uowProvider.GetUnitOfWork();
-                using (var repository = _repositoryFactory.CreateContentRepository(uow))
+                //Only loop through content that was successfully published, was not already published and where the Published property has been updated
+                foreach (var item in publishedOutcome.Where(
+                    x => x.Success
+                         && x.Result.StatusType != PublishStatusType.SuccessAlreadyPublished
+                         && ((ICanBeDirty) x.Result.ContentItem).IsPropertyDirty("Published")))
                 {
-                    //Only loop through content where the Published property has been updated
-                    foreach (var item in list.Where(x => ((ICanBeDirty)x).IsPropertyDirty("Published")))
-                    {
-                        item.WriterId = userId;
-                        repository.AddOrUpdate(item);
-                        updated.Add(item);
-                    }
-
-                    uow.Commit();
-
-                    foreach (var c in updated)
-                    {
-                        var xml = c.ToXml();
-                        var poco = new ContentXmlDto { NodeId = c.Id, Xml = xml.ToString(SaveOptions.None) };
-                        var exists = uow.Database.FirstOrDefault<ContentXmlDto>("WHERE nodeId = @Id", new { Id = c.Id }) !=
-                                     null;
-                        int result = exists
-                                         ? uow.Database.Update(poco)
-                                         : Convert.ToInt32(uow.Database.Insert(poco));
-                    }
+                    item.Result.ContentItem.WriterId = userId;
+                    repository.AddOrUpdate(item.Result.ContentItem);
+                    updated.Add(item.Result.ContentItem);
                 }
-                //Save xml to db and call following method to fire event:
-                if (omitCacheRefresh == false)
-                    _publishingStrategy.PublishingFinalized(updated, false);
 
-                Audit.Add(AuditTypes.Publish, "Publish with Children performed by user", userId, content.Id);
+                uow.Commit();
+
+                foreach (var c in updated)
+                {
+                    var xml = c.ToXml();
+                    var poco = new ContentXmlDto { NodeId = c.Id, Xml = xml.ToString(SaveOptions.None) };
+                    var exists = uow.Database.FirstOrDefault<ContentXmlDto>("WHERE nodeId = @Id", new { Id = c.Id }) !=
+                                    null;
+                    var r = exists
+                                ? uow.Database.Update(poco)
+                                : Convert.ToInt32(uow.Database.Insert(poco));
+                }
             }
+            //Save xml to db and call following method to fire event:
+            _publishingStrategy.PublishingFinalized(updated, false);
 
-            return published;
+            Audit.Add(AuditTypes.Publish, "Publish with Children performed by user", userId, content.Id);
+            
+
+            return publishedOutcome;
         }
 
         /// <summary>
@@ -1247,21 +1301,22 @@ namespace Umbraco.Core.Services
 	    /// Saves and Publishes a single <see cref="IContent"/> object
 	    /// </summary>
 	    /// <param name="content">The <see cref="IContent"/> to save and publish</param>
-	    /// <param name="omitCacheRefresh">Optional boolean to avoid having the cache refreshed when calling this Publish method. By default this method will update the cache.</param>
 	    /// <param name="userId">Optional Id of the User issueing the publishing</param>
         /// <param name="raiseEvents">Optional boolean indicating whether or not to raise save events.</param>
 	    /// <returns>True if publishing succeeded, otherwise False</returns>
-	    private bool SaveAndPublishDo(IContent content, bool omitCacheRefresh = false, int userId = 0, bool raiseEvents = true)
+	    private Attempt<PublishStatus> SaveAndPublishDo(IContent content, int userId = 0, bool raiseEvents = true)
         {
             if(raiseEvents)
             {
                 if (Saving.IsRaisedEventCancelled(new SaveEventArgs<IContent>(content), this))
-                return false;
+                {
+                    return new Attempt<PublishStatus>(false, new PublishStatus(content, PublishStatusType.FailedCancelledByEvent));
+                }
             }
 
             //Has this content item previously been published? If so, we don't need to refresh the children
 	        var previouslyPublished = HasPublishedVersion(content.Id);
-	        var validForPublishing = true;
+	        var publishStatus = new PublishStatus(content, PublishStatusType.Success); //initially set to success
 
             //Check if parent is published (although not if its a root node) - if parent isn't published this Content cannot be published
             if (content.ParentId != -1 && content.ParentId != -20 && IsPublishable(content) == false)
@@ -1270,7 +1325,7 @@ namespace Umbraco.Core.Services
                     string.Format(
                         "Content '{0}' with Id '{1}' could not be published because its parent is not published.",
                         content.Name, content.Id));
-                validForPublishing = false;
+                publishStatus.StatusType = PublishStatusType.FailedPathNotPublished;
             }
 
             //Content contains invalid property values and can therefore not be published - fire event?
@@ -1280,12 +1335,22 @@ namespace Umbraco.Core.Services
                     string.Format(
                         "Content '{0}' with Id '{1}' could not be published because of invalid properties.",
                         content.Name, content.Id));
-                validForPublishing = false;
+                publishStatus.StatusType = PublishStatusType.FailedContentInvalid;
             }
 
-            //Publish and then update the database with new status
-	        bool published = validForPublishing && _publishingStrategy.Publish(content, userId);
-
+            //if we're still successful, then publish using the strategy
+            if (publishStatus.StatusType == PublishStatusType.Success)
+            {
+                var internalStrategy = (PublishingStrategy)_publishingStrategy;
+                //Publish and then update the database with new status
+                var publishResult = internalStrategy.PublishInternal(content, userId);
+                //set the status type to the publish result
+                publishStatus.StatusType = publishResult.Result.StatusType;
+            }
+            
+            //we are successfully published if our publishStatus is still Successful
+	        bool published = publishStatus.StatusType == PublishStatusType.Success;
+            
             var uow = _uowProvider.GetUnitOfWork();
             using (var repository = _repositoryFactory.CreateContentRepository(uow))
             {
@@ -1336,11 +1401,13 @@ namespace Umbraco.Core.Services
                 Saved.RaiseEvent(new SaveEventArgs<IContent>(content, false), this);
 
             //Save xml to db and call following method to fire event through PublishingStrategy to update cache
-            if (published && omitCacheRefresh == false)
+            if (published)
+            {
                 _publishingStrategy.PublishingFinalized(content);
+            }
 
             //We need to check if children and their publish state to ensure that we 'republish' content that was previously published
-            if (published && omitCacheRefresh == false && previouslyPublished == false && HasChildren(content.Id))
+            if (published && previouslyPublished == false && HasChildren(content.Id))
             {
                 var descendants = GetPublishedDescendants(content);
 
@@ -1349,7 +1416,7 @@ namespace Umbraco.Core.Services
 
             Audit.Add(AuditTypes.Publish, "Save and Publish performed by user", userId, content.Id);
 
-            return published;
+	        return new Attempt<PublishStatus>(publishStatus.StatusType == PublishStatusType.Success, publishStatus);
         }
 
 	    /// <summary>

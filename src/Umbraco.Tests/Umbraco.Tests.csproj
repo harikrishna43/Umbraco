@@ -48,9 +48,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Examine, Version=0.1.43.2941, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Examine, Version=0.1.48.2941, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Examine.0.1.43.2941\lib\Examine.dll</HintPath>
+      <HintPath>..\packages\Examine.0.1.48.2941\lib\Examine.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -68,8 +68,9 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
     </Reference>
-    <Reference Include="nunit.framework">
-      <HintPath>..\packages\NUnit.2.6.0.12054\lib\nunit.framework.dll</HintPath>
+    <Reference Include="nunit.framework, Version=2.6.2.12296, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\packages\RhinoMocks.3.6.1\lib\net\Rhino.Mocks.dll</HintPath>
@@ -155,8 +156,14 @@
     <Compile Include="CodeFirst\TypeInheritanceTest.cs" />
     <Compile Include="Configurations\FileSystemProviderTests.cs" />
     <Compile Include="ContentStores\PublishMediaStoreTests.cs" />
+    <Compile Include="CoreStrings\ShortStringHelperResolverTest.cs" />
+    <Compile Include="CoreStrings\LegacyShortStringHelperTests.cs" />
+    <Compile Include="CoreStrings\DefaultShortStringHelperTests.cs" />
+    <Compile Include="CoreStrings\LegacyStringExtensionsTests.cs" />
+    <Compile Include="CoreStrings\MockShortStringHelper.cs" />
     <Compile Include="LegacyApi\MediaTypeTests.cs" />
     <Compile Include="Migrations\AlterMigrationTests.cs" />
+    <Compile Include="Migrations\TargetVersionSixthOneZeroMigrationsTest.cs" />
     <Compile Include="Migrations\Upgrades\BaseUpgradeTest.cs" />
     <Compile Include="Migrations\FindingMigrationsTest.cs" />
     <Compile Include="Migrations\SqlScripts\SqlResources.Designer.cs">
@@ -182,11 +189,14 @@
     <Compile Include="Persistence\Querying\ExpressionTests.cs" />
     <Compile Include="Persistence\Querying\MediaRepositorySqlClausesTest.cs" />
     <Compile Include="Persistence\Querying\MediaTypeRepositorySqlClausesTest.cs" />
+    <Compile Include="Persistence\Repositories\ServerRegistrationRepositoryTest.cs" />
     <Compile Include="Persistence\SchemaValidationTest.cs" />
     <Compile Include="Persistence\SyntaxProvider\SqlSyntaxProviderTests.cs" />
     <Compile Include="PublishedContent\DynamicXmlConverterTests.cs" />
     <Compile Include="PublishedContent\DynamicXmlTests.cs" />
+    <Compile Include="PublishedContent\LegacyExamineBackedMediaTests.cs" />
     <Compile Include="PublishedContent\PublishedContentDataTableTests.cs" />
+    <Compile Include="PublishedContent\PublishedContentTestBase.cs" />
     <Compile Include="PublishedContent\PublishedContentTests.cs" />
     <Compile Include="PublishedContent\PublishedMediaTests.cs" />
     <Compile Include="PublishedContent\StronglyTypedQueryTests.cs" />
@@ -251,7 +261,9 @@
     <Compile Include="Resolvers\ManyResolverTests.cs" />
     <Compile Include="Resolvers\SingleResolverTests.cs" />
     <Compile Include="Resolvers\ResolutionTests.cs" />
+    <Compile Include="Routing\ContentFinderByAliasWithDomainsTests.cs" />
     <Compile Include="Routing\ContentFinderByNiceUrlWithDomainsTests.cs" />
+    <Compile Include="Routing\DomainsAndCulturesTests.cs" />
     <Compile Include="Routing\NiceUrlsProviderWithDomainsTests.cs" />
     <Compile Include="Routing\uQueryGetNodeIdByUrlTests.cs" />
     <Compile Include="Routing\UrlsWithNestedDomains.cs" />
@@ -261,9 +273,12 @@
     <Compile Include="Services\ContentTypeServiceTests.cs" />
     <Compile Include="Services\ThreadSafetyServiceTest.cs" />
     <Compile Include="Surface\PluginControllerAreaTests.cs" />
+    <Compile Include="Sync\ConfigServerRegistrarTests.cs" />
+    <Compile Include="Sync\DistributedCacheTests.cs" />
     <Compile Include="Templates\MasterPageHelperTests.cs" />
     <Compile Include="TestHelpers\BaseDatabaseFactoryTest.cs" />
     <Compile Include="TestHelpers\BaseRoutingTest.cs" />
+    <Compile Include="TestHelpers\SettingsForTests.cs" />
     <Compile Include="GlobalSettingsTests.cs" />
     <Compile Include="Routing\ContentFinderByAliasTests.cs" />
     <Compile Include="Routing\ContentFinderByIdTests.cs" />
@@ -283,9 +298,11 @@
     <Compile Include="TestHelpers\Entities\MockedMedia.cs" />
     <Compile Include="UmbracoExamine\ContentServiceTest.cs" />
     <Compile Include="UmbracoExamine\EventsTest.cs" />
+    <Compile Include="UmbracoExamine\ExamineBaseTest.cs" />
     <Compile Include="UmbracoExamine\IndexInitializer.cs" />
     <Compile Include="UmbracoExamine\IndexTest.cs" />
     <Compile Include="UmbracoExamine\PdfIndexerTests.cs" />
+    <Compile Include="UmbracoExamine\SearchTests.cs" />
     <Compile Include="UmbracoExamine\TestDataService.cs" />
     <Compile Include="UmbracoExamine\TestFiles.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -318,7 +335,7 @@
     <Compile Include="PartialTrust\PartialTrustTestException.cs" />
     <Compile Include="PartialTrust\TestOnlyInFullTrustAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StringExtensionsTests.cs" />
+    <Compile Include="CoreStrings\StringExtensionsTests.cs" />
     <Compile Include="TestHelpers\FakeHttpContextFactory.cs" />
     <Compile Include="TypeFinderTests.cs" />
     <Compile Include="Routing\UmbracoModuleTests.cs" />
@@ -328,7 +345,14 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
+    <None Include="UmbracoExamine\TestFiles\Converting_file_to_PDF.pdf" />
+    <None Include="UmbracoExamine\TestFiles\PDFStandards.PDF" />
+    <None Include="UmbracoExamine\TestFiles\SurviorFlipCup.pdf" />
+    <None Include="UmbracoExamine\TestFiles\umbraco-sort.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="UmbracoExamine\TestFiles\umbraco.config" />
+    <None Include="UmbracoExamine\TestFiles\windows-vista.pdf" />
     <None Include="unit-test-log4net.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

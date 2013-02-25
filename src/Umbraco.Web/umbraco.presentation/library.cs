@@ -162,51 +162,16 @@ namespace umbraco
 
         #region Publish Helper Methods
 
-        // Esben Carlsen: Commented out, not referenced anywhere
-        ///// <summary>
-        ///// Updates nodes and eventually subnodes, making the latest version the one to be published.
-        ///// Should always be used with library.rePublishNodes(), to ensure that the xml source is
-        ///// updated
-        ///// </summary>
-        ///// <param name="publishChildren">Publish childnodes as well</param>
-        ///// <returns></returns>
-        //public static void PublishDocument(Guid nodeID, bool publishChildren, User u)
-        //{
-        //    Document d = new Document(nodeID, true);
-        //    d.Publish(u);
-        //    NodesPublished++;
-
-        //    if(publishChildren)
-        //        foreach(Document dc in d.Children)
-        //        {
-        //            PublishDocument(dc.UniqueId, true, u);
-        //        }
-        //}
-
+        
         /// <summary>
         /// Unpublish a node, by removing it from the runtime xml index. Note, prior to this the Document should be 
         /// marked unpublished by setting the publish property on the document object to false
         /// </summary>
         /// <param name="DocumentId">The Id of the Document to be unpublished</param>
+        [Obsolete("This method is no longer used, a document's cache will be removed automatically when the document is deleted or unpublished")]
         public static void UnPublishSingleNode(int DocumentId)
-        {            
-            if (UmbracoSettings.UseDistributedCalls)
-                DistributedCache.Instance.RemovePageCache(DocumentId);
-            else
-                content.Instance.ClearDocumentCache(DocumentId);
-        }
-
-        /// <summary>
-        /// Unpublish a node, by removing it from the runtime xml index. Note, prior to this the Document should be 
-        /// marked unpublished by setting the publish property on the document object to false
-        /// </summary>
-        /// <param name="document">The Document to be unpublished</param>
-        internal static void UnPublishSingleNode(Document document)
         {
-            if (UmbracoSettings.UseDistributedCalls)
-                DistributedCache.Instance.RemovePageCache(document.Id);
-            else
-                content.Instance.ClearDocumentCache(document);
+            DistributedCache.Instance.RemovePageCache(DocumentId);
         }
 
         /// <summary>
@@ -214,30 +179,11 @@ namespace umbraco
         /// marked published by calling Publish(User u) on the document object.
         /// </summary>
         /// <param name="documentId">The Id of the Document to be published</param>
+        [Obsolete("This method is no longer used, a document's cache will be updated automatically when the document is published")]
         public static void UpdateDocumentCache(int documentId)
         {
-            var d = new Document(documentId);
-            UpdateDocumentCache(d);
+            DistributedCache.Instance.RefreshPageCache(documentId);
         }
-
-        /// <summary>
-        /// Publishes a Document by adding it to the runtime xml index. Note, prior to this the Document should be 
-        /// marked published by calling Publish(User u) on the document object.
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <remarks>
-        /// NOTE: This method was created because before it was always calling the method with the documentId as a parameter 
-        /// which means we have to re-look up the document in the db again when we already have it, this should save on a few 
-        /// dozen sql calls when publishing.
-        /// </remarks>
-        internal static void UpdateDocumentCache(Document doc)
-        {
-            if (UmbracoSettings.UseDistributedCalls)
-                DistributedCache.Instance.RefreshPageCache(doc.Id);
-            else
-                content.Instance.UpdateDocumentCache(doc);
-        }
-
 
         /// <summary>
         /// Publishes the single node, this method is obsolete
@@ -276,7 +222,7 @@ namespace umbraco
         [Obsolete("Please use: umbraco.library.RefreshContent")]
         public static void RePublishNodesDotNet(int nodeID)
         {
-            content.Instance.RefreshContentFromDatabaseAsync();
+            DistributedCache.Instance.RefreshAllPageCache();
         }
 
         /// <summary>
@@ -288,7 +234,7 @@ namespace umbraco
         [Obsolete("Please use: content.Instance.RefreshContentFromDatabaseAsync")]
         public static void RePublishNodesDotNet(int nodeID, bool SaveToDisk)
         {
-            content.Instance.RefreshContentFromDatabaseAsync();
+            DistributedCache.Instance.RefreshAllPageCache();
         }
 
         #endregion
@@ -1390,25 +1336,6 @@ namespace umbraco
         }
 
         /// <summary>
-        /// Returns the ID of the current language.
-        /// </summary>
-        /// <returns>The ID of the current language, or 0 if it could not be determined.</returns>
-        private static int GetCurrentLanguageId()
-        {
-            int languageId = 0;
-
-            string pageId = HttpContext.Current.Items["pageID"] as string;
-            if (pageId != null)
-            {
-                Domain[] domains = GetCurrentDomains(int.Parse(pageId));
-                if (domains != null && domains.Length >= 0)
-                    languageId = domains[0].Language.id;
-            }
-
-            return languageId;
-        }
-
-        /// <summary>
         /// Gets the current page.
         /// </summary>
         /// <returns>An XpathNodeIterator containing the current page as Xml.</returns>
@@ -1833,25 +1760,25 @@ namespace umbraco
             return new CMSNode(NodeId).Relations;
         }
 
-        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMedia instead")]
+        [Obsolete("Use DistributedCache.Instance.RemoveMediaCache instead")]
         public static void ClearLibraryCacheForMedia(int mediaId)
         {
             DistributedCache.Instance.RemoveMediaCache(mediaId);      
         }
 
-        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMedia with the allServers flag set to false instead")]
+        [Obsolete("Use DistributedCache.Instance.RemoveMediaCache instead")]
         public static void ClearLibraryCacheForMediaDo(int mediaId)
         {
             DistributedCache.Instance.RemoveMediaCache(mediaId);
         }
 
-        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMember instead")]
+        [Obsolete("Use DistributedCache.Instance.RefreshMemberCache instead")]
         public static void ClearLibraryCacheForMember(int mediaId)
         {
             DistributedCache.Instance.RefreshMemberCache(mediaId);
         }
 
-        [Obsolete("Use ApplicationContext.Current.ApplicationCache.ClearLibraryCacheForMember with the allServers flag set to false instead")]
+        [Obsolete("Use DistributedCache.Instance.RefreshMemberCache instead")]
         public static void ClearLibraryCacheForMemberDo(int memberId)
         {
             DistributedCache.Instance.RefreshMemberCache(memberId);

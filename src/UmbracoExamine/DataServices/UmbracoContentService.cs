@@ -122,8 +122,8 @@ namespace UmbracoExamine.DataServices
 	    {
             try
             {
-                var result = _applicationContext.DatabaseContext.Database.Fetch<dynamic>("select distinct alias from cmsPropertyType order by alias");
-                return result.Select(r => r.Alias.ToString()).Cast<string>().ToList();
+                var result = _applicationContext.DatabaseContext.Database.Fetch<PropertyAliasDto>("select distinct alias from cmsPropertyType order by alias");
+                return result.Select(r => r.Alias).ToList();
             }
             catch (Exception ex)
             {
@@ -138,7 +138,7 @@ namespace UmbracoExamine.DataServices
         /// <returns></returns>
         public IEnumerable<string> GetAllSystemPropertyNames()
         {
-            return UmbracoContentIndexer.IndexFieldPolicies.Select(x => x.Key);
+            return UmbracoContentIndexer.IndexFieldPolicies.Select(x => x.Name);
         }
 
     }

@@ -10,6 +10,7 @@ using Umbraco.Web.Models;
 using Umbraco.Web.Mvc;
 using Umbraco.Web.Routing;
 using umbraco.BusinessLogic;
+using Umbraco.Core.Strings;
 
 namespace Umbraco.Tests.Routing
 {
@@ -24,9 +25,11 @@ namespace Umbraco.Tests.Routing
             SurfaceControllerResolver.Current = new SurfaceControllerResolver(
                 PluginManager.Current.ResolveSurfaceControllers());
 
+            ShortStringHelperResolver.Current = new ShortStringHelperResolver(new LegacyShortStringHelper());
+
 			base.Initialize();
 
-			System.Configuration.ConfigurationManager.AppSettings.Set("umbracoPath", "~/umbraco");
+		    SettingsForTests.UmbracoPath = "~/umbraco";
             
 			var webBoot = new WebBootManager(new UmbracoApplication(), true);
 			//webBoot.Initialize();
@@ -38,9 +41,11 @@ namespace Umbraco.Tests.Routing
 		public override void TearDown()
 		{
 			base.TearDown();
+		    UmbracoContext.Current = null;
 			RouteTable.Routes.Clear();
-			System.Configuration.ConfigurationManager.AppSettings.Set("umbracoPath", "");
 			SurfaceControllerResolver.Reset();
+            ShortStringHelperResolver.Reset();
+            PluginManager.Current = null;
 		}
 
         Template CreateTemplate(string alias)
@@ -73,7 +78,9 @@ namespace Umbraco.Tests.Routing
 
 			handler.GetHandlerForRoute(routingContext.UmbracoContext.HttpContext.Request.RequestContext, docRequest);
 			Assert.AreEqual("RenderMvc", routeData.Values["controller"].ToString());
-			Assert.AreEqual("Index", routeData.Values["action"].ToString());
+            //the route action will still be the one we've asked for because our RenderActionInvoker is the thing that decides
+            // if the action matches.
+            Assert.AreEqual("homePage", routeData.Values["action"].ToString());
 		}
 
 		//test all template name styles to match the ActionName
@@ -96,7 +103,7 @@ namespace Umbraco.Tests.Routing
             var template = CreateTemplate(templateName);
             var route = RouteTable.Routes["Umbraco_default"];
 			var routeData = new RouteData() {Route = route};
-			var routingContext = GetRoutingContext("~/dummy-page", template.Id, routeData);
+			var routingContext = GetRoutingContext("~/dummy-page", template.Id, routeData, true);
 			var docRequest = new PublishedContentRequest(routingContext.UmbracoContext.CleanedUmbracoUrl, routingContext)
 				{
 					PublishedContent = routingContext.PublishedContentStore.GetDocumentById(routingContext.UmbracoContext, 1172), 

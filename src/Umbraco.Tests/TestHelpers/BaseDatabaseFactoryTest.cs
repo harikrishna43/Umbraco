@@ -8,6 +8,7 @@ using NUnit.Framework;
 using SQLCE4Umbraco;
 using Umbraco.Core;
 using Umbraco.Core.Configuration;
+using Umbraco.Core.Logging;
 using Umbraco.Core.ObjectResolution;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.SqlSyntax;
@@ -33,28 +34,35 @@ namespace Umbraco.Tests.TestHelpers
         public virtual void Initialize()
         {
             TestHelper.SetupLog4NetForTests();
-            Resolution.Reset();
             TestHelper.InitializeContentDirectories();
 
             string path = TestHelper.CurrentAssemblyDirectory;
             AppDomain.CurrentDomain.SetData("DataDirectory", path);
 
-            UmbracoSettings.UseLegacyXmlSchema = false;
-
-			RepositoryResolver.Current = new RepositoryResolver(
-				new RepositoryFactory());
-            
             //Ensure that any database connections from a previous test is disposed. This is really just double safety as its also done in the TearDown.
             if(ApplicationContext != null && DatabaseContext != null)
                 DatabaseContext.Database.Dispose();
             SqlCeContextGuardian.CloseBackgroundConnection();
-			
-            //Delete database file before continueing
-            string filePath = string.Concat(path, "\\UmbracoPetaPocoTests.sdf");
-            if (File.Exists(filePath))
+
+            try
             {
-                File.Delete(filePath);
+                //Delete database file before continueing
+                string filePath = string.Concat(path, "\\UmbracoPetaPocoTests.sdf");
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
             }
+            catch (Exception)
+            {
+                //if this doesn't work we have to make sure everything is reset! otherwise
+                // well run into issues because we've already set some things up
+                TearDown();
+                throw;
+            }
+
+            RepositoryResolver.Current = new RepositoryResolver(
+                new RepositoryFactory());
 
             //Get the connectionstring settings from config
             var settings = ConfigurationManager.ConnectionStrings[Core.Configuration.GlobalSettings.UmbracoConnectionName];
@@ -63,21 +71,30 @@ namespace Umbraco.Tests.TestHelpers
             //Create the Sql CE database
             var engine = new SqlCeEngine(settings.ConnectionString);
             engine.CreateDatabase();
-
+            
             ApplicationContext.Current = new ApplicationContext(
 				//assign the db context
 				new DatabaseContext(new DefaultDatabaseFactory()),
 				//assign the service context
 				new ServiceContext(new PetaPocoUnitOfWorkProvider(), new FileUnitOfWorkProvider(), new PublishingStrategy())) { IsReady = true };
 
-            Resolution.Freeze();
+            FreezeResolution();
 
+            InitializeDatabase();
+        }
+
+        protected virtual void FreezeResolution()
+        {
+            Resolution.Freeze();
+        }
+
+        protected virtual void InitializeDatabase()
+        {
             //Configure the Database and Sql Syntax based on connection string set in config
             DatabaseContext.Initialize();
             //Create the umbraco database and its base data
-            DatabaseContext.Database.CreateDatabaseSchema();
+            DatabaseContext.Database.CreateDatabaseSchema(false);
         }
-
 
         [TearDown]
         public virtual void TearDown()
@@ -92,18 +109,34 @@ namespace Umbraco.Tests.TestHelpers
 			SqlCeContextGuardian.CloseBackgroundConnection();
 			
 			ApplicationContext.Current = null;
+			
 			RepositoryResolver.Reset();
+            Resolution.Reset();
 
             TestHelper.CleanContentDirectories();
 			
             string path = TestHelper.CurrentAssemblyDirectory;
             AppDomain.CurrentDomain.SetData("DataDirectory", null);
 
-            string filePath = string.Concat(path, "\\UmbracoPetaPocoTests.sdf");
-            if (File.Exists(filePath))
+            PluginManager.Current = null;
+            SettingsForTests.Reset();
+            UmbracoSettings.ResetSetters();
+            
+            try
             {
-                File.Delete(filePath);
+                string filePath = string.Concat(path, "\\UmbracoPetaPocoTests.sdf");
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
             }
+            catch (Exception ex)
+            {
+                LogHelper.Error<BaseDatabaseFactoryTest>("Could not remove the old database file", ex);
+
+                //We will swallow this exception! That's because a sub class might require further teardown logic.
+            }
+                            
         }
 
 	    protected ApplicationContext ApplicationContext

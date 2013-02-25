@@ -9,12 +9,6 @@ namespace Umbraco.Tests.Routing
 	[TestFixture]
 	public class ContentFinderByNiceUrlAndTemplateTests : BaseRoutingTest
 	{
-		public override void Initialize()
-		{
-			base.Initialize();
-			Umbraco.Core.Configuration.UmbracoSettings.UseLegacyXmlSchema = false;
-		}
-
         Template CreateTemplate(string alias)
         {
             var template = new Template(alias, alias, alias);
@@ -36,6 +30,8 @@ namespace Umbraco.Tests.Routing
 			var url = routingContext.UmbracoContext.CleanedUmbracoUrl; //very important to use the cleaned up umbraco url
 			var docRequest = new PublishedContentRequest(url, routingContext);
 			var lookup = new ContentFinderByNiceUrlAndTemplate();
+
+		    SettingsForTests.HideTopLevelNodeFromPath = false;
 
 			var result = lookup.TryFindDocument(docRequest);
 
