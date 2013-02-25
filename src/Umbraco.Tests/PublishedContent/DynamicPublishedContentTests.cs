@@ -1,54 +1,23 @@
-using System;
 using System.Linq;
 using NUnit.Framework;
-using Umbraco.Core;
 using Umbraco.Core.Models;
-using Umbraco.Core.PropertyEditors;
 using Umbraco.Web;
 using Umbraco.Web.Models;
 
 namespace Umbraco.Tests.PublishedContent
 {
-	[TestFixture]
+    [TestFixture]
 	public class DynamicPublishedContentTests : DynamicDocumentTestsBase<DynamicPublishedContent, DynamicPublishedContentList>
 	{
 		public override void Initialize()
-		{
-            PropertyEditorValueConvertersResolver.Current = new PropertyEditorValueConvertersResolver(
-                new[]
-					{
-						typeof(DatePickerPropertyEditorValueConverter),
-						typeof(TinyMcePropertyEditorValueConverter),
-						typeof(YesNoPropertyEditorValueConverter)
-					});
-
-            PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(new DefaultPublishedContentStore());
-
-            //need to specify a custom callback for unit tests
-            PublishedContentHelper.GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
-                {
-                    if (propertyAlias == "content")
-                    {
-                        //return the rte type id
-                        return Guid.Parse("5e9b75ae-face-41c8-b47e-5f4b0fd82f83");
-                    }
-                    return Guid.Empty;
-                };
-
+		{            
             base.Initialize();
 
-			var rCtx = GetRoutingContext("/test", 1234);
-			UmbracoContext.Current = rCtx.UmbracoContext;
-			
 		}
 
 		public override void TearDown()
 		{
 			base.TearDown();
-
-			PropertyEditorValueConvertersResolver.Reset();
-			PublishedContentStoreResolver.Reset();
-			UmbracoContext.Current = null;
 		}
 
 		internal DynamicPublishedContent GetNode(int id)

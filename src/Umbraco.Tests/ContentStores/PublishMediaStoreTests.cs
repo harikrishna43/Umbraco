@@ -14,27 +14,21 @@ using umbraco.BusinessLogic;
 namespace Umbraco.Tests.ContentStores
 {
 	[TestFixture]
-	public class PublishMediaStoreTests : BaseWebTest
+    public class PublishMediaStoreTests : PublishedContentTestBase
 	{
 		public override void Initialize()
 		{
 			base.Initialize();				
 		}
 
-        protected override void OnFreezing()
-        {
-            base.OnFreezing();
-            //we're going to use the same initialization as the PublishedMediaTests
-            PublishedMediaTests.DoInitialization(GetUmbracoContext("/test", 1234));		
-        }
+
+		
 
 		public override void TearDown()
 		{
 			base.TearDown();
-			PublishedMediaTests.DoTearDown();
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Root_Docs()
 		{
@@ -53,7 +47,6 @@ namespace Umbraco.Tests.ContentStores
 
 		}
 
-        [Ignore]
 		[Test]
 		public void Get_Item_Without_Examine()
 		{

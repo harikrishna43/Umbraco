@@ -74,26 +74,26 @@ namespace UmbracoExamine
         /// Alot of standard umbraco fields shouldn't be tokenized or even indexed, just stored into lucene
         /// for retreival after searching.
         /// </summary>
-        internal static readonly Dictionary<string, FieldIndexTypes> IndexFieldPolicies
-            = new Dictionary<string, FieldIndexTypes>()
+        internal static readonly List<StaticField> IndexFieldPolicies
+            = new List<StaticField>
             {
-                { "id", FieldIndexTypes.NOT_ANALYZED},
-                { "version", FieldIndexTypes.NOT_ANALYZED},
-                { "parentID", FieldIndexTypes.NOT_ANALYZED},
-                { "level", FieldIndexTypes.NOT_ANALYZED},
-                { "writerID", FieldIndexTypes.NOT_ANALYZED},
-                { "creatorID", FieldIndexTypes.NOT_ANALYZED},
-                { "nodeType", FieldIndexTypes.NOT_ANALYZED},
-                { "template", FieldIndexTypes.NOT_ANALYZED},
-                { "sortOrder", FieldIndexTypes.NOT_ANALYZED},
-                { "createDate", FieldIndexTypes.NOT_ANALYZED},
-                { "updateDate", FieldIndexTypes.NOT_ANALYZED},
-                { "nodeName", FieldIndexTypes.ANALYZED},
-                { "urlName", FieldIndexTypes.NOT_ANALYZED},
-                { "writerName", FieldIndexTypes.ANALYZED},
-                { "creatorName", FieldIndexTypes.ANALYZED},
-                { "nodeTypeAlias", FieldIndexTypes.ANALYZED},
-                { "path", FieldIndexTypes.NOT_ANALYZED}
+                new StaticField("id", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "version", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "parentID", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "level", FieldIndexTypes.NOT_ANALYZED, true, "NUMBER"),
+                new StaticField( "writerID", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "creatorID", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "nodeType", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "template", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "sortOrder", FieldIndexTypes.NOT_ANALYZED, true, "NUMBER"),
+                new StaticField( "createDate", FieldIndexTypes.NOT_ANALYZED, false, "DATETIME"),
+                new StaticField( "updateDate", FieldIndexTypes.NOT_ANALYZED, false, "DATETIME"),
+                new StaticField( "nodeName", FieldIndexTypes.ANALYZED, false, string.Empty),
+                new StaticField( "urlName", FieldIndexTypes.NOT_ANALYZED, false, string.Empty),
+                new StaticField( "writerName", FieldIndexTypes.ANALYZED, false, string.Empty),
+                new StaticField( "creatorName", FieldIndexTypes.ANALYZED, false, string.Empty),
+                new StaticField( "nodeTypeAlias", FieldIndexTypes.ANALYZED, false, string.Empty),
+                new StaticField( "path", FieldIndexTypes.NOT_ANALYZED, false, string.Empty)
             };
 
         #endregion
@@ -119,13 +119,7 @@ namespace UmbracoExamine
         /// </exception>
         public override void Initialize(string name, System.Collections.Specialized.NameValueCollection config)
         {
-
-            //We need to check if we actually can initialize, if not then don't continue
-            if (!CanInitialized())
-            {
-                return;
-            }
-
+           
             //check if there's a flag specifying to support unpublished content,
             //if not, set to false;
             bool supportUnpublished;
@@ -340,9 +334,20 @@ namespace UmbracoExamine
         /// </summary>
         /// <param name="indexSet"></param>
         /// <returns></returns>
+        /// <remarks>
+        /// If we cannot initialize we will pass back empty indexer data since we cannot read from the database
+        /// </remarks>
         protected override IIndexCriteria GetIndexerData(IndexSet indexSet)
         {
-            return indexSet.ToIndexCriteria(DataService);
+            if (CanInitialize())
+            {
+                return indexSet.ToIndexCriteria(DataService);
+            }
+            else
+            {
+                return base.GetIndexerData(indexSet);
+            }
+            
         }
 
         /// <summary>
@@ -352,8 +357,8 @@ namespace UmbracoExamine
         /// <returns></returns>
         protected override FieldIndexTypes GetPolicy(string fieldName)
         {
-            var def = IndexFieldPolicies.Where(x => x.Key == fieldName);
-            return (def.Count() == 0 ? FieldIndexTypes.ANALYZED : def.Single().Value);
+            var def = IndexFieldPolicies.Where(x => x.Name == fieldName);
+            return (!def.Any() ? FieldIndexTypes.ANALYZED : def.Single().IndexType);
         }
 
         /// <summary>

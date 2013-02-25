@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Examine;
 using Examine.LuceneEngine;
@@ -19,7 +20,7 @@ namespace Umbraco.Tests.UmbracoExamine
 	/// Tests the standard indexing capabilities
 	/// </summary>
 	[TestFixture, RequiresSTA]
-	public class IndexTest : AbstractPartialTrustFixture<IndexTest>
+    public class IndexTest : ExamineBaseTest<IndexTest>
 	{
 
 		///// <summary>
@@ -71,11 +72,12 @@ namespace Umbraco.Tests.UmbracoExamine
 			                        .Where(x => (int)x.Attribute("id") == 2112)
 			                        .First();
 
-			var currPath = (string)node.Attribute("path"); //should be : -1,2222,2112
-			Assert.AreEqual("-1,2222,2112", currPath);
+            var currPath = (string)node.Attribute("path"); //should be : -1,1111,2222,2112
+            Assert.AreEqual("-1,1111,2222,2112", currPath);
 
 			//now mimic moving 2112 to 1116
-			node.SetAttributeValue("path", currPath.Replace("2222", "1116"));
+			//node.SetAttributeValue("path", currPath.Replace("2222", "1116"));
+            node.SetAttributeValue("path", "-1,1116,2112");
 			node.SetAttributeValue("parentID", "1116");
 
 			//now reindex the node, this should first delete it and then WILL add it because of the parent id constraint
@@ -102,8 +104,8 @@ namespace Umbraco.Tests.UmbracoExamine
 			                        .Where(x => (int)x.Attribute("id") == 2112)
 			                        .First();
 
-			var currPath = (string)node.Attribute("path"); //should be : -1,2222,2112
-			Assert.AreEqual("-1,2222,2112", currPath);
+            var currPath = (string)node.Attribute("path"); //should be : -1,1111,2222,2112
+            Assert.AreEqual("-1,1111,2222,2112", currPath);
 
 			//ensure it's indexed
 			_indexer.ReIndexNode(node, IndexTypes.Media);
@@ -161,7 +163,12 @@ namespace Umbraco.Tests.UmbracoExamine
 			collector = new AllHitsCollector(false, true);
 			s = (IndexSearcher)_searcher.GetSearcher(); //make sure the searcher is up do date.
 			s.Search(query, collector);
-			Assert.AreEqual(9, collector.Count);
+            //var ids = new List<string>();
+            //for (var i = 0; i < collector.Count;i++)
+            //{
+            //    ids.Add(s.Doc(collector.GetDocId(i)).GetValues("__NodeId")[0]);
+            //}
+			Assert.AreEqual(20, collector.Count);
 		}
 
 		/// <summary>
@@ -200,11 +207,15 @@ namespace Umbraco.Tests.UmbracoExamine
 
 		public override void TestTearDown()
 		{
+            base.TestTearDown();
 			_luceneDir.Dispose();
+            UmbracoExamineSearcher.DisableInitializationCheck = null;
+            BaseUmbracoIndexer.DisableInitializationCheck = null;
 		}
 
 		public override void TestSetup()
 		{
+            base.TestSetup();
 			_luceneDir = new RAMDirectory();
 			_indexer = IndexInitializer.GetUmbracoIndexer(_luceneDir);
 			_indexer.RebuildIndex();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -10,7 +11,9 @@ using System.Xml;
 using System.Xml.Linq;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.IO;
+using Umbraco.Core.Media;
 using Umbraco.Core.Models.Membership;
+using Umbraco.Core.Strings;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.UnitOfWork;
 
@@ -18,6 +21,90 @@ namespace Umbraco.Core.Models
 {
     public static class ContentExtensions
     {
+        #region IContent
+        /// <summary>
+        /// Returns a list of the current contents ancestors, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Ancestors(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetAncestors(content);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents children.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Children(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetChildren(content.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents descendants, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Descendants(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetDescendants(content);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current content.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An <see cref="IContent"/> object</returns>
+        public static IContent Parent(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetById(content.ParentId);
+        }
+        #endregion
+
+        #region IMedia
+        /// <summary>
+        /// Returns a list of the current medias ancestors, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Ancestors(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetAncestors(media);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias children.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Children(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetChildren(media.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias descendants, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Descendants(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetDescendants(media);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current media.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An <see cref="IMedia"/> object</returns>
+        public static IMedia Parent(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetById(media.ParentId);
+        }
+        #endregion
+
         /// <summary>
         /// Set property values by alias with an annonymous object
         /// </summary>
@@ -57,16 +144,22 @@ namespace Umbraco.Core.Models
         /// <summary>
         /// Sets and uploads the file from a HttpPostedFileBase object as the property value
         /// </summary>
-        /// <param name="content"><see cref="IContent"/> to add property value to</param>
+        /// <param name="content"><see cref="IContentBase"/> to add property value to</param>
         /// <param name="propertyTypeAlias">Alias of the property to save the value on</param>
         /// <param name="value">The <see cref="HttpPostedFileBase"/> containing the file that will be uploaded</param>
         public static void SetValue(this IContentBase content, string propertyTypeAlias, HttpPostedFileBase value)
         {
+            // Ensure we get the filename without the path in IE in intranet mode 
+            // http://stackoverflow.com/questions/382464/httppostedfile-filename-different-from-ie
+            var fileName = value.FileName;
+            if (fileName.LastIndexOf(@"\") > 0)
+                fileName = fileName.Substring(fileName.LastIndexOf(@"\") + 1);
+
             var name =
                 IOHelper.SafeFileName(
-                    value.FileName.Substring(value.FileName.LastIndexOf(IOHelper.DirSepChar) + 1,
-                                             value.FileName.Length - value.FileName.LastIndexOf(IOHelper.DirSepChar) - 1)
-                         .ToLower());
+                    fileName.Substring(fileName.LastIndexOf(IOHelper.DirSepChar) + 1,
+                                       fileName.Length - fileName.LastIndexOf(IOHelper.DirSepChar) - 1)
+                            .ToLower());
 
             if (string.IsNullOrEmpty(name) == false)
                 SetFileOnContent(content, propertyTypeAlias, name, value.InputStream);
@@ -75,16 +168,22 @@ namespace Umbraco.Core.Models
         /// <summary>
         /// Sets and uploads the file from a HttpPostedFile object as the property value
         /// </summary>
-        /// <param name="content"><see cref="IContent"/> to add property value to</param>
+        /// <param name="content"><see cref="IContentBase"/> to add property value to</param>
         /// <param name="propertyTypeAlias">Alias of the property to save the value on</param>
         /// <param name="value">The <see cref="HttpPostedFile"/> containing the file that will be uploaded</param>
         public static void SetValue(this IContentBase content, string propertyTypeAlias, HttpPostedFile value)
         {
+            // Ensure we get the filename without the path in IE in intranet mode 
+            // http://stackoverflow.com/questions/382464/httppostedfile-filename-different-from-ie
+            var fileName = value.FileName;
+            if (fileName.LastIndexOf(@"\") > 0)
+                fileName = fileName.Substring(fileName.LastIndexOf(@"\") + 1);
+
             var name =
                 IOHelper.SafeFileName(
-                    value.FileName.Substring(value.FileName.LastIndexOf(IOHelper.DirSepChar) + 1,
-                                            value.FileName.Length - value.FileName.LastIndexOf(IOHelper.DirSepChar) - 1)
-                        .ToLower());
+                    fileName.Substring(fileName.LastIndexOf(IOHelper.DirSepChar) + 1,
+                                       fileName.Length - fileName.LastIndexOf(IOHelper.DirSepChar) - 1)
+                            .ToLower());
 
             if (string.IsNullOrEmpty(name) == false)
                 SetFileOnContent(content, propertyTypeAlias, name, value.InputStream);
@@ -93,13 +192,33 @@ namespace Umbraco.Core.Models
         /// <summary>
         /// Sets and uploads the file from a HttpPostedFileWrapper object as the property value
         /// </summary>
-        /// <param name="content"><see cref="IContent"/> to add property value to</param>
+        /// <param name="content"><see cref="IContentBase"/> to add property value to</param>
         /// <param name="propertyTypeAlias">Alias of the property to save the value on</param>
         /// <param name="value">The <see cref="HttpPostedFileWrapper"/> containing the file that will be uploaded</param>
         public static void SetValue(this IContentBase content, string propertyTypeAlias, HttpPostedFileWrapper value)
         {
-            if (string.IsNullOrEmpty(value.FileName) == false)
-                SetFileOnContent(content, propertyTypeAlias, value.FileName, value.InputStream);
+            // Ensure we get the filename without the path in IE in intranet mode 
+            // http://stackoverflow.com/questions/382464/httppostedfile-filename-different-from-ie
+            var fileName = value.FileName;
+            if (fileName.LastIndexOf(@"\") > 0)
+                fileName = fileName.Substring(fileName.LastIndexOf(@"\") + 1);
+
+            if (string.IsNullOrEmpty(fileName) == false)
+                SetFileOnContent(content, propertyTypeAlias, fileName, value.InputStream);
+        }
+
+        /// <summary>
+        /// Sets and uploads the file from a <see cref="Stream"/> as the property value
+        /// </summary>
+        /// <param name="content"><see cref="IContentBase"/> to add property value to</param>
+        /// <param name="propertyTypeAlias">Alias of the property to save the value on</param>
+        /// <param name="fileName">Name of the file</param>
+        /// <param name="fileStream"><see cref="Stream"/> to save to disk</param>
+        public static void SetValue(this IContentBase content, string propertyTypeAlias, string fileName,
+                                    Stream fileStream)
+        {
+            if (string.IsNullOrEmpty(fileName) == false && fileStream != null)
+                SetFileOnContent(content, propertyTypeAlias, fileName, fileStream);
         }
 
         private static void SetFileOnContent(IContentBase content, string propertyTypeAlias, string name, Stream fileStream)
@@ -109,10 +228,12 @@ namespace Umbraco.Core.Models
                 return;
 
             bool supportsResizing = false;
+            var numberedFolder = MediaSubfolderCounter.Current.Increment();
             string fileName = UmbracoSettings.UploadAllowDirectories
-                                              ? Path.Combine(property.Id.ToString(), name)
-                                              : property.Id + "-" + name;
-            string extension = Path.GetExtension(name);
+                                              ? Path.Combine(numberedFolder.ToString(CultureInfo.InvariantCulture), name)
+                                              : numberedFolder + "-" + name;
+
+            string extension = Path.GetExtension(name).Substring(1).ToLowerInvariant();
 
             var fs = FileSystemProviderManager.Current.GetFileSystemProvider<MediaFileSystem>();
             fs.AddFile(fileName, fileStream);
@@ -182,7 +303,7 @@ namespace Umbraco.Core.Models
         private static void SetPropertyValue(IContentBase content, XmlNode uploadFieldConfigNode, string propertyAlias, string propertyValue)
         {
             XmlNode propertyNode = uploadFieldConfigNode.SelectSingleNode(propertyAlias);
-            if (propertyNode != null && string.IsNullOrEmpty(propertyNode.FirstChild.Value) == false)
+            if (propertyNode != null && string.IsNullOrEmpty(propertyNode.FirstChild.Value) == false && content.HasProperty(propertyNode.FirstChild.Value))
             {
                 content.SetValue(propertyNode.FirstChild.Value, propertyValue);
             }
@@ -391,7 +512,8 @@ namespace Umbraco.Core.Models
         /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
         private static XElement ToXml(this IContentBase contentBase, string nodeName)
         {
-            var niceUrl = contentBase.Name.FormatUrl().ToLower();
+            // note: that one will take care of umbracoUrlName
+            var url = contentBase.GetUrlSegment();
 
 			var xml = new XElement(nodeName,
                                    new XAttribute("id", contentBase.Id),
@@ -402,21 +524,12 @@ namespace Umbraco.Core.Models
                                    new XAttribute("createDate", contentBase.CreateDate.ToString("s")),
                                    new XAttribute("updateDate", contentBase.UpdateDate.ToString("s")),
                                    new XAttribute("nodeName", contentBase.Name),
-                                   new XAttribute("urlName", niceUrl),//Format Url ?								   
+                                   new XAttribute("urlName", url),
                                    new XAttribute("path", contentBase.Path),
                                    new XAttribute("isDoc", ""));
 
-            foreach (var property in contentBase.Properties)
-			{
-				if (property == null) continue;
-
+            foreach (var property in contentBase.Properties.Where(p => p != null))
 				xml.Add(property.ToXml());
-
-				//Check for umbracoUrlName convention
-                if (property.Alias == "umbracoUrlName" && property.Value != null && 
-                        property.Value.ToString().Trim() != string.Empty)
-                    xml.SetAttributeValue("urlName", property.Value.ToString().FormatUrl().ToLower());
-			}
 
 			return xml;
 		}

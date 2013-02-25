@@ -31,10 +31,29 @@ namespace UmbracoExamine
         {
         }
 
+        private string _name;
+
+        /// <summary>
+        /// we override name because we need to manually set it if !CanInitialize() 
+        /// since we cannot call base.Initialize in that case.
+        /// </summary>
+        public override string Name
+        {
+            get
+            {
+                return _name;
+            }
+        }
+
         public override void Initialize(string name, System.Collections.Specialized.NameValueCollection config)
         {
+            if (name == null) throw new ArgumentNullException("name");
+
+            //ensure name is set
+            _name = name;
+
             //We need to check if we actually can initialize, if not then don't continue
-            if (!CanInitialized())
+            if (!CanInitialize())
             {
                 return;
             }
@@ -67,18 +86,28 @@ namespace UmbracoExamine
 		#endregion
 
         /// <summary>
+        /// Used for unit tests
+        /// </summary>
+        internal static bool? DisableInitializationCheck = null;
+
+        /// <summary>
         /// Returns true if the Umbraco application is in a state that we can initialize the examine indexes
         /// </summary>
         /// <returns></returns>
-        protected bool CanInitialized()
+        [SecuritySafeCritical]
+        protected bool CanInitialize()
         {
-            //We need to check if we actually can initialize, if not then don't continue
-            if (ApplicationContext.Current == null
-                || !ApplicationContext.Current.IsConfigured
-                || !ApplicationContext.Current.DatabaseContext.IsDatabaseConfigured)
+            //check the DisableInitializationCheck and ensure that it is not set to true
+            if (!DisableInitializationCheck.HasValue || !DisableInitializationCheck.Value)
             {
-                return false;
-            }
+                //We need to check if we actually can initialize, if not then don't continue
+                if (ApplicationContext.Current == null
+                    || !ApplicationContext.Current.IsConfigured
+                    || !ApplicationContext.Current.DatabaseContext.IsDatabaseConfigured)
+                {
+                    return false;
+                }
+            }            
             return true;
         }
 

@@ -103,6 +103,10 @@
     <Reference Include="ClientDependency.Core.Mvc">
       <HintPath>..\packages\ClientDependency-Mvc.1.5.1.0\lib\ClientDependency.Core.Mvc.dll</HintPath>
     </Reference>
+    <Reference Include="Examine, Version=0.1.48.2941, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Examine.0.1.48.2941\lib\Examine.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\log4net-mediumtrust.2.0.0\lib\log4net.dll</HintPath>
@@ -114,8 +118,9 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Web.Mvc.FixedDisplayModes">
-      <HintPath>..\packages\Microsoft.AspNet.Mvc.FixedDisplayModes.1.0.0\lib\net40\Microsoft.Web.Mvc.FixedDisplayModes.dll</HintPath>
+    <Reference Include="Microsoft.Web.Mvc.FixedDisplayModes, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.FixedDisplayModes.1.0.1\lib\net40\Microsoft.Web.Mvc.FixedDisplayModes.dll</HintPath>
     </Reference>
     <Reference Include="MySql.Data, Version=6.6.4.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -354,6 +359,13 @@
     <Compile Include="Umbraco\Create\PartialViewMacro.ascx.designer.cs">
       <DependentUpon>PartialViewMacro.ascx</DependentUpon>
     </Compile>
+    <Compile Include="Umbraco\Dashboard\ExamineManagement.ascx.cs">
+      <DependentUpon>ExamineManagement.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Umbraco\Dashboard\ExamineManagement.ascx.designer.cs">
+      <DependentUpon>ExamineManagement.ascx</DependentUpon>
+    </Compile>
     <Compile Include="Umbraco\Developer\Macros\EditMacro.aspx.cs">
       <DependentUpon>editMacro.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -374,6 +386,20 @@
     </Compile>
     <Compile Include="Umbraco\Dialogs\EditMacro.aspx.designer.cs">
       <DependentUpon>EditMacro.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Umbraco\Dialogs\Publish.aspx.cs">
+      <DependentUpon>publish.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Umbraco\Dialogs\Publish.aspx.designer.cs">
+      <DependentUpon>publish.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Umbraco\Masterpages\Default.Master.cs">
+      <DependentUpon>default.Master</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Umbraco\Masterpages\Default.Master.designer.cs">
+      <DependentUpon>default.Master</DependentUpon>
     </Compile>
     <Compile Include="Umbraco\Masterpages\UmbracoDialog.master.cs">
       <SubType>ASPXCodeBehind</SubType>
@@ -481,6 +507,7 @@
     </None>
     <None Include="Config\ExamineIndex.Release.config">
       <DependentUpon>ExamineIndex.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Config\Dashboard.Release.config">
       <DependentUpon>Dashboard.config</DependentUpon>
@@ -499,6 +526,7 @@
     <Content Include="Umbraco\Config\Lang\zh.xml" />
     <Content Include="Umbraco\Controls\Tree\CustomTreeService.asmx" />
     <Content Include="Umbraco\Create\PartialViewMacro.ascx" />
+    <Content Include="Umbraco\Dashboard\ExamineManagement.ascx" />
     <Content Include="Umbraco\Dashboard\Images\access-denied.png" />
     <Content Include="Umbraco\Dashboard\Scripts\swfobject.js" />
     <Content Include="Umbraco\Dashboard\MediaDashboardFolderBrowser.ascx" />
@@ -710,9 +738,13 @@
     <Content Include="Umbraco_Client\CodeMirror\Js\Theme\xq-dark.css" />
     <Content Include="Umbraco_Client\ContextMenu\Css\jquery.contextMenu.css" />
     <Content Include="Umbraco_Client\ContextMenu\Js\jquery.contextMenu.js" />
+    <Content Include="Umbraco_Client\Dashboards\ExamineManagement.css" />
+    <Content Include="Umbraco_Client\Dashboards\ExamineManagement.js" />
     <Content Include="Umbraco_Client\Dialogs\CreateDialog.css" />
     <Content Include="Umbraco_Client\Dialogs\EditMacro.css" />
     <Content Include="Umbraco_Client\Dialogs\EditMacro.js" />
+    <Content Include="Umbraco_Client\Dialogs\PublishDialog.css" />
+    <Content Include="Umbraco_Client\Dialogs\PublishDialog.js" />
     <Content Include="Umbraco_Client\Dialogs\UmbracoField.js" />
     <Content Include="Umbraco_Client\Editors\EditMacro.css" />
     <Content Include="Umbraco_Client\Editors\EditView.js" />
@@ -1581,7 +1613,6 @@
     <Content Include="Umbraco_Client\ui\ui-lightness\images\ui-icons_ffd27a_256x240.png" />
     <Content Include="Umbraco_Client\ui\ui-lightness\images\ui-icons_ffffff_256x240.png" />
     <Content Include="Umbraco\endPreview.aspx" />
-    <Content Include="Umbraco\Js\UmbracoCasingRules.aspx" />
     <Content Include="Umbraco_Client\Application\HistoryManager.js" />
     <Content Include="Umbraco_Client\Application\JQuery\jquery.ba-bbq.min.js" />
     <Content Include="Umbraco_Client\Preview\previewModeBadge.png" />
@@ -1895,7 +1926,9 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Config\ExamineSettings.config" />
-    <Content Include="Config\ExamineIndex.config" />
+    <Content Include="Config\ExamineIndex.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Config\scripting.config" />
     <Content Include="Config\Skinning.config" />
     <Content Include="Config\feedProxy.config" />
@@ -1923,6 +1956,8 @@
     </Content>
     <Content Include="Umbraco\Scripting\templates\cshtml\MultinodeTree-picker.cshtml" />
     <Content Include="Umbraco\Scripting\templates\cshtml\TwitterFeed.cshtml" />
+    <Content Include="Umbraco\Views\ExamineManagement\ExamineDetails.cshtml" />
+    <Content Include="Umbraco\Views\Web.config" />
     <None Include="umbraco_client\CodeMirror\js\mode\coffeescript\LICENSE" />
     <None Include="umbraco_client\CodeMirror\js\mode\pascal\LICENSE" />
     <None Include="umbraco_client\CodeMirror\js\mode\perl\LICENSE" />
@@ -2353,7 +2388,9 @@
       <SubType>Designer</SubType>
     </None>
     <Content Include="Config\404handlers.config" />
-    <Content Include="Config\Dashboard.config" />
+    <Content Include="Config\Dashboard.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Config\metablogConfig.config" />
     <Content Include="Config\restExtensions.config">
       <SubType>Designer</SubType>

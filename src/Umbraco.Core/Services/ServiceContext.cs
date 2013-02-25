@@ -21,13 +21,17 @@ namespace Umbraco.Core.Services
         private Lazy<FileService> _fileService;
         private Lazy<LocalizationService> _localizationService;
 
+        //NOTE: SD: Commenting out for now until we want to release a distributed cache provider that 
+        // uses internal DNS names for each website to 'call' home intead of the current configuration based approach.
+        //private Lazy<ServerRegistrationService> _serverRegistrationService;
+
 		/// <summary>
 		/// Constructor
 		/// </summary>
 		/// <param name="dbUnitOfWorkProvider"></param>
 		/// <param name="fileUnitOfWorkProvider"></param>
 		/// <param name="publishingStrategy"></param>
-		internal ServiceContext(IDatabaseUnitOfWorkProvider dbUnitOfWorkProvider, IUnitOfWorkProvider fileUnitOfWorkProvider, IPublishingStrategy publishingStrategy)
+		internal ServiceContext(IDatabaseUnitOfWorkProvider dbUnitOfWorkProvider, IUnitOfWorkProvider fileUnitOfWorkProvider, BasePublishingStrategy publishingStrategy)
 		{   
 			BuildServiceCache(dbUnitOfWorkProvider, fileUnitOfWorkProvider, publishingStrategy, 
 				//this needs to be lazy because when we create the service context it's generally before the
@@ -41,11 +45,16 @@ namespace Umbraco.Core.Services
 		private void BuildServiceCache(
 			IDatabaseUnitOfWorkProvider dbUnitOfWorkProvider, 
 			IUnitOfWorkProvider fileUnitOfWorkProvider, 
-			IPublishingStrategy publishingStrategy, 
+			BasePublishingStrategy publishingStrategy, 
 			Lazy<RepositoryFactory> repositoryFactory)
         {
             var provider = dbUnitOfWorkProvider;
             var fileProvider = fileUnitOfWorkProvider;
+
+            //NOTE: SD: Commenting out for now until we want to release a distributed cache provider that 
+            // uses internal DNS names for each website to 'call' home intead of the current configuration based approach.
+            //if (_serverRegistrationService == null)
+            //    _serverRegistrationService = new Lazy<ServerRegistrationService>(() => new ServerRegistrationService(provider, repositoryFactory.Value));
 
 			if (_userService == null)
 				_userService = new Lazy<UserService>(() => new UserService(provider, repositoryFactory.Value));
@@ -71,6 +80,17 @@ namespace Umbraco.Core.Services
             if(_localizationService == null)
 				_localizationService = new Lazy<LocalizationService>(() => new LocalizationService(provider, repositoryFactory.Value));
         }
+
+        //NOTE: SD: Commenting out for now until we want to release a distributed cache provider that 
+        // uses internal DNS names for each website to 'call' home intead of the current configuration based approach.
+
+        ///// <summary>
+        ///// Gets the <see cref="ServerRegistrationService"/>
+        ///// </summary>
+        //internal ServerRegistrationService ServerRegistrationService
+        //{
+        //    get { return _serverRegistrationService.Value; }
+        //}
 
         /// <summary>
         /// Gets the <see cref="IContentService"/>

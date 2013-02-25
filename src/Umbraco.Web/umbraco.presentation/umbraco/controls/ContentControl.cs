@@ -2,20 +2,25 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using Umbraco.Core;
 using Umbraco.Core.IO;
+using Umbraco.Core.Models;
 using umbraco.BasePages;
 using umbraco.cms.businesslogic;
-using umbraco.cms.businesslogic.media;
-using umbraco.cms.businesslogic.property;
 using umbraco.cms.businesslogic.propertytype;
 using umbraco.cms.businesslogic.web;
 using umbraco.interfaces;
 using umbraco.uicontrols;
 using Content = umbraco.cms.businesslogic.Content;
+using ContentType = umbraco.cms.businesslogic.ContentType;
+using Media = umbraco.cms.businesslogic.media.Media;
+using Property = umbraco.cms.businesslogic.property.Property;
+using StylesheetProperty = umbraco.cms.businesslogic.web.StylesheetProperty;
 
 namespace umbraco.controls
 {
@@ -54,12 +59,14 @@ namespace umbraco.controls
             set { _errorMessage = value; }
         }
 
+        [Obsolete("This event handler should not be used, it will stil fire for when a SaveAndPublish event is raised but this should be handled with the data APIs")]
         protected void standardSaveAndPublishHandler(object sender, EventArgs e)
         {
         }
 
         // zb-00036 #29889 : load it only once
-        List<ContentType.TabI> _virtualTabs;
+        private List<ContentType.TabI> _virtualTabs;
+        private ContentType _contentType;
 
         /// <summary>
         /// Constructor to set default properties.
@@ -82,8 +89,6 @@ namespace umbraco.controls
             Width = 350;
             Height = 350;
 
-            SaveAndPublish += new EventHandler(standardSaveAndPublishHandler);
-            Save += new EventHandler(standardSaveAndPublishHandler);
             _prntpage = (UmbracoEnsuredPage)Page;
 
             // zb-00036 #29889 : load it only once
@@ -108,11 +113,14 @@ namespace umbraco.controls
             Save += new EventHandler(standardSaveAndPublishHandler);
             _prntpage = (UmbracoEnsuredPage)Page;
             int i = 0;
-            var inTab = new Hashtable();
+            Hashtable inTab = new Hashtable();
 
             // zb-00036 #29889 : load it only once
             if (_virtualTabs == null)
                 _virtualTabs = _content.ContentType.getVirtualTabs.ToList();
+
+            if(_contentType == null)
+                _contentType = ContentType.GetContentType(_content.ContentType.Id);
 
             foreach (ContentType.TabI tab in _virtualTabs)
             {
@@ -121,31 +129,17 @@ namespace umbraco.controls
                 {
                     throw new ArgumentException("Unable to load tab \"" + tab.Caption + "\"");
                 }
-                //TabPage tp = NewTabPage(t.Caption);
-                //addSaveAndPublishButtons(ref tp);
 
                 tabPage.Style.Add("text-align", "center");
 
-
-                // Iterate through the property types and add them to the tab
-                // zb-00036 #29889 : fix property types getter to get the right set of properties
-                // ge : had a bit of a corrupt db and got weird NRE errors so rewrote this to catch the error and rethrow with detail
-                var propertyTypes = tab.GetPropertyTypes(_content.ContentType.Id);
-                foreach (PropertyType propertyType in propertyTypes)
+                //Legacy vs New API loading of PropertyTypes
+                if (_contentType.ContentTypeItem != null)
                 {
-                    var property = _content.getProperty(propertyType);
-                    if (property != null && tabPage != null)
-                    {
-                        AddControlNew(property, tabPage, tab.Caption);
-
-                        // adding this check, as we occasionally get an already in dictionary error, though not sure why
-                        if (!inTab.ContainsKey(propertyType.Id.ToString()))
-                            inTab.Add(propertyType.Id.ToString(), true);
-                    }
-                    else
-                    {
-                        throw new ArgumentNullException(string.Format("Property {0} ({1}) on Content Type {2} could not be retrieved for Document {3} on Tab Page {4}. To fix this problem, delete the property and recreate it.", propertyType.Alias, propertyType.Id, _content.ContentType.Alias, _content.Id, tab.Caption));
-                    }
+                    LoadPropertyTypes(_contentType.ContentTypeItem, tabPage, inTab, tab.Id, tab.Caption);
+                }
+                else
+                {
+                    LoadPropertyTypes(tab, tabPage, inTab);
                 }
 
                 i++;
@@ -166,6 +160,72 @@ namespace umbraco.controls
                     AddControlNew(p, tpProp, ui.Text("general", "properties", null));
             }
 
+        }
+
+        /// <summary>
+        /// Loades PropertyTypes by Tab/PropertyGroup using the new API.
+        /// </summary>
+        /// <param name="contentType"></param>
+        /// <param name="tabPage"></param>
+        /// <param name="inTab"></param>
+        /// <param name="tabId"></param>
+        /// <param name="tabCaption"></param>
+        private void LoadPropertyTypes(IContentTypeComposition contentType, TabPage tabPage, Hashtable inTab, int tabId, string tabCaption)
+        {
+            var propertyGroups = contentType.CompositionPropertyGroups.Where(x => x.Id == tabId || x.ParentId == tabId);
+            var propertyTypeAliases = propertyGroups.SelectMany(x => x.PropertyTypes.OrderBy(y => y.SortOrder).Select(y => new Tuple<int, string, int>(y.Id, y.Alias, y.SortOrder)));
+            foreach (var items in propertyTypeAliases)
+            {
+                var property = _content.getProperty(items.Item2);
+                if (property != null)
+                {
+                    AddControlNew(property, tabPage, tabCaption);
+
+                    if (!inTab.ContainsKey(items.Item1.ToString(CultureInfo.InvariantCulture)))
+                        inTab.Add(items.Item1.ToString(CultureInfo.InvariantCulture), true);
+                }
+                else
+                {
+                    throw new ArgumentNullException(
+                        string.Format(
+                            "Property {0} ({1}) on Content Type {2} could not be retrieved for Document {3} on Tab Page {4}. To fix this problem, delete the property and recreate it.",
+                            items.Item2, items.Item1, _content.ContentType.Alias, _content.Id,
+                            tabCaption));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Loades PropertyTypes by Tab using the Legacy API.
+        /// </summary>
+        /// <param name="tab"></param>
+        /// <param name="tabPage"></param>
+        /// <param name="inTab"></param>
+        private void LoadPropertyTypes(ContentType.TabI tab, TabPage tabPage, Hashtable inTab)
+        {
+            // Iterate through the property types and add them to the tab
+            // zb-00036 #29889 : fix property types getter to get the right set of properties
+            // ge : had a bit of a corrupt db and got weird NRE errors so rewrote this to catch the error and rethrow with detail
+            var propertyTypes = tab.GetPropertyTypes(_content.ContentType.Id);
+            foreach (var propertyType in propertyTypes)
+            {
+                var property = _content.getProperty(propertyType);
+                if (property != null && tabPage != null)
+                {
+                    AddControlNew(property, tabPage, tab.Caption);
+
+                    // adding this check, as we occasionally get an already in dictionary error, though not sure why
+                    if (!inTab.ContainsKey(propertyType.Id.ToString(CultureInfo.InvariantCulture)))
+                        inTab.Add(propertyType.Id.ToString(CultureInfo.InvariantCulture), true);
+                }
+                else
+                {
+                    throw new ArgumentNullException(
+                        string.Format(
+                            "Property {0} ({1}) on Content Type {2} could not be retrieved for Document {3} on Tab Page {4}. To fix this problem, delete the property and recreate it.",
+                            propertyType.Alias, propertyType.Id, _content.ContentType.Alias, _content.Id, tab.Caption));
+                }
+            }
         }
 
         /// <summary>
@@ -231,28 +291,23 @@ namespace umbraco.controls
             FireAfterContentControlLoad(contentcontrolEvent);
         }
 
-
-        private void saveClick(object Sender, ImageClickEventArgs e)
+        /// <summary>
+        /// Sets the name (text) and values on the data types of the document
+        /// </summary>
+        private void SetNameAndDataTypeValues()
         {
-            var doc = this._content as Document;
-            if (doc != null)
-            {
-                var docArgs = new SaveEventArgs();
-                doc.FireBeforeSave(docArgs);
-
-                if (docArgs.Cancel) //TODO: need to have some notification to the user here
-                {
-                    return;
-                }
-            }
+            if (!string.IsNullOrEmpty(NameTxt.Text))
+                _content.Text = NameTxt.Text;
 
             foreach (var property in DataTypes)
             {
                 property.Value.DataEditor.Save();
             }
+        }
 
-            if (!string.IsNullOrEmpty(NameTxt.Text))
-                _content.Text = NameTxt.Text;
+        private void SaveClick(object sender, ImageClickEventArgs e)
+        {
+            SetNameAndDataTypeValues();
 
             Save(this, new EventArgs());
         }
@@ -260,14 +315,19 @@ namespace umbraco.controls
         private void DoSaveAndPublish(object sender, ImageClickEventArgs e)
         {
             DoesPublish = true;
-            saveClick(sender, e);
+
+            SetNameAndDataTypeValues();
+
+            //NOTE: This is only here to keep backwards compatibility.
+            // see: http://issues.umbraco.org/issue/U4-1660
+            Save(this, new EventArgs());
 
             SaveAndPublish(this, new EventArgs());
         }
 
         private void DoSaveToPublish(object sender, ImageClickEventArgs e)
         {
-            saveClick(sender, e);
+            SaveClick(sender, e);
             SaveToPublish(this, new EventArgs());
         }
 
@@ -276,7 +336,7 @@ namespace umbraco.controls
             MenuImageButton menuSave = tp.Menu.NewImageButton();
             menuSave.ID = tp.ID + "_save";
             menuSave.ImageUrl = _UmbracoPath + "/images/editor/save.gif";
-            menuSave.Click += new ImageClickEventHandler(saveClick);
+            menuSave.Click += new ImageClickEventHandler(SaveClick);
             menuSave.OnClickCommand = "invokeSaveHandlers();";
             menuSave.AltText = ui.Text("buttons", "save", null);
             if (_canPublish == publishModes.Publish)
