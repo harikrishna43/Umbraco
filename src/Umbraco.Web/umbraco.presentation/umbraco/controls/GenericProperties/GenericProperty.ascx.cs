@@ -1,9 +1,13 @@
 using System;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Web.UI.WebControls;
 using ClientDependency.Core;
+using Umbraco.Core;
 using umbraco.BasePages;
 using umbraco.IO;
 using umbraco.cms.businesslogic.propertytype;
@@ -17,7 +21,6 @@ namespace umbraco.controls.GenericProperties
 	/// </summary>
 	[ClientDependency(ClientDependencyType.Css, "GenericProperty/genericproperty.css", "UmbracoClient")]
     [ClientDependency(ClientDependencyType.Javascript, "GenericProperty/genericproperty.js", "UmbracoClient")]
-    [ClientDependency(ClientDependencyType.Javascript, "js/UmbracoCasingRules.aspx", "UmbracoRoot")]
     public partial class GenericProperty : System.Web.UI.UserControl
 	{
 
@@ -74,7 +77,7 @@ namespace umbraco.controls.GenericProperties
 		}
 		public string Alias 
 		{
-			get {return tbAlias.Text;}
+            get {return tbAlias.Text;} // FIXME so we blindly trust the UI for safe aliases?!
 		}
 		public string Description 
 		{
@@ -247,6 +250,11 @@ namespace umbraco.controls.GenericProperties
 			base.OnInit(e);
 
 			this.Delete += new System.EventHandler(defaultDeleteHandler);
+
+            // [ClientDependency(ClientDependencyType.Javascript, "js/UmbracoCasingRules.aspx", "UmbracoRoot")]
+		    var loader = ClientDependency.Core.Controls.ClientDependencyLoader.GetInstance(new HttpContextWrapper(Context));
+		    var helper = new UrlHelper(new RequestContext(new HttpContextWrapper(Context), new RouteData()));
+            loader.RegisterDependency(helper.GetCoreStringsControllerPath() + "ServicesJavaScript", ClientDependencyType.Javascript);
 		}
 		
 		/// <summary>
