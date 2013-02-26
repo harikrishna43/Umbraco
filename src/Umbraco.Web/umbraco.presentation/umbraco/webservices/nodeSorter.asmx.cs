@@ -6,6 +6,8 @@ using System.Web.Services;
 using System.Xml;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Persistence.Caching;
+using Umbraco.Web;
+using Umbraco.Web.Security;
 using umbraco.BasePages;
 using umbraco.BusinessLogic.Actions;
 using umbraco.cms.businesslogic.web;
@@ -81,8 +83,8 @@ namespace umbraco.presentation.webservices
                     {
                         var tmp = SortOrder.Split(',');
 
-                        var isContent = helper.Request("app") == "content" | helper.Request("app") == "";
-                        var isMedia = helper.Request("app") == "media";
+                        var isContent = Context.Request.GetItemAsString("app") == "content" | helper.Request("app") == "";
+                        var isMedia = Context.Request.GetItemAsString("app") == "media";
 
                         for (var i = 0; i < tmp.Length; i++)
                         {
@@ -97,9 +99,8 @@ namespace umbraco.presentation.webservices
                                     // refresh the xml for the sorting to work
                                     if (published)
                                     {
-                                        document.Publish(BusinessLogic.User.GetCurrent());
+                                        document.SaveAndPublish(WebSecurity.CurrentUser);
                                         document.refreshXmlSortOrder();
-                                        library.UpdateDocumentCache(int.Parse(tmp[i]));
                                     }
                                 }
                                 // to update the sortorder of the media node in the XML, re-save the node....
@@ -127,6 +128,9 @@ namespace umbraco.presentation.webservices
 
 
                             // Load balancing - then refresh entire cache
+                            // NOTE: This seems a bit excessive to do simply for sorting! I'm going to leave this here for now but 
+                            //  the sort order should be updated in distributed calls when an item is Published (and it most likely is)
+                            //  but I guess this was put here for a reason at some point.
                             if (UmbracoSettings.UseDistributedCalls)
                                 library.RefreshContent();
                         }
