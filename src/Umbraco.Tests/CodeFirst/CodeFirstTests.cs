@@ -233,7 +233,6 @@ namespace Umbraco.Tests.CodeFirst
             //reset the app context
             DataTypesResolver.Reset();
             ApplicationContext.Current = null;
-            Resolution.IsFrozen = false;
             PluginManager.Current = null;
 
             string path = TestHelper.CurrentAssemblyDirectory;
