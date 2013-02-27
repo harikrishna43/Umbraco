@@ -10,8 +10,9 @@ namespace Umbraco.Tests.PublishedContent
 	public class DynamicPublishedContentTests : DynamicDocumentTestsBase<DynamicPublishedContent, DynamicPublishedContentList>
 	{
 		public override void Initialize()
-		{
-			base.Initialize();
+		{            
+            base.Initialize();
+
 		}
 
 		public override void TearDown()

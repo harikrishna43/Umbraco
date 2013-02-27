@@ -27,8 +27,8 @@ namespace Umbraco.Tests.Routing
 
 			var url = "/test";
 			
-			var lookup = new Umbraco.Web.Routing.LookupByNiceUrl();
-			var lookups = new Umbraco.Web.Routing.IPublishedContentLookup[] { lookup };
+			var lookup = new Umbraco.Web.Routing.ContentFinderByNiceUrl();
+			var lookups = new Umbraco.Web.Routing.IContentFinder[] { lookup };
 
 			var t = Template.MakeNew("test", new User(0));
 
@@ -38,9 +38,10 @@ namespace Umbraco.Tests.Routing
 			var routingContext = new RoutingContext(
 				umbracoContext,
 				lookups,
-				new FakeLastChanceLookup(),
+				new FakeLastChanceFinder(),
 				contentStore,
-				niceUrls);
+				niceUrls,
+                GetRoutesCache());
 
 			//assign the routing context back to the umbraco context
 			umbracoContext.RoutingContext = routingContext;
