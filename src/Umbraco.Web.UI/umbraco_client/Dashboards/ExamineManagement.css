@@ -1,0 +1,26 @@
+﻿#examineManagement .provider {
+    padding-top: 3px;
+}
+
+#examineManagement .propertyPane {
+    padding: 5px;
+}
+
+#examineManagement table th
+{
+    font-weight: bold;
+    width: 200px;
+}
+#examineManagement table td {
+    color: #999;
+}
+
+#examineManagement table td.highlight {
+    font-style: italic;
+}
+
+#examineManagement .propertyPane > a
+{    
+    padding: 3px;
+    display: block;
+}
