@@ -1,28 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using NUnit.Framework;
-using Umbraco.Core;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.Models;
 using Umbraco.Core.PropertyEditors;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web;
 using Umbraco.Web.Models;
-using Umbraco.Web.Routing;
 
 namespace Umbraco.Tests.PublishedContent
 {
 	[TestFixture]
 	public class StronglyTypedQueryTests : PublishedContentTestBase
 	{
-        public override void Initialize()
-        {
-            base.Initialize();
-        }
+	    public override void Initialize()
+	    {
+	        base.Initialize();
+	    }
 
-        public override void TearDown()
+	    public override void TearDown()
         {
             base.TearDown();
         }
