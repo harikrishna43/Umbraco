@@ -20,7 +20,7 @@ namespace umbraco.editorControls
 		{
 			// Get the value from 
 			string v = "";
-			try 
+			try
 			{
                 // Don't query if there's nothing to query for..
                 if (string.IsNullOrWhiteSpace(Value.ToString()) == false)
@@ -29,13 +29,13 @@ namespace umbraco.editorControls
 
                     while (dr.Read())
                     {
-					if (v.Length == 0)
-						v += dr.GetString("value");
-					else
-						v += "," + dr.GetString("value");
-				}
-				dr.Close();
-			} 
+                        if (v.Length == 0)
+                            v += dr.GetString("value");
+                        else
+                            v += "," + dr.GetString("value");
+                    }
+                    dr.Close();
+                }
 			} 
 			catch {}
 			return d.CreateCDataSection(v);
