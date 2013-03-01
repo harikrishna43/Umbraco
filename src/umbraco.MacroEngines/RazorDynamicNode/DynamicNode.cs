@@ -31,11 +31,11 @@ namespace umbraco.MacroEngines
 {
     public class DynamicNode : DynamicObject, INode
     {
-        /// <summary>
-        /// This callback is used only so we can set it dynamically for use in unit tests
-        /// </summary>
-        internal static Func<string, string, Guid> GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
-            ContentType.GetDataType(docTypeAlias, propertyAlias);
+		/// <summary>
+		/// This callback is used only so we can set it dynamically for use in unit tests
+		/// </summary>
+		internal static Func<string, string, Guid> GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
+			ContentType.GetDataType(docTypeAlias, propertyAlias);
 
         #region consts
         // these are private readonlys as const can't be Guids
@@ -46,8 +46,8 @@ namespace umbraco.MacroEngines
         //private readonly Guid DATATYPE_INTEGER_GUID = new Guid("1413afcb-d19a-4173-8e9a-68288d2a73b8");
         #endregion
 
-        private DynamicNodeList _cachedChildren;
-        private readonly ConcurrentDictionary<string, object> _cachedMemberOutput = new ConcurrentDictionary<string, object>();
+		private DynamicNodeList _cachedChildren;
+		private readonly ConcurrentDictionary<string, object> _cachedMemberOutput = new ConcurrentDictionary<string, object>();
 
         internal readonly DynamicBackingItem n;
 
@@ -158,20 +158,20 @@ namespace umbraco.MacroEngines
         {
             get
             {
-                if (_cachedChildren == null)
-                {
-                    List<DynamicBackingItem> children = n.ChildrenAsList;
-                    //testing
-                    if (children.Count == 0 && n.Id == 0)
-                    {
-                        _cachedChildren = new DynamicNodeList(new List<DynamicBackingItem> { this.n });
-                    }
-                    else
-                    {
+	            if (_cachedChildren == null)
+	            {
+					List<DynamicBackingItem> children = n.ChildrenAsList;
+					//testing
+					if (children.Count == 0 && n.Id == 0)
+					{
+						_cachedChildren = new DynamicNodeList(new List<DynamicBackingItem> {this.n});
+					}
+					else
+					{
                         _cachedChildren = new DynamicNodeList(children);
-                    }
-                }
-                return _cachedChildren;
+					}
+	            }
+				return _cachedChildren;
             }
         }
         public DynamicNodeList XPath(string xPath)
@@ -245,12 +245,12 @@ namespace umbraco.MacroEngines
                 throw new NullReferenceException("DynamicNode wasn't initialized with an underlying NodeFactory.Node");
             }
         }
-
-
+        
+        
         public DynamicNodeList Search(string term, bool useWildCards = true, string searchProvider = null)
         {
             var searcher = Examine.ExamineManager.Instance.DefaultSearchProvider;
-            if (!string.IsNullOrEmpty(searchProvider))
+            if(!string.IsNullOrEmpty(searchProvider))
                 searcher = Examine.ExamineManager.Instance.SearchProviderCollection[searchProvider];
 
             var t = term.Escape().Value;
@@ -290,10 +290,11 @@ namespace umbraco.MacroEngines
             var s = Examine.ExamineManager.Instance.DefaultSearchProvider;
             if (searchProvider != null)
                 s = searchProvider;
-
+            
             var results = s.Search(criteria);
             return ExamineSearchUtill.ConvertSearchResultToDynamicNode(results);
         }
+        
         
         public bool HasProperty(string name)
         {
@@ -400,84 +401,84 @@ namespace umbraco.MacroEngines
             return result;
         }
 
-        private static Dictionary<System.Tuple<Guid, int>, Type> _razorDataTypeModelTypes = null;
-        private static readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+    	private static Dictionary<System.Tuple<Guid, int>, Type> _razorDataTypeModelTypes = null;
+    	private static readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
-        internal static Dictionary<System.Tuple<Guid, int>, Type> RazorDataTypeModelTypes
-        {
-            get
-            {
-                using (var l = new UpgradeableReadLock(_locker))
-                {
-                    if (_razorDataTypeModelTypes == null)
-                    {
-                        l.UpgradeToWriteLock();
+    	internal static Dictionary<System.Tuple<Guid, int>, Type> RazorDataTypeModelTypes
+    	{
+    		get
+    		{
+    			using (var l = new UpgradeableReadLock(_locker))
+    			{
+    				if (_razorDataTypeModelTypes == null)
+    				{
+    					l.UpgradeToWriteLock();
 
-                        var foundTypes = new Dictionary<System.Tuple<Guid, int>, Type>();
+    					var foundTypes = new Dictionary<System.Tuple<Guid, int>, Type>();
 
-                        try
-                        {
-                            PluginManager.Current.ResolveRazorDataTypeModels()
-                                .ToList()
-                                .ConvertAll(type =>
-                                {
-                                    var razorDataTypeModelAttributes = type.GetCustomAttributes<RazorDataTypeModel>(true);
-                                    return razorDataTypeModelAttributes.ToList().ConvertAll(razorDataTypeModelAttribute =>
-                                    {
-                                        var g = razorDataTypeModelAttribute.DataTypeEditorId;
-                                        var priority = razorDataTypeModelAttribute.Priority;
-                                        return new KeyValuePair<System.Tuple<Guid, int>, Type>(new System.Tuple<Guid, int>(g, priority), type);
-                                    });
-                                })
-                                .SelectMany(item => item)
-                                .ToList()
-                                .ForEach(item =>
-                                {
-                                    System.Tuple<Guid, int> key = item.Key;
-                                    if (!foundTypes.ContainsKey(key))
-                                    {
-                                        foundTypes.Add(key, item.Value);
-                                    }
-                                });
+						try
+						{
+							PluginManager.Current.ResolveRazorDataTypeModels()
+								.ToList()
+								.ConvertAll(type =>
+								{
+									var razorDataTypeModelAttributes = type.GetCustomAttributes<RazorDataTypeModel>(true);
+									return razorDataTypeModelAttributes.ToList().ConvertAll(razorDataTypeModelAttribute =>
+									{
+										var g = razorDataTypeModelAttribute.DataTypeEditorId;
+										var priority = razorDataTypeModelAttribute.Priority;
+										return new KeyValuePair<System.Tuple<Guid, int>, Type>(new System.Tuple<Guid, int>(g, priority), type);
+									});
+								})
+								.SelectMany(item => item)
+								.ToList()
+								.ForEach(item =>
+								{
+									System.Tuple<Guid, int> key = item.Key;
+									if (!foundTypes.ContainsKey(key))
+									{
+										foundTypes.Add(key, item.Value);
+									}
+								});
 
-                            //there is no error, so set the collection
-                            _razorDataTypeModelTypes = foundTypes;
+							//there is no error, so set the collection
+							_razorDataTypeModelTypes = foundTypes;
 
-                        }
-                        catch (Exception ex)
-                        {
-                            LogHelper.Warn<DynamicNode>("Exception occurred while populating cache, will keep RazorDataTypeModelTypes to null so that this error remains visible and you don't end up with an empty cache with silent failure."
-                                + string.Format("The exception was {0} and the message was {1}. {2}", ex.GetType().FullName, ex.Message, ex.StackTrace));
-                        }
+						}
+						catch (Exception ex)
+						{
+							LogHelper.Warn<DynamicNode>("Exception occurred while populating cache, will keep RazorDataTypeModelTypes to null so that this error remains visible and you don't end up with an empty cache with silent failure."
+								+ string.Format("The exception was {0} and the message was {1}. {2}", ex.GetType().FullName, ex.Message, ex.StackTrace));							
+						}
 
-                    }
-                    return _razorDataTypeModelTypes;
-                }
-            }
-        }
+    				}
+					return _razorDataTypeModelTypes;
+    			}
+    		}
+    	}
 
-        private static Guid GetDataType(string docTypeAlias, string propertyAlias)
-        {
-            return GetDataTypeCallback(docTypeAlias, propertyAlias);
-        }
+		private static Guid GetDataType(string docTypeAlias, string propertyAlias)
+		{
+			return GetDataTypeCallback(docTypeAlias, propertyAlias);
+		}
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            var name = binder.Name;
+			var name = binder.Name;
 
-            //check the cache first!
-            if (_cachedMemberOutput.TryGetValue(name, out result))
-            {
-                return true;
-            }
+			//check the cache first!
+			if (_cachedMemberOutput.TryGetValue(name, out result))
+			{
+				return true;
+			}
 
             result = null; //this will never be returned
 
             if (name.InvariantEquals("ChildrenAsList") || name.InvariantEquals("Children"))
             {
                 result = GetChildrenAsList;
-                //cache the result so we don't have to re-process the whole thing
-                _cachedMemberOutput.TryAdd(name, result);
+				//cache the result so we don't have to re-process the whole thing
+				_cachedMemberOutput.TryAdd(name, result);
                 return true;
             }
             if (binder.Name.InvariantEquals("parentId"))
@@ -521,8 +522,8 @@ namespace umbraco.MacroEngines
 
                     //contextAlias is the node which the property data was returned from
                     //Guid dataType = ContentType.GetDataType(data.ContextAlias, data.Alias);					
-                    var dataType = GetDataType(data.ContextAlias, data.Alias);
-
+                	var dataType = GetDataType(data.ContextAlias, data.Alias);
+                    
                     var staticMapping = UmbracoSettings.RazorDataTypeModelStaticMapping.FirstOrDefault(mapping =>
                     {
                         return mapping.Applies(dataType, data.ContextAlias, data.Alias);
@@ -537,21 +538,21 @@ namespace umbraco.MacroEngines
                             if (TryCreateInstanceRazorDataTypeModel(dataType, dataTypeType, data.Value, out instance))
                             {
                                 result = instance;
-                                //cache the result so we don't have to re-process the whole thing
-                                _cachedMemberOutput.TryAdd(name, result);
+								//cache the result so we don't have to re-process the whole thing
+								_cachedMemberOutput.TryAdd(name, result);
                                 return true;
                             }
                             else
                             {
-                                LogHelper.Warn<DynamicNode>(string.Format("Failed to create the instance of the model binder"));
+								LogHelper.Warn<DynamicNode>(string.Format("Failed to create the instance of the model binder"));                            
                             }
                         }
                         else
                         {
-                            LogHelper.Warn<DynamicNode>(string.Format("staticMapping type name {0} came back as null from Type.GetType; check the casing, assembly presence, assembly framework version, namespace", staticMapping.TypeName));
+							LogHelper.Warn<DynamicNode>(string.Format("staticMapping type name {0} came back as null from Type.GetType; check the casing, assembly presence, assembly framework version, namespace", staticMapping.TypeName));                            
                         }
                     }
-
+                    
                     if (RazorDataTypeModelTypes != null && RazorDataTypeModelTypes.Any(model => model.Key.Item1 == dataType) && dataType != Guid.Empty)
                     {
                         var razorDataTypeModelDefinition = RazorDataTypeModelTypes.Where(model => model.Key.Item1 == dataType).OrderByDescending(model => model.Key.Item2).FirstOrDefault();
@@ -562,26 +563,26 @@ namespace umbraco.MacroEngines
                             if (TryCreateInstanceRazorDataTypeModel(dataType, dataTypeType, data.Value, out instance))
                             {
                                 result = instance;
-                                //cache the result so we don't have to re-process the whole thing
-                                _cachedMemberOutput.TryAdd(name, result);
+								//cache the result so we don't have to re-process the whole thing
+								_cachedMemberOutput.TryAdd(name, result);
                                 return true;
                             }
                             else
                             {
-                                LogHelper.Warn<DynamicNode>(string.Format("Failed to create the instance of the model binder"));
+								LogHelper.Warn<DynamicNode>(string.Format("Failed to create the instance of the model binder"));
                             }
                         }
                         else
                         {
-                            LogHelper.Warn<DynamicNode>(string.Format("Could not get the dataTypeType for the RazorDataTypeModel"));
+							LogHelper.Warn<DynamicNode>(string.Format("Could not get the dataTypeType for the RazorDataTypeModel"));                            
                         }
                     }
-
-                    //convert the string value to a known type
+                    
+					//convert the string value to a known type
                     var returnVal = ConvertPropertyValueByDataType(ref result, name, dataType);
-                    //cache the result so we don't have to re-process the whole thing
-                    _cachedMemberOutput.TryAdd(name, result);
-                    return returnVal;
+					//cache the result so we don't have to re-process the whole thing
+					_cachedMemberOutput.TryAdd(name, result);
+	                return returnVal;
                 }
 
                 //check if the alias is that of a child type
@@ -590,14 +591,14 @@ namespace umbraco.MacroEngines
                 if (typeChildren != null)
                 {
 
-                    var filteredTypeChildren = typeChildren
-                        .Where(x => x.NodeTypeAlias.InvariantEquals(name) || x.NodeTypeAlias.MakePluralName().InvariantEquals(binder.Name))
-                        .ToArray();
+	                var filteredTypeChildren = typeChildren
+		                .Where(x => x.NodeTypeAlias.InvariantEquals(name) || x.NodeTypeAlias.MakePluralName().InvariantEquals(binder.Name))
+		                .ToArray();
                     if (filteredTypeChildren.Any())
                     {
                         result = new DynamicNodeList(filteredTypeChildren);
-                        //cache the result so we don't have to re-process the whole thing
-                        _cachedMemberOutput.TryAdd(name, result);
+						//cache the result so we don't have to re-process the whole thing
+						_cachedMemberOutput.TryAdd(name, result);
                         return true;
                     }
 
@@ -676,22 +677,22 @@ namespace umbraco.MacroEngines
                 {
                     if (instance == null)
                     {
-                        LogHelper.Warn<DynamicNode>("razorDataTypeModel successfully instantiated but returned null for instance");
+						LogHelper.Warn<DynamicNode>("razorDataTypeModel successfully instantiated but returned null for instance");
                     }
-                    result = instance;
+                	result = instance;
                     return true;
                 }
                 else
                 {
                     if (instance == null)
                     {
-                        LogHelper.Warn<DynamicNode>("razorDataTypeModel successfully instantiated but returned null for instance");
+						LogHelper.Warn<DynamicNode>("razorDataTypeModel successfully instantiated but returned null for instance");
                     }
                 }
             }
             else
             {
-                LogHelper.Warn<DynamicNode>(string.Format("DataTypeModel {0} failed to instantiate, perhaps it is lacking a parameterless constructor or doesn't implement IRazorDataTypeModel?", dataTypeType.FullName));
+				LogHelper.Warn<DynamicNode>(string.Format("DataTypeModel {0} failed to instantiate, perhaps it is lacking a parameterless constructor or doesn't implement IRazorDataTypeModel?", dataTypeType.FullName));
             }
             result = null;
             return false;
@@ -1318,15 +1319,15 @@ namespace umbraco.MacroEngines
         {
             get
             {
-                return GetChildrenAsList;
-                //if (n == null) return null; return n.ChildrenAsList;
+            	return GetChildrenAsList;
+            	//if (n == null) return null; return n.ChildrenAsList;
             }
         }
 
-        public DynamicNodeList Children
-        {
-            get { return ChildrenAsList; }
-        }
+	    public DynamicNodeList Children
+	    {
+		    get { return ChildrenAsList; }
+	    }
 
         public IProperty GetProperty(string alias)
         {
@@ -1411,7 +1412,7 @@ namespace umbraco.MacroEngines
             var p = alias.StartsWith("@")
                     ? GetReflectedProperty(alias.TrimStart('@'))
                     : GetPropertyValue(alias, recursive, null);
-            return (string)p;
+            return (string) p;
         }
         public string GetPropertyValue(string alias, bool recursive, string fallback)
         {
@@ -1480,7 +1481,7 @@ namespace umbraco.MacroEngines
             if (this.ownerList == null && this.Parent != null)
             {
                 var list = this.Parent.ChildrenAsList.Select(n => new DynamicNode(n));
-                this.ownerList = new DynamicNodeList(list);
+                this.ownerList = new DynamicNodeList(list);                
             }
             return this.ownerList != null;
         }
@@ -1821,128 +1822,128 @@ namespace umbraco.MacroEngines
             return false;
         }
 
-        #region Explicit INode implementation
-        INode INode.Parent
-        {
-            get { return Parent; }
-        }
+		#region Explicit INode implementation
+		INode INode.Parent
+		{
+			get { return Parent; }
+		}
 
-        int INode.Id
-        {
-            get { return Id; }
-        }
+		int INode.Id
+		{
+			get { return Id; }
+		}
 
-        int INode.template
-        {
-            get { return template; }
-        }
+		int INode.template
+		{
+			get { return template; }
+		}
 
-        int INode.SortOrder
-        {
-            get { return SortOrder; }
-        }
+		int INode.SortOrder
+		{
+			get { return SortOrder; }
+		}
 
-        string INode.Name
-        {
-            get { return Name; }
-        }
+		string INode.Name
+		{
+			get { return Name; }
+		}
 
-        string INode.Url
-        {
-            get { return Url; }
-        }
+		string INode.Url
+		{
+			get { return Url; }
+		}
 
-        string INode.UrlName
-        {
-            get { return UrlName; }
-        }
+		string INode.UrlName
+		{
+			get { return UrlName; }
+		}
 
-        string INode.NodeTypeAlias
-        {
-            get { return NodeTypeAlias; }
-        }
+		string INode.NodeTypeAlias
+		{
+			get { return NodeTypeAlias; }
+		}
 
-        string INode.WriterName
-        {
-            get { return WriterName; }
-        }
+		string INode.WriterName
+		{
+			get { return WriterName; }
+		}
 
-        string INode.CreatorName
-        {
-            get { return CreatorName; }
-        }
+		string INode.CreatorName
+		{
+			get { return CreatorName; }
+		}
 
-        int INode.WriterID
-        {
-            get { return WriterID; }
-        }
+		int INode.WriterID
+		{
+			get { return WriterID; }
+		}
 
-        int INode.CreatorID
-        {
-            get { return CreatorID; }
-        }
+		int INode.CreatorID
+		{
+			get { return CreatorID; }
+		}
 
-        string INode.Path
-        {
-            get { return Path; }
-        }
+		string INode.Path
+		{
+			get { return Path; }
+		}
 
-        DateTime INode.CreateDate
-        {
-            get { return CreateDate; }
-        }
+		DateTime INode.CreateDate
+		{
+			get { return CreateDate; }
+		}
 
-        DateTime INode.UpdateDate
-        {
-            get { return UpdateDate; }
-        }
+		DateTime INode.UpdateDate
+		{
+			get { return UpdateDate; }
+		}
 
-        Guid INode.Version
-        {
-            get { return Version; }
-        }
+		Guid INode.Version
+		{
+			get { return Version; }
+		}
 
-        string INode.NiceUrl
-        {
-            get { return NiceUrl; }
-        }
+		string INode.NiceUrl
+		{
+			get { return NiceUrl; }
+		}
 
-        int INode.Level
-        {
-            get { return Level; }
-        }
+		int INode.Level
+		{
+			get { return Level; }
+		}
 
-        List<IProperty> INode.PropertiesAsList
-        {
-            get { return PropertiesAsList; }
-        }
+		List<IProperty> INode.PropertiesAsList
+		{
+			get { return PropertiesAsList; }
+		}
 
-        List<INode> INode.ChildrenAsList
-        {
-            get { return new List<INode>(ChildrenAsList.Select(x => x).ToList()); }
-        }
+		List<INode> INode.ChildrenAsList
+		{
+			get { return new List<INode>(ChildrenAsList.Select(x => x).ToList()); }
+		}
 
-        IProperty INode.GetProperty(string Alias)
-        {
-            return GetProperty(Alias);
-        }
+		IProperty INode.GetProperty(string Alias)
+		{
+			return GetProperty(Alias);
+		}
 
-        IProperty INode.GetProperty(string Alias, out bool propertyExists)
-        {
-            var p = GetProperty(Alias, false);
-            propertyExists = p != null;
-            return p;
-        }
+		IProperty INode.GetProperty(string Alias, out bool propertyExists)
+		{
+			var p = GetProperty(Alias, false);
+			propertyExists = p != null;
+			return p;
+		}
 
-        System.Data.DataTable INode.ChildrenAsTable()
-        {
-            return ChildrenAsTable();
-        }
+		System.Data.DataTable INode.ChildrenAsTable()
+		{
+			return ChildrenAsTable();
+		}
 
-        System.Data.DataTable INode.ChildrenAsTable(string nodeTypeAliasFilter)
-        {
-            return ChildrenAsTable(nodeTypeAliasFilter);
-        }
-        #endregion
-    }
+		System.Data.DataTable INode.ChildrenAsTable(string nodeTypeAliasFilter)
+		{
+			return ChildrenAsTable(nodeTypeAliasFilter);
+		} 
+		#endregion
+	}
 }
