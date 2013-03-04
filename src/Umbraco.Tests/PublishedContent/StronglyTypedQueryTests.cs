@@ -6,8 +6,11 @@ using NUnit.Framework;
 using Umbraco.Core;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.Models;
+using Umbraco.Core.PropertyEditors;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web;
+using Umbraco.Web.Models;
+using Umbraco.Web.Routing;
 
 namespace Umbraco.Tests.PublishedContent
 {
@@ -73,13 +76,13 @@ namespace Umbraco.Tests.PublishedContent
 
 		internal IPublishedContent GetNode(int id)
 		{
-			var ctx = GetUmbracoContext("/test", 1234);
+			var ctx = UmbracoContext.Current;
 			var contentStore = new DefaultPublishedContentStore();
 			var doc = contentStore.GetDocumentById(ctx, id);
 			Assert.IsNotNull(doc);
 			return doc;
 		}
-        
+
         
 		[Test]
 		public void Type_Test()
@@ -173,7 +176,7 @@ namespace Umbraco.Tests.PublishedContent
 			if (content.DocumentTypeAlias == alias) return creator(content);
 			throw new InvalidOperationException("The content type cannot be cast to " + typeof(T).FullName + " since it is type: " + content.DocumentTypeAlias);
 		}
-	
+
 		public static HomeContentItem AsHome(this IPublishedContent content)
 		{
 			return content.AsDocumentType("Home", x => new HomeContentItem(x));
@@ -215,13 +218,23 @@ namespace Umbraco.Tests.PublishedContent
 		}
 	}
 
-	public class PublishedContentWrapper : IPublishedContent
+    public class PublishedContentWrapper : IPublishedContent, IOwnerCollectionAware<IPublishedContent>
 	{
 		protected IPublishedContent WrappedContent { get; private set; }
 
 		public PublishedContentWrapper(IPublishedContent content)
 		{
 			WrappedContent = content;
+		}
+
+		public string Url
+		{
+			get { return WrappedContent.Url; }
+		}
+
+		public PublishedItemType ItemType
+		{
+			get { return WrappedContent.ItemType; }
 		}
 
 		public IPublishedContent Parent
@@ -293,10 +306,16 @@ namespace Umbraco.Tests.PublishedContent
 		{
 			get { return WrappedContent.Level; }
 		}
-		public Collection<IPublishedContentProperty> Properties
+		public ICollection<IPublishedContentProperty> Properties
 		{
 			get { return WrappedContent.Properties; }
 		}
+
+		public object this[string propertyAlias]
+		{
+			get { return GetProperty(propertyAlias).Value; }
+		}
+
 		public IEnumerable<IPublishedContent> Children
 		{
 			get { return WrappedContent.Children; }
@@ -305,11 +324,52 @@ namespace Umbraco.Tests.PublishedContent
 		{
 			return WrappedContent.GetProperty(alias);
 		}
+
+        private IEnumerable<IPublishedContent> _ownersCollection;
+
+        /// <summary>
+        /// Need to get/set the owner collection when an item is returned from the result set of a query
+        /// </summary>
+        /// <remarks>
+        /// Based on this issue here: http://issues.umbraco.org/issue/U4-1797
+        /// </remarks>
+        IEnumerable<IPublishedContent> IOwnerCollectionAware<IPublishedContent>.OwnersCollection
+        {
+            get
+            {
+                var publishedContentBase = WrappedContent as IOwnerCollectionAware<IPublishedContent>;
+                if (publishedContentBase != null)
+                {
+                    return publishedContentBase.OwnersCollection;
+                }
+
+                //if the owners collection is null, we'll default to it's siblings
+                if (_ownersCollection == null)
+                {
+                    //get the root docs if parent is null
+                    _ownersCollection = this.Siblings();
+                }
+                return _ownersCollection;
+            }
+            set
+            {
+                var publishedContentBase = WrappedContent as IOwnerCollectionAware<IPublishedContent>;
+                if (publishedContentBase != null)
+                {
+                    publishedContentBase.OwnersCollection = value;
+                }
+                else
+                {
+                    _ownersCollection = value;
+                }
+            }
+        }
 	}
 
 	public partial class HomeContentItem : ContentPageContentItem
-	{	
-		public HomeContentItem(IPublishedContent content) : base(content)
+	{
+		public HomeContentItem(IPublishedContent content)
+			: base(content)
 		{
 		}
 
