@@ -38,9 +38,8 @@ namespace umbraco.presentation.actions
             deleteMessage.Text = ui.Text("editContentPublishedHeader");
 
             confirm.Visible = false;
-            d.Publish(getUser());
-            library.UpdateDocumentCache(d);
-
+            d.SaveAndPublish(UmbracoUser);
+            
             deleted.Text = ui.Text("editContentPublishedHeader") + " ('" + d.Text + "') " + ui.Text("editContentPublishedText") + "</p><p><a href=\"" + library.NiceUrl(d.Id) + "\"> " + ui.Text("view") + " " + d.Text + "</a>";
         }
     }
