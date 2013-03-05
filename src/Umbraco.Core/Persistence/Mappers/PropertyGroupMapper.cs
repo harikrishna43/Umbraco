@@ -14,7 +14,7 @@ namespace Umbraco.Core.Persistence.Mappers
     {
         private static readonly ConcurrentDictionary<string, DtoMapModel> PropertyInfoCache = new ConcurrentDictionary<string, DtoMapModel>();
 
-        internal static PropertyGroupMapper Instance = new PropertyGroupMapper();
+        internal static readonly PropertyGroupMapper Instance = new PropertyGroupMapper();
 
         private PropertyGroupMapper()
         {

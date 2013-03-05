@@ -61,11 +61,6 @@ namespace Umbraco.Core.ObjectResolution
 			get { return false; }			
 		}
 
-		protected override bool SupportsRemove
-		{
-			get { return false; }
-		}
-
 	    private class LegacyStartupHandlerResolver : ManyObjectsResolverBase<ApplicationEventsResolver, IApplicationStartupHandler>
 	    {
 	        internal LegacyStartupHandlerResolver(IEnumerable<Type> legacyStartupHandlers)
@@ -78,7 +73,7 @@ namespace Umbraco.Core.ObjectResolution
             {
                 get { return Values; }
             }
-	    }
+	    }	    
 
 	}
 }
