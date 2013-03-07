@@ -33,23 +33,25 @@ namespace Umbraco.Tests.TestHelpers
             string path = TestHelper.CurrentAssemblyDirectory;
             AppDomain.CurrentDomain.SetData("DataDirectory", path);
 
-            try
-            {
-                //Delete database file before continueing
-                string filePath = string.Concat(path, "\\test.sdf");
-                if (File.Exists(filePath))
+           
+                try
                 {
-                    File.Delete(filePath);
+                    //Delete database file before continueing
+                    string filePath = string.Concat(path, "\\test.sdf");
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
                 }
-            }
-            catch (Exception)
-            {
-                //if this doesn't work we have to make sure everything is reset! otherwise
-                // well run into issues because we've already set some things up
-                TearDown();
-                throw;
-            }
+                catch (Exception)
+                {
+                    //if this doesn't work we have to make sure everything is reset! otherwise
+                    // well run into issues because we've already set some things up
+                    TearDown();
+                    throw;
+                }
             
+
             RepositoryResolver.Current = new RepositoryResolver(
                 new RepositoryFactory());
 
@@ -83,7 +85,6 @@ namespace Umbraco.Tests.TestHelpers
 
             //reset the app context
             ApplicationContext.Current = null;
-            Resolution.IsFrozen = false;
 
             RepositoryResolver.Reset();
         }
