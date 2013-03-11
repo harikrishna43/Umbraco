@@ -78,7 +78,7 @@ namespace Umbraco.Tests.Routing
 			
 			var result = _module.EnsureUmbracoRoutablePage(umbracoContext, httpContext);
 
-			Assert.AreEqual(assert, result);
+			Assert.AreEqual(assert, result.Success);
 		}
 
 		[TestCase("/favicon.ico", true)]
