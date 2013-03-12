@@ -1,11 +1,12 @@
 ﻿using System;
 using Umbraco.Core;
 using Umbraco.Core.Cache;
+using umbraco.cms.businesslogic.member;
 using umbraco.interfaces;
 
 namespace Umbraco.Web.Cache
 {
-    public class MemberCacheRefresher : ICacheRefresher
+    public class MemberCacheRefresher : ICacheRefresher<Member>
     {
 
         public Guid UniqueIdentifier
@@ -40,8 +41,17 @@ namespace Umbraco.Web.Cache
         private void ClearCache(int id)
         {
             ApplicationContext.Current.ApplicationCache.
-                ClearCacheByKeySearch(string.Format("UL_{0}_{1}", CacheKeys.GetMemberCacheKey, id));
+                ClearCacheByKeySearch(string.Format("UL_{0}_{1}", CacheKeys.MemberCacheKey, id));
         }
 
+        public void Refresh(Member instance)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Remove(Member instance)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
