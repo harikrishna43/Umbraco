@@ -25,9 +25,6 @@ namespace Umbraco.Tests.Routing
 		{
 			base.Initialize();
 			
-			//the module requires that the singleton is setup
-			ApplicationContext.Current = ApplicationContext;
-
 			//create the module
 			_module = new UmbracoModule();
 
@@ -78,7 +75,7 @@ namespace Umbraco.Tests.Routing
 			
 			var result = _module.EnsureUmbracoRoutablePage(umbracoContext, httpContext);
 
-			Assert.AreEqual(assert, result);
+			Assert.AreEqual(assert, result.Success);
 		}
 
 		[TestCase("/favicon.ico", true)]

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Umbraco.Core;
 using Umbraco.Core.Logging;
 using umbraco.DataLayer;
 using System.Collections.Generic;
@@ -651,7 +652,7 @@ namespace umbraco.BusinessLogic
             {
                 this.LoginName = DateTime.Now.ToString("yyyyMMdd") + "_" + this.LoginName;
             }
-
+            this.Save();
         }
 
         /// <summary>
@@ -896,12 +897,11 @@ namespace umbraco.BusinessLogic
         /// <summary>
         /// Flushes the user from cache.
         /// </summary>
+        [Obsolete("This method should not be used, cache flushing is handled automatically by event handling in the web application and ensures that all servers are notified, this will not notify all servers in a load balanced environment")]
         public void FlushFromCache()
         {
             OnFlushingFromCache(EventArgs.Empty);
-
-            if (System.Web.HttpRuntime.Cache[string.Format("UmbracoUser{0}", Id.ToString())] != null)
-                System.Web.HttpRuntime.Cache.Remove(string.Format("UmbracoUser{0}", Id.ToString()));
+            ApplicationContext.Current.ApplicationCache.ClearCacheItem(string.Format("UmbracoUser{0}", Id.ToString()));            
         }
 
         /// <summary>
@@ -911,22 +911,19 @@ namespace umbraco.BusinessLogic
         /// <returns></returns>
         public static User GetUser(int id)
         {
-            if (System.Web.HttpRuntime.Cache[string.Format("UmbracoUser{0}", id.ToString())] == null)
-            {
-
-                try
-                {
-                    User u = new User(id);
-                    System.Web.HttpRuntime.Cache.Insert(string.Format("UmbracoUser{0}", id.ToString()), u);
-                }
-                catch (ArgumentException)
-                {
-                    //no user was found
-                    return null;
-                }
-
-            }
-            return (User)System.Web.HttpRuntime.Cache[string.Format("UmbracoUser{0}", id.ToString())];
+            return ApplicationContext.Current.ApplicationCache.GetCacheItem(
+                string.Format("UmbracoUser{0}", id.ToString()), () =>
+                    {
+                        try
+                        {
+                            return new User(id);
+                        }
+                        catch (ArgumentException)
+                        {
+                            //no user was found
+                            return null;
+                        }
+                    });
         }
 
 

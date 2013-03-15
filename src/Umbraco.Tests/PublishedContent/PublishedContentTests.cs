@@ -67,7 +67,10 @@ namespace Umbraco.Tests.PublishedContent
 		public override void Initialize()
 		{
 			base.Initialize();
+            
 		}
+
+
 
 		public override void TearDown()
 		{

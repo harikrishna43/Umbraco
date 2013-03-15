@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using Umbraco.Core.Persistence.Mappers;
 
 namespace Umbraco.Core.Models
 {

@@ -18,12 +18,8 @@ namespace Umbraco.Tests
 	public class LibraryTests : BaseRoutingTest
 	{
 		public override void Initialize()
-		{
+		{            
 			base.Initialize();
-
-			//set the current umbraco context and a published content store
-			PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(
-				new DefaultPublishedContentStore());
 
 			var routingContext = GetRoutingContext("/test", 1234);
 			UmbracoContext.Current = routingContext.UmbracoContext;
@@ -40,11 +36,19 @@ namespace Umbraco.Tests
             Core.Configuration.UmbracoSettings.SettingsFilePath = Core.IO.IOHelper.MapPath(Core.IO.SystemDirectories.Config + Path.DirectorySeparatorChar, false);
 		}
 
+        protected override void FreezeResolution()
+        {
+            //set the current umbraco context and a published content store
+            PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(
+                new DefaultPublishedContentStore());
+
+            base.FreezeResolution();
+        }
+
 		public override void TearDown()
 		{
 			base.TearDown();
 			UmbracoContext.Current = null;
-			PublishedContentStoreResolver.Reset();
 		}
 
 		protected override bool RequiresDbSetup
