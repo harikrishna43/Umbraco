@@ -152,7 +152,7 @@ namespace Umbraco.Web
 
 			//Here we need to put the value through the IPropertyEditorValueConverter's
 			//get the data type id for the current property
-			var dataType = PublishedContentHelper.GetDataType(doc.DocumentTypeAlias, alias);
+			var dataType = PublishedContentHelper.GetDataType(ApplicationContext.Current, doc.DocumentTypeAlias, alias);
 			//convert the string value to a known type
 			var converted = PublishedContentHelper.ConvertPropertyValue(p.Value, dataType, doc.DocumentTypeAlias, alias);
 			return converted.Success
@@ -187,7 +187,7 @@ namespace Umbraco.Web
 			//before we try to convert it manually, lets see if the PropertyEditorValueConverter does this for us
 			//Here we need to put the value through the IPropertyEditorValueConverter's
 			//get the data type id for the current property
-			var dataType = PublishedContentHelper.GetDataType(prop.DocumentTypeAlias, alias);
+			var dataType = PublishedContentHelper.GetDataType(ApplicationContext.Current, prop.DocumentTypeAlias, alias);
 			//convert the value to a known type
 			var converted = PublishedContentHelper.ConvertPropertyValue(p.Value, dataType, prop.DocumentTypeAlias, alias);
 			object parsedLinksVal;
@@ -1173,7 +1173,7 @@ namespace Umbraco.Web
 			if (firstNode == null)
 				return new DataTable(); //no children found 
 
-			var urlProvider = UmbracoContext.Current.RoutingContext.NiceUrlProvider;
+			var urlProvider = UmbracoContext.Current.RoutingContext.UrlProvider;
 
 			//use new utility class to create table so that we don't have to maintain code in many places, just one
 			var dt = Umbraco.Core.DataTableExtensions.GenerateDataTable(
@@ -1204,7 +1204,7 @@ namespace Umbraco.Web
 									{"UpdateDate", n.UpdateDate},
 									{"CreatorName", n.CreatorName},
 									{"WriterName", n.WriterName},
-									{"Url", urlProvider.GetNiceUrl(n.Id)}
+									{"Url", urlProvider.GetUrl(n.Id)}
 								};
 						var userVals = new Dictionary<string, object>();
 						foreach (var p in from IPublishedContentProperty p in n.Properties where p.Value != null select p)

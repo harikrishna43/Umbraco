@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Umbraco.Core.Events;
+using Umbraco.Core.Logging;
 using Umbraco.Core.Models.Rdbms;
 using Umbraco.Core.Persistence.DatabaseModelDefinitions;
 using Umbraco.Core.Persistence.SqlSyntax;
@@ -60,9 +61,33 @@ namespace Umbraco.Core.Persistence.Migrations.Initial
                                                                               },
                                                                               {38, typeof (User2AppDto)},
                                                                               {39, typeof (User2NodeNotifyDto)},
-                                                                              {40, typeof (User2NodePermissionDto)}
+                                                                              {40, typeof (User2NodePermissionDto)},
+                                                                              {41, typeof (ServerRegistrationDto)}
                                                                           };
         #endregion
+
+        /// <summary>
+        /// Drops all Umbraco tables in the db
+        /// </summary>
+        internal void UninstallDatabaseSchema()
+        {
+            foreach (var item in OrderedTables.OrderByDescending(x => x.Key))
+            {
+                var tableNameAttribute = item.Value.FirstAttribute<TableNameAttribute>();
+                string tableName = tableNameAttribute == null ? item.Value.Name : tableNameAttribute.Value;
+
+                try
+                {
+                    _database.DropTable(tableName);
+                }
+                catch (Exception ex)
+                {
+                    //swallow this for now, not sure how best to handle this with diff databases... though this is internal
+                    // and only used for unit tests. If this fails its because the table doesn't exist... generally!
+                    LogHelper.Error<DatabaseSchemaCreation>("Could not drop table " + tableName, ex);
+                }
+            }
+        }
 
         public DatabaseSchemaCreation(Database database)
         {
@@ -110,7 +135,9 @@ namespace Umbraco.Core.Persistence.Migrations.Initial
             {
                 result.ValidTables.Add(tableName);
             }
-            var invalidTableDifferences = tablesInDatabase.Except(tablesInSchema);
+            var invalidTableDifferences =
+                tablesInDatabase.Except(tablesInSchema)
+                                .Union(tablesInSchema.Except(tablesInDatabase));
             foreach (var tableName in invalidTableDifferences)
             {
                 result.Errors.Add(new Tuple<string, string>("Table", tableName));

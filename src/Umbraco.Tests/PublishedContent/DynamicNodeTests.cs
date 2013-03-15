@@ -3,9 +3,9 @@ using System.IO;
 using NUnit.Framework;
 using Umbraco.Core;
 using Umbraco.Core.Configuration;
+using Umbraco.Core.IO;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web;
-using umbraco.IO;
 using umbraco.MacroEngines;
 using umbraco.NodeFactory;
 using System.Linq;
@@ -18,6 +18,14 @@ namespace Umbraco.Tests.PublishedContent
         protected override bool RequiresDbSetup
         {
             get { return true; }
+        }
+
+        /// <summary>
+        /// We only need a new schema per fixture... speeds up testing
+        /// </summary>
+        protected override DbInitBehavior DatabaseTestBehavior
+        {
+            get { return DbInitBehavior.NewSchemaPerFixture; }
         }
 
         public override void Initialize()
@@ -35,19 +43,13 @@ namespace Umbraco.Tests.PublishedContent
 
             UmbracoSettings.SettingsFilePath = IOHelper.MapPath(SystemDirectories.Config + Path.DirectorySeparatorChar, false);
 
-            //for testing, we'll specify which assemblies are scanned for the PluginTypeResolver
-            PluginManager.Current.AssembliesToScan = new[]
-				{
-					typeof(DynamicNode).Assembly
-				};
-
             //need to specify a custom callback for unit tests
             DynamicNode.GetDataTypeCallback = (docTypeAlias, propertyAlias) =>
             {
                 if (propertyAlias == "content")
                 {
                     //return the rte type id
-                    return Guid.Parse("5e9b75ae-face-41c8-b47e-5f4b0fd82f83");
+                    return Guid.Parse(Constants.PropertyEditors.TinyMCEv3);
                 }
                 return Guid.Empty;
             };
@@ -78,10 +80,6 @@ namespace Umbraco.Tests.PublishedContent
         public override void TearDown()
         {
             base.TearDown();
-
-            PluginManager.Current.AssembliesToScan = null;
-
-            UmbracoSettings.ResetSetters();
         }
 
         protected override dynamic GetDynamicNode(int id)
