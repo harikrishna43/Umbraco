@@ -81,18 +81,23 @@ namespace Umbraco.Web
             if (UmbracoContext.Current != null && !replaceContext)
                 return UmbracoContext.Current;
 
-            var umbracoContext = new UmbracoContext(httpContext, applicationContext, RoutesCacheResolver.Current.RoutesCache);
+            var umbracoContext = new UmbracoContext(httpContext, applicationContext);
 
             // create the nice urls provider
-            var niceUrls = new NiceUrlProvider(PublishedContentStoreResolver.Current.PublishedContentStore, umbracoContext);
+            // there's one per request because there are some behavior parameters that can be changed
+            var urlProvider = new UrlProvider(
+                umbracoContext,
+                PublishedContentStoreResolver.Current.PublishedContentStore,
+                UrlProviderResolver.Current.Providers);
 
             // create the RoutingContext, and assign
             var routingContext = new RoutingContext(
                 umbracoContext,
-                DocumentLookupsResolver.Current.DocumentLookups,
-                LastChanceLookupResolver.Current.LastChanceLookup,
+                ContentFinderResolver.Current.Finders,
+                ContentLastChanceFinderResolver.Current.Finder,
                 PublishedContentStoreResolver.Current.PublishedContentStore,
-                niceUrls);
+                urlProvider,
+                RoutesCacheResolver.Current.RoutesCache);
 
             //assign the routing context back
             umbracoContext.RoutingContext = routingContext;
@@ -107,11 +112,9 @@ namespace Umbraco.Web
         /// </summary>
         /// <param name="httpContext"></param>
         /// <param name="applicationContext"> </param>
-        /// <param name="routesCache"> </param>
         internal UmbracoContext(
 			HttpContextBase httpContext, 
-			ApplicationContext applicationContext,
-			IRoutesCache routesCache)
+			ApplicationContext applicationContext)
         {
             if (httpContext == null) throw new ArgumentNullException("httpContext");
             if (applicationContext == null) throw new ArgumentNullException("applicationContext");
@@ -121,7 +124,6 @@ namespace Umbraco.Web
 
             HttpContext = httpContext;            
             Application = applicationContext;
-        	RoutesCache = routesCache;
 
 			// set the urls...
 			//original request url
@@ -200,11 +202,6 @@ namespace Umbraco.Web
         /// </summary>
         public ApplicationContext Application { get; private set; }       
 
-        /// <summary>
-        /// Gets the <see cref="IRoutesCache"/>
-        /// </summary>
-		internal IRoutesCache RoutesCache { get; private set; }
-		
 	    /// <summary>
 	    /// Gets the uri that is handled by ASP.NET after server-side rewriting took place.
 	    /// </summary>
@@ -277,13 +274,13 @@ namespace Umbraco.Web
 		/// <remarks>
 		/// If the RoutingContext is null, this will throw an exception.
 		/// </remarks>
-    	internal NiceUrlProvider NiceUrlProvider
+    	internal UrlProvider UrlProvider
     	{
     		get
     		{
     			if (RoutingContext == null)
-					throw new InvalidOperationException("Cannot access the NiceUrlProvider when the UmbracoContext's RoutingContext is null");
-    			return RoutingContext.NiceUrlProvider;
+					throw new InvalidOperationException("Cannot access the UrlProvider when the UmbracoContext's RoutingContext is null");
+    			return RoutingContext.UrlProvider;
     		}
     	}
 

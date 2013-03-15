@@ -27,20 +27,21 @@ namespace Umbraco.Tests.Routing
 
 			var url = "/test";
 			
-			var lookup = new Umbraco.Web.Routing.LookupByNiceUrl();
-			var lookups = new Umbraco.Web.Routing.IPublishedContentLookup[] { lookup };
+			var lookup = new Umbraco.Web.Routing.ContentFinderByNiceUrl();
+			var lookups = new Umbraco.Web.Routing.IContentFinder[] { lookup };
 
 			var t = Template.MakeNew("test", new User(0));
 
 			var umbracoContext = GetUmbracoContext(url, t.Id);
 			var contentStore = new DefaultPublishedContentStore();
-			var niceUrls = new NiceUrlProvider(contentStore, umbracoContext);
+            var urlProvider = new UrlProvider(umbracoContext, contentStore, new IUrlProvider[] { new DefaultUrlProvider() });
 			var routingContext = new RoutingContext(
 				umbracoContext,
 				lookups,
-				new FakeLastChanceLookup(),
+				new FakeLastChanceFinder(),
 				contentStore,
-				niceUrls);
+                urlProvider,
+                GetRoutesCache());
 
 			//assign the routing context back to the umbraco context
 			umbracoContext.RoutingContext = routingContext;
@@ -50,6 +51,11 @@ namespace Umbraco.Tests.Routing
 			Umbraco.Web.UmbracoContext.Current = routingContext.UmbracoContext;
 		}
 
+        public override void TearDown()
+        {
+            Umbraco.Web.UmbracoContext.Current = null;
+            base.TearDown();
+        }
 
 		[TestCase(1046, "/home")]
 		[TestCase(1173, "/home/sub1")]

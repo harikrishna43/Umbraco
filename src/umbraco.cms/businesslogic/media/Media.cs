@@ -64,7 +64,7 @@ namespace umbraco.cms.businesslogic.media
         /// <summary>
         /// -
         /// </summary>
-        public static Guid _objectType = new Guid("b796f64c-1f99-4ffb-b886-4bf4bc011a9c");
+        public static Guid _objectType = new Guid(Constants.ObjectTypes.Media);
 
         /// <summary>
         /// Creates a new Media
@@ -220,7 +220,8 @@ namespace umbraco.cms.businesslogic.media
                 var children = ApplicationContext.Current.Services.MediaService.GetChildren(Id).OrderBy(c => c.SortOrder);
                 return children.Select(x => new Media(x)).ToArray();
             }
-        } 
+        }
+        
         #endregion
 
         #region Public methods
