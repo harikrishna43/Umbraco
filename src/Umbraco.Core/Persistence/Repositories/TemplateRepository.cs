@@ -12,6 +12,7 @@ using Umbraco.Core.Persistence.Caching;
 using Umbraco.Core.Persistence.Factories;
 using Umbraco.Core.Persistence.Querying;
 using Umbraco.Core.Persistence.UnitOfWork;
+using Umbraco.Core.Sync;
 
 namespace Umbraco.Core.Persistence.Repositories
 {
@@ -163,7 +164,7 @@ namespace Umbraco.Core.Persistence.Repositories
 
         protected override Guid NodeObjectTypeId
         {
-            get { return new Guid("6FBDE604-4178-42CE-A10B-8A2600A2F07D"); }
+            get { return new Guid(Constants.ObjectTypes.Template); }
         }
 
         protected override void PersistNewItem(ITemplate entity)
