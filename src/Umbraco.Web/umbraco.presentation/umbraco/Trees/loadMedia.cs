@@ -24,11 +24,12 @@ using umbraco.DataLayer;
 using umbraco.BusinessLogic.Actions;
 using umbraco.BusinessLogic.Utils;
 using umbraco.cms.presentation.Trees;
+using Umbraco.Core;
 
 
 namespace umbraco
 {
-    [Tree("media", "media", "Media")]
+    [Tree(Constants.Applications.Media, "media", "Media")]
     public class loadMedia : BaseMediaTree
     {
 
@@ -45,7 +46,7 @@ namespace umbraco
 		static loadMedia()
 		{
 			LinkableMediaDataTypes = new List<Guid>();
-			LinkableMediaDataTypes.Add(new Guid("5032a6e6-69e3-491d-bb28-cd31cd11086c"));
+			LinkableMediaDataTypes.Add(new Guid(Constants.PropertyEditors.UploadField));
 		}
 
 		public loadMedia(string application)

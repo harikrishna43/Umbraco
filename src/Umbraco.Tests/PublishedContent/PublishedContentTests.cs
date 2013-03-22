@@ -8,6 +8,8 @@ using Umbraco.Core.Models;
 using Umbraco.Core.PropertyEditors;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web;
+using Umbraco.Web.PublishedCache;
+using Umbraco.Web.PublishedCache.LegacyXmlCache;
 
 namespace Umbraco.Tests.PublishedContent
 {
@@ -17,10 +19,10 @@ namespace Umbraco.Tests.PublishedContent
 	[TestFixture]
     public class PublishedContentTests : PublishedContentTestBase
 	{
-		protected override bool RequiresDbSetup
-		{
-			get { return false; }
-		}
+        protected override DatabaseBehavior DatabaseTestBehavior
+        {
+            get { return DatabaseBehavior.NoDatabasePerFixture; }
+        }
 
 		protected override string GetXmlContent(int templateId)
 		{
@@ -64,22 +66,10 @@ namespace Umbraco.Tests.PublishedContent
 </root>";
 		}
 
-		public override void Initialize()
-		{
-			base.Initialize();
-		}
-
-		public override void TearDown()
-		{
-			base.TearDown();
-			
-		}
-
 		internal IPublishedContent GetNode(int id)
 		{
 			var ctx = GetUmbracoContext("/test", 1234);
-			var contentStore = new DefaultPublishedContentStore();
-			var doc = contentStore.GetDocumentById(ctx, id);
+			var doc = ctx.ContentCache.GetById(id);
 			Assert.IsNotNull(doc);
 			return doc;
 		}
@@ -333,7 +323,7 @@ namespace Umbraco.Tests.PublishedContent
 		{
 			var doc = GetNode(1173);
 
-			var hasProp = doc.HasProperty("umbracoUrlAlias");
+			var hasProp = doc.HasProperty(Constants.Conventions.Content.UrlAlias);
 
 			Assert.AreEqual(true, (bool)hasProp);
 
@@ -345,7 +335,7 @@ namespace Umbraco.Tests.PublishedContent
 		{
 			var doc = GetNode(1173);
 
-			var hasValue = doc.HasValue("umbracoUrlAlias");
+			var hasValue = doc.HasValue(Constants.Conventions.Content.UrlAlias);
 			var noValue = doc.HasValue("blahblahblah");
 
 			Assert.IsTrue(hasValue);

@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Web.Services;
+using Umbraco.Core;
+using Umbraco.Web;
+using Umbraco.Web.Cache;
 
 namespace umbraco.webservices.templates
 {
@@ -92,7 +95,6 @@ namespace umbraco.webservices.templates
             template.Text = carrier.Name;
             template.Design = carrier.Design;
             template.Save();
-            clearCachedTemplate(template);
             return template.Id;
         }
 
@@ -117,9 +119,6 @@ namespace umbraco.webservices.templates
             template.Text = carrier.Name;
             template.Design = carrier.Design;
             template.Save();
-
-
-            clearCachedTemplate(template);
         }
 
         [WebMethod]
@@ -201,17 +200,6 @@ namespace umbraco.webservices.templates
                 get { return design; }
                 set { design = value; }
             }
-        }
-
-        private void clearCachedTemplate(cms.businesslogic.template.Template cachedTemplate)
-        {
-            // Clear cache in rutime
-            if (UmbracoSettings.UseDistributedCalls)
-                umbraco.presentation.cache.dispatcher.Refresh(
-                    new Guid("dd12b6a0-14b9-46e8-8800-c154f74047c8"),
-                    cachedTemplate.Id);
-            else
-                umbraco.template.ClearCachedTemplate(cachedTemplate.Id);
         }
 
     }
