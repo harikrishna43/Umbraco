@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -30,7 +33,6 @@ namespace umbraco.controls
     [ClientDependency(ClientDependencyType.Css, "Tree/Themes/umbraco/style.css", "UmbracoClient")]
     [ClientDependency(ClientDependencyType.Css, "GenericProperty/genericproperty.css", "UmbracoClient")]
     [ClientDependency(ClientDependencyType.Javascript, "GenericProperty/genericproperty.js", "UmbracoClient")]
-    [ClientDependency(ClientDependencyType.Javascript, "js/UmbracoCasingRules.aspx", "UmbracoRoot")]
     public partial class ContentTypeControlNew : UserControl
     {
         // General Private members
@@ -70,6 +72,10 @@ namespace umbraco.controls
             SetupGenericPropertiesPane();
             SetupTabPane();
 
+            // [ClientDependency(ClientDependencyType.Javascript, "js/UmbracoCasingRules.aspx", "UmbracoRoot")]
+            var loader = ClientDependency.Core.Controls.ClientDependencyLoader.GetInstance(new HttpContextWrapper(Context));
+            var helper = new UrlHelper(new RequestContext(new HttpContextWrapper(Context), new RouteData()));
+            loader.RegisterDependency(helper.GetCoreStringsControllerPath() + "ServicesJavaScript", ClientDependencyType.Javascript);
         }
 
         protected void Page_Load(object sender, EventArgs e)
@@ -93,7 +99,7 @@ namespace umbraco.controls
                 PanePropertiesInherited.Visible = true;
             }
 
-            theClientId.Text = this.ClientID;
+            checkTxtAliasJs.Text = string.Format("checkAlias('{0}');", txtAlias.ClientID);
         }
 
         protected void save_click(object sender, ImageClickEventArgs e)
@@ -188,11 +194,6 @@ namespace umbraco.controls
             // reload content type (due to caching)
             LoadContentType();
 
-            // Only if the doctype alias changed, cause a regeneration of the xml cache file since
-            // the xml element names will need to be updated to reflect the new alias
-            if (docTypeAliasChanged)
-                RegenerateXmlCaches();
-
             BindDataGenericProperties(true);
 
             // we need to re-bind the alias as the SafeAlias method can have changed it
@@ -230,16 +231,7 @@ namespace umbraco.controls
                 _contentType = new ContentType(docTypeId);
             }
         }
-
-        /// <summary>
-        /// Regenerates the XML caches. Used after a document type alias has been changed.
-        /// </summary>
-        private void RegenerateXmlCaches()
-        {
-            Document.RePublishAll();
-            library.RefreshContent();
-        }
-
+        
         /// <summary>
         /// Updates the Node in the Tree
         /// </summary>
@@ -270,7 +262,12 @@ namespace umbraco.controls
             // nh css file update, add support for css sprites
             foreach (string iconClass in cms.businesslogic.CMSNode.DefaultIconClasses)
             {
-                ListItem li = new ListItem(helper.SpaceCamelCasing((iconClass.Substring(1, iconClass.Length - 1))).Replace("Spr Tree", "").Trim(), iconClass);
+                var liText = iconClass
+                    .Substring(1)
+                    .SplitPascalCasing().ToFirstUpperInvariant()
+                    .Replace("Spr Tree", "")
+                    .Trim();
+                ListItem li = new ListItem(liText, iconClass);
                 li.Attributes.Add("class", "spriteBackground sprTree " + iconClass.Trim('.'));
                 li.Attributes.Add("style", "padding-left:20px !important; background-repeat:no-repeat;");
 
@@ -673,13 +670,6 @@ jQuery(document).ready(function() {{ refreshDropDowns(); }});
                         contentTypeItem.MovePropertyType(propertyType.Alias, propertyGroup.Name);
                     }
                 }
-
-                //Is only called to flush cache since gpw.PropertyType.Save() isn't called
-                // clear local cache
-                cms.businesslogic.cache.Cache.ClearCacheItem("UmbracoPropertyTypeCache" + gpw.PropertyType.Id);
-                // clear cache in ContentType
-                cms.businesslogic.cache.Cache.ClearCacheItem("ContentType_PropertyTypes_Content:" + contentTypeItem.Id);
-                _contentType.ClearVirtualTabs();
             }
 
             //Update the SortOrder of the PropertyTypes
@@ -745,7 +735,7 @@ jQuery(document).ready(function() {{ refreshDropDowns(); }});
             foreach (GenericPropertyWrapper gpw in _genericProperties)
             {
                 cms.businesslogic.propertytype.PropertyType pt = gpw.PropertyType;
-                pt.Alias = gpw.GenricPropertyControl.Alias;
+                pt.Alias = gpw.GenricPropertyControl.Alias; // FIXME so we blindly trust the UI for safe aliases?!
                 pt.Name = gpw.GenricPropertyControl.Name;
                 pt.Description = gpw.GenricPropertyControl.Description;
                 pt.ValidationRegExp = gpw.GenricPropertyControl.Validation;
@@ -848,8 +838,14 @@ jQuery(document).ready(function() {{ refreshDropDowns(); }});
                 _contentType.ContentTypeItem.RemovePropertyType(gpw.PropertyType.Alias);
                 _contentType.Save();
             }
-
-            gpw.GenricPropertyControl.PropertyType.delete();
+            else
+            {
+                //if it is not a document type or a media type, then continue to call the legacy delete() method.
+                //the new API for document type and media type's will ensure that the data is removed correctly and that
+                //the cache is flushed correctly (using events).  If it is not one of these types, we'll rever to the 
+                //legacy operation (... like for members i suppose ?)
+                gpw.GenricPropertyControl.PropertyType.delete();    
+            }
 
             LoadContentType(_contentType.Id);
             BindDataGenericProperties(true);

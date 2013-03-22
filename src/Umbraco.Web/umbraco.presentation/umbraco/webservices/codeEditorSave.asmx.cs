@@ -11,7 +11,10 @@ using System.Web.Services;
 using System.Web.UI;
 using System.Xml;
 using System.Xml.Xsl;
+using Umbraco.Core;
 using Umbraco.Core.IO;
+using Umbraco.Web;
+using Umbraco.Web.Cache;
 using umbraco.BasePages;
 using umbraco.cms.businesslogic.macro;
 using umbraco.cms.businesslogic.template;
@@ -445,7 +448,7 @@ namespace umbraco.presentation.webservices
             return "false";
         }
         
-		[Obsolete("This method has been superceded by the REST service /Umbraco/RestServices/SaveFile/SaveTemplate which is powered by the SafeFileController.")]
+		[Obsolete("This method has been superceded by the REST service /Umbraco/RestServices/SaveFile/SaveTemplate which is powered by the SaveFileController.")]
         [WebMethod]
         public string SaveTemplate(string templateName, string templateAlias, string templateContents, int templateID, int masterTemplateID)
         {
@@ -463,13 +466,7 @@ namespace umbraco.presentation.webservices
 
                     _template.Save();
 
-                    retVal = "true";
-
-                    // Clear cache in rutime
-                    if (UmbracoSettings.UseDistributedCalls)
-                        dispatcher.Refresh(new Guid("dd12b6a0-14b9-46e8-8800-c154f74047c8"), _template.Id);
-                    else
-                        template.ClearCachedTemplate(_template.Id);
+                    retVal = "true";                    
                 }
                 return retVal;
             }
