@@ -3,6 +3,7 @@ using System.Web;
 using Umbraco.Core;
 using Umbraco.Core.Services;
 using Umbraco.Core.CodeAnnotations;
+using Umbraco.Web.PublishedCache;
 using Umbraco.Web.Routing;
 using umbraco;
 using umbraco.IO;
@@ -24,7 +25,6 @@ namespace Umbraco.Web
     /// </summary>
     public class UmbracoContext
     {
-
         private const string HttpContextItemName = "Umbraco.Web.UmbracoContext";
         private static readonly object Locker = new object();
 
@@ -48,10 +48,9 @@ namespace Umbraco.Web
         /// This is created in order to standardize the creation of the singleton. Normally it is created during a request
         /// in the UmbracoModule, however this module does not execute during application startup so we need to ensure it
         /// during the startup process as well.
-        /// See: http://issues.umbraco.org/issue/U4-1890
+        /// See: http://issues.umbraco.org/issue/U4-1890, http://issues.umbraco.org/issue/U4-1717
         /// </remarks>
-        [UmbracoProposedPublic("http://issues.umbraco.org/issue/U4-1717")]
-        internal static UmbracoContext EnsureContext(HttpContextBase httpContext, ApplicationContext applicationContext)
+        public static UmbracoContext EnsureContext(HttpContextBase httpContext, ApplicationContext applicationContext)
         {
             return EnsureContext(httpContext, applicationContext, false);
         }
@@ -74,25 +73,31 @@ namespace Umbraco.Web
         /// This is created in order to standardize the creation of the singleton. Normally it is created during a request
         /// in the UmbracoModule, however this module does not execute during application startup so we need to ensure it
         /// during the startup process as well.
-        /// See: http://issues.umbraco.org/issue/U4-1890
+        /// See: http://issues.umbraco.org/issue/U4-1890, http://issues.umbraco.org/issue/U4-1717
         /// </remarks>
-        internal static UmbracoContext EnsureContext(HttpContextBase httpContext, ApplicationContext applicationContext, bool replaceContext)
+        public static UmbracoContext EnsureContext(HttpContextBase httpContext, ApplicationContext applicationContext, bool replaceContext)
         {
             if (UmbracoContext.Current != null && !replaceContext)
                 return UmbracoContext.Current;
 
-            var umbracoContext = new UmbracoContext(httpContext, applicationContext, RoutesCacheResolver.Current.RoutesCache);
+            var umbracoContext = new UmbracoContext(
+                httpContext,
+                applicationContext,
+                PublishedContentCacheResolver.Current.ContentCache,
+                PublishedMediaCacheResolver.Current.PublishedMediaCache);
 
             // create the nice urls provider
-            var niceUrls = new NiceUrlProvider(PublishedContentStoreResolver.Current.PublishedContentStore, umbracoContext);
+            // there's one per request because there are some behavior parameters that can be changed
+            var urlProvider = new UrlProvider(
+                umbracoContext,
+                UrlProviderResolver.Current.Providers);
 
             // create the RoutingContext, and assign
             var routingContext = new RoutingContext(
                 umbracoContext,
-                DocumentLookupsResolver.Current.DocumentLookups,
-                LastChanceLookupResolver.Current.LastChanceLookup,
-                PublishedContentStoreResolver.Current.PublishedContentStore,
-                niceUrls);
+                ContentFinderResolver.Current.Finders,
+                ContentLastChanceFinderResolver.Current.Finder,
+                urlProvider);
 
             //assign the routing context back
             umbracoContext.RoutingContext = routingContext;
@@ -107,11 +112,13 @@ namespace Umbraco.Web
         /// </summary>
         /// <param name="httpContext"></param>
         /// <param name="applicationContext"> </param>
-        /// <param name="routesCache"> </param>
+        /// <param name="contentCache">The published content cache.</param>
+        /// <param name="mediaCache">The published media cache.</param>
         internal UmbracoContext(
 			HttpContextBase httpContext, 
 			ApplicationContext applicationContext,
-			IRoutesCache routesCache)
+            IPublishedContentCache contentCache,
+            IPublishedMediaCache mediaCache)
         {
             if (httpContext == null) throw new ArgumentNullException("httpContext");
             if (applicationContext == null) throw new ArgumentNullException("applicationContext");
@@ -121,7 +128,9 @@ namespace Umbraco.Web
 
             HttpContext = httpContext;            
             Application = applicationContext;
-        	RoutesCache = routesCache;
+
+            ContentCache = new ContextualPublishedContentCache(contentCache, this);
+            MediaCache = new ContextualPublishedMediaCache(mediaCache, this);
 
 			// set the urls...
 			//original request url
@@ -200,11 +209,6 @@ namespace Umbraco.Web
         /// </summary>
         public ApplicationContext Application { get; private set; }       
 
-        /// <summary>
-        /// Gets the <see cref="IRoutesCache"/>
-        /// </summary>
-		internal IRoutesCache RoutesCache { get; private set; }
-		
 	    /// <summary>
 	    /// Gets the uri that is handled by ASP.NET after server-side rewriting took place.
 	    /// </summary>
@@ -216,52 +220,15 @@ namespace Umbraco.Web
 		/// <remarks>That is, lowercase, no trailing slash after path, no .aspx...</remarks>
 		internal Uri CleanedUmbracoUrl { get; private set; }
 
-    	private Func<XmlDocument> _xmlDelegate; 
-
-		/// <summary>
-		/// Gets/sets the delegate used to retreive the Xml content, generally the setter is only used for unit tests
-		/// and by default if it is not set will use the standard delegate which ONLY works when in the context an Http Request
-		/// </summary>
-		/// <remarks>
-		/// If not defined, we will use the standard delegate which ONLY works when in the context an Http Request
-		/// mostly because the 'content' object heavily relies on HttpContext, SQL connections and a bunch of other stuff
-		/// that when run inside of a unit test fails.
-		/// </remarks>
-    	internal Func<XmlDocument> GetXmlDelegate
-    	{
-    		get
-    		{				
-    			return _xmlDelegate ?? (_xmlDelegate = () =>
-    				{
-    					if (InPreviewMode)
-    					{
-    						if (_previewContent == null)
-    						{
-    							_previewContent = new PreviewContent(UmbracoUser, new Guid(StateHelper.Cookies.Preview.GetValue()), true);
-    							if (_previewContent.ValidPreviewSet)
-    								_previewContent.LoadPreviewset();
-    						}
-    						if (_previewContent.ValidPreviewSet)
-    							return _previewContent.XmlContent;
-    					}
-    					return content.Instance.XmlContent;
-    				});
-    		}
-			set { _xmlDelegate = value; }
-    	} 
+        /// <summary>
+        /// Gets or sets the published content cache.
+        /// </summary>
+        internal ContextualPublishedContentCache ContentCache { get; private set; }
 
         /// <summary>
-        /// Returns the XML Cache document
+        /// Gets or sets the published media cache.
         /// </summary>
-        /// <returns></returns>
-        /// <remarks>
-        /// This is marked internal for now because perhaps we might return a wrapper like CacheData so that it doesn't have a reliance
-        /// specifically on XML.
-        /// </remarks>
-        internal XmlDocument GetXml()
-        {
-        	return GetXmlDelegate();
-        }
+        internal ContextualPublishedMediaCache MediaCache { get; private set; }
 
 		/// <summary>
 		/// Boolean value indicating whether the current request is a front-end umbraco request
@@ -277,13 +244,13 @@ namespace Umbraco.Web
 		/// <remarks>
 		/// If the RoutingContext is null, this will throw an exception.
 		/// </remarks>
-    	internal NiceUrlProvider NiceUrlProvider
+    	internal UrlProvider UrlProvider
     	{
     		get
     		{
     			if (RoutingContext == null)
-					throw new InvalidOperationException("Cannot access the NiceUrlProvider when the UmbracoContext's RoutingContext is null");
-    			return RoutingContext.NiceUrlProvider;
+					throw new InvalidOperationException("Cannot access the UrlProvider when the UmbracoContext's RoutingContext is null");
+    			return RoutingContext.UrlProvider;
     		}
     	}
 
