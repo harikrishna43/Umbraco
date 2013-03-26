@@ -91,7 +91,7 @@ namespace umbraco.cms.presentation.developer
 
         }
 
-        protected void save_click(object sender, System.Web.UI.ImageClickEventArgs e)
+        protected void save_click(object sender, ImageClickEventArgs e)
         {
             // save prevalues;
             if (_prevalue != null)
@@ -104,9 +104,9 @@ namespace umbraco.cms.presentation.developer
 
             System.Web.HttpRuntime.Cache.Remove(string.Format("UmbracoDataTypeDefinition{0}", dt.UniqueId));
 
-            this.speechBubble(BasePages.BasePage.speechBubbleIcon.save, ui.Text("speechBubbles", "dataTypeSaved", null), "");
+            ClientTools.ShowSpeechBubble(BasePages.BasePage.speechBubbleIcon.save, ui.Text("speechBubbles", "dataTypeSaved", null), "");
 
-            //Response.Redirect("editDataType.aspx?id=" + _id);
+            ClientTools.SyncTree(dt.Path, true);
         }
 
 

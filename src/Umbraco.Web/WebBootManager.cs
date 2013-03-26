@@ -8,6 +8,7 @@ using Umbraco.Core;
 using Umbraco.Core.Configuration;
 using Umbraco.Core.Dictionary;
 using Umbraco.Core.Dynamics;
+using Umbraco.Core.ObjectResolution;
 using Umbraco.Core.PropertyEditors;
 using Umbraco.Web.Dictionary;
 using Umbraco.Web.Media;
@@ -25,14 +26,14 @@ namespace Umbraco.Web
     /// <summary>
     /// A bootstrapper for the Umbraco application which initializes all objects including the Web portion of the application 
     /// </summary>
-    internal class WebBootManager : CoreBootManager
+    public class WebBootManager : CoreBootManager
     {
         private readonly bool _isForTesting;
-        private readonly UmbracoApplication _umbracoApplication;
 
-        public WebBootManager(UmbracoApplication umbracoApplication)
+		public WebBootManager(UmbracoApplicationBase umbracoApplication)
             : this(umbracoApplication, false)
         {
+			
         }
 
         /// <summary>
@@ -40,17 +41,10 @@ namespace Umbraco.Web
         /// </summary>
         /// <param name="umbracoApplication"></param>
         /// <param name="isForTesting"></param>
-        internal WebBootManager(UmbracoApplication umbracoApplication, bool isForTesting)
+		internal WebBootManager(UmbracoApplicationBase umbracoApplication, bool isForTesting)
+            : base(umbracoApplication)
         {
-            _isForTesting = isForTesting;
-            _umbracoApplication = umbracoApplication;
-            if (umbracoApplication == null) throw new ArgumentNullException("umbracoApplication");
-        }
-
-        [Obsolete("This method was never supposed to be here and will be removed in v6.0.0")]
-        public void Boot()
-        {
-            InitializeResolvers();
+			_isForTesting = isForTesting;			
         }
 
         /// <summary>
@@ -77,25 +71,6 @@ namespace Umbraco.Web
             //set model binder
             ModelBinders.Binders.Add(new KeyValuePair<Type, IModelBinder>(typeof(RenderModel), new RenderModelBinder()));
 
-
-            //find and initialize the application startup handlers, we need to initialize this resolver here because
-            //it is a special resolver where they need to be instantiated first before any other resolvers in order to bind to 
-            //events and to call their events during bootup.
-            //ApplicationStartupHandler.RegisterHandlers();
-            //... and set the special flag to let us resolve before frozen resolution
-            ApplicationEventsResolver.Current = new ApplicationEventsResolver(
-                PluginManager.Current.ResolveApplicationStartupHandlers())
-            {
-                CanResolveBeforeFrozen = true
-            };
-            //add the internal types since we don't want to mark these public
-            ApplicationEventsResolver.Current.AddType<CacheHelperExtensions.CacheHelperApplicationEventListener>();
-            ApplicationEventsResolver.Current.AddType<LegacyScheduledTasks>();
-
-            //now we need to call the initialize methods
-            ApplicationEventsResolver.Current.ApplicationEventHandlers
-                .ForEach(x => x.OnApplicationInitialized(_umbracoApplication, ApplicationContext));
-
             return this;
         }
 
@@ -109,23 +84,17 @@ namespace Umbraco.Web
 
             //before we do anything, we'll ensure the umbraco context
             //see: http://issues.umbraco.org/issue/U4-1717
-            UmbracoContext.EnsureContext(new HttpContextWrapper(_umbracoApplication.Context), ApplicationContext);
+            UmbracoContext.EnsureContext(new HttpContextWrapper(UmbracoApplication.Context), ApplicationContext);
         }
 
         /// <summary>
-        /// Ensure that the OnApplicationStarting methods of the IApplicationEvents are called
+        /// Adds custom types to the ApplicationEventsResolver
         /// </summary>
-        /// <param name="afterStartup"></param>
-        /// <returns></returns>
-        public override IBootManager Startup(Action<ApplicationContext> afterStartup)
+        protected override void InitializeApplicationEventsResolver()
         {
-            base.Startup(afterStartup);
-
-            //call OnApplicationStarting of each application events handler
-            ApplicationEventsResolver.Current.ApplicationEventHandlers
-                .ForEach(x => x.OnApplicationStarting(_umbracoApplication, ApplicationContext));
-
-            return this;
+            base.InitializeApplicationEventsResolver();
+            ApplicationEventsResolver.Current.AddType<CacheHelperExtensions.CacheHelperApplicationEventListener>();
+            ApplicationEventsResolver.Current.AddType<LegacyScheduledTasks>();
         }
 
         /// <summary>
@@ -140,15 +109,8 @@ namespace Umbraco.Web
 
             base.Complete(afterComplete);
 
-            //call OnApplicationStarting of each application events handler
-            ApplicationEventsResolver.Current.ApplicationEventHandlers
-                .ForEach(x => x.OnApplicationStarted(_umbracoApplication, ApplicationContext));
-
             //Now, startup all of our legacy startup handler
             ApplicationEventsResolver.Current.InstantiateLegacyStartupHanlders();
-
-            // we're ready to serve content!
-            ApplicationContext.IsReady = true;
 
             return this;
         }
@@ -175,6 +137,16 @@ namespace Umbraco.Web
                 new { controller = "InstallPackage", action = "Index", id = UrlParameter.Optional }
                 );
             installPackageRoute.DataTokens.Add("area", umbracoPath);
+
+            //Create the REST/web/script service routes
+            var webServiceRoutes = RouteTable.Routes.MapRoute(
+                "Umbraco_web_services",
+                umbracoPath + "/RestServices/{controller}/{action}/{id}",
+                new {controller = "SaveFileController", action = "Index", id = UrlParameter.Optional},
+                //VERY IMPORTANT! for this route, only match controllers in this namespace!
+                new string[] { "Umbraco.Web.WebServices" }
+                );
+            webServiceRoutes.DataTokens.Add("area", umbracoPath);
 
             //we need to find the surface controllers and route them
             var surfaceControllers = SurfaceControllerResolver.Current.RegisteredSurfaceControllers.ToArray();
