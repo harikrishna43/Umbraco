@@ -1,8 +1,11 @@
 using System.Linq;
 using NUnit.Framework;
+using Umbraco.Core;
 using Umbraco.Core.Models;
 using Umbraco.Web;
 using Umbraco.Web.Models;
+using Umbraco.Web.PublishedCache;
+using Umbraco.Web.PublishedCache.XmlPublishedCache;
 
 namespace Umbraco.Tests.PublishedContent
 {
@@ -10,8 +13,9 @@ namespace Umbraco.Tests.PublishedContent
 	public class DynamicPublishedContentTests : DynamicDocumentTestsBase<DynamicPublishedContent, DynamicPublishedContentList>
 	{
 		public override void Initialize()
-		{
-			base.Initialize();
+		{            
+            base.Initialize();
+
 		}
 
 		public override void TearDown()
@@ -24,8 +28,7 @@ namespace Umbraco.Tests.PublishedContent
 			//var template = Template.MakeNew("test", new User(0));
 			//var ctx = GetUmbracoContext("/test", template.Id);
 			var ctx = GetUmbracoContext("/test", 1234);
-			var contentStore = new DefaultPublishedContentStore();
-			var doc = contentStore.GetDocumentById(ctx, id);
+			var doc = ctx.ContentCache.GetById(id);
 			Assert.IsNotNull(doc);
 			var dynamicNode = new DynamicPublishedContent(doc);
 			Assert.IsNotNull(dynamicNode);
@@ -65,7 +68,7 @@ namespace Umbraco.Tests.PublishedContent
 			var helper = new TestHelper(GetNode(1173));
 			var doc = helper.GetDocAsDynamic();
 			//HasProperty is only a prop on DynamicPublishedContent, NOT IPublishedContent
-			Assert.IsTrue(doc.HasProperty("umbracoUrlAlias"));
+			Assert.IsTrue(doc.HasProperty(Constants.Conventions.Content.UrlAlias));
 		}
 
 		[Test]
@@ -75,7 +78,7 @@ namespace Umbraco.Tests.PublishedContent
 			var doc = helper.GetDoc();
 			var ddoc = (dynamic) doc;
 			//HasProperty is only a prop on DynamicPublishedContent, NOT IPublishedContent
-			Assert.IsTrue(ddoc.HasProperty("umbracoUrlAlias"));
+			Assert.IsTrue(ddoc.HasProperty(Constants.Conventions.Content.UrlAlias));
 		}
 
 		/// <summary>
