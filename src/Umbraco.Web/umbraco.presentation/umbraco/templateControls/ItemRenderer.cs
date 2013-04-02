@@ -8,6 +8,8 @@ using System.Web;
 using System.Web.UI;
 using System.Xml;
 using Umbraco.Core.Macros;
+using Umbraco.Web;
+using Umbraco.Web.Routing;
 using Umbraco.Web.Templates;
 using umbraco.cms.businesslogic;
 using umbraco.cms.businesslogic.property;
@@ -98,7 +100,13 @@ namespace umbraco.presentation.templateControls
 				{
                     //moved the following from the catch block up as this will allow fallback options alt text etc to work
                     var itemPage = new page(Umbraco.Web.UmbracoContext.Current.GetXml().GetElementById(tempNodeId.ToString()));
-                    tempElementContent = new item(itemPage.Elements, item.LegacyAttributes).FieldContent;
+					//get the publishedcontent item
+					var publishedContent = PublishedContentStoreResolver.Current.PublishedContentStore.GetDocumentById(
+						Umbraco.Web.UmbracoContext.Current,
+						tempNodeId.Value);
+
+					var itemPage = new page(publishedContent);                    
+					tempElementContent = new item(publishedContent, itemPage.Elements, item.LegacyAttributes).FieldContent;
 				}
 			}
 			else
