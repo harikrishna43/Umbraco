@@ -35,8 +35,8 @@ namespace Umbraco.Core.Persistence.Repositories
         private void EnsureDependencies()
         {            
 			_fileSystem = new PhysicalFileSystem("~/App_Data/Macros");
-            var serviceStackSerializer = new ServiceStackJsonSerializer();
-            _serializationService = new SerializationService(serviceStackSerializer);
+            var jsonSerializer = new JsonNetSerializer();
+            _serializationService = new SerializationService(jsonSerializer);
         }
 
         #region Overrides of RepositoryBase<string,IMacro>
@@ -48,8 +48,10 @@ namespace Umbraco.Core.Persistence.Repositories
             var o = _serializationService.FromStream(file, typeof(Macro));
             var macro = o as IMacro;
 
+            //on initial construction we don't want to have dirty properties tracked
+            // http://issues.umbraco.org/issue/U4-1946
             if(macro != null)
-                ((ICanBeDirty)macro).ResetDirtyProperties();
+                ((Entity)macro).ResetDirtyProperties(false);
 
             return macro;
         }
