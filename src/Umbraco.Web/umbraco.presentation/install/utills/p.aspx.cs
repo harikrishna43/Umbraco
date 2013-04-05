@@ -15,7 +15,6 @@ namespace umbraco.presentation.install.utills
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-
             // Stop Caching in IE
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
 
