@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Web;
 using System.Web.Caching;
+using Umbraco.Core;
 using Umbraco.Core.Logging;
 using global::umbraco.BusinessLogic;
 
@@ -17,17 +18,20 @@ namespace Umbraco.Web
 
 	internal sealed class LegacyScheduledTasks : IApplicationEventHandler
 	{
-		Timer pingTimer;
-		Timer publishingTimer;
-		CacheItemRemovedCallback OnCacheRemove;
+		Timer _pingTimer;
+		Timer _publishingTimer;
+		CacheItemRemovedCallback _onCacheRemove;
 
-		public void OnApplicationInitialized(UmbracoApplication httpApplication, Core.ApplicationContext applicationContext)
+        public void OnApplicationInitialized(UmbracoApplicationBase umbracoApplication, Core.ApplicationContext applicationContext)
 		{
 			// nothing yet
 		}
 
-		public void OnApplicationStarting(UmbracoApplication httpApplication, Core.ApplicationContext applicationContext)
-		{
+        public void OnApplicationStarting(UmbracoApplicationBase umbracoApplication, Core.ApplicationContext applicationContext)
+        {
+            if (umbracoApplication.Context == null)
+                return;
+
 			// time to setup the tasks
 
 			// these are the legacy tasks
@@ -44,7 +48,7 @@ namespace Umbraco.Web
 			AddTask(LOG_SCRUBBER_TASK_NAME, GetLogScrubbingInterval());
 		}
 
-		public void OnApplicationStarted(UmbracoApplication httpApplication, Core.ApplicationContext applicationContext)
+        public void OnApplicationStarted(UmbracoApplicationBase httpApplication, Core.ApplicationContext applicationContext)
 		{
 			// nothing
 		}
@@ -88,10 +92,10 @@ namespace Umbraco.Web
 
 		private void AddTask(string name, int seconds)
 		{
-			OnCacheRemove = new CacheItemRemovedCallback(CacheItemRemoved);
+			_onCacheRemove = new CacheItemRemovedCallback(CacheItemRemoved);
 			HttpRuntime.Cache.Insert(name, seconds, null,
 				DateTime.Now.AddSeconds(seconds), System.Web.Caching.Cache.NoSlidingExpiration,
-				CacheItemPriority.NotRemovable, OnCacheRemove);
+				CacheItemPriority.NotRemovable, _onCacheRemove);
 		}
 
 		public void CacheItemRemoved(string k, object v, CacheItemRemovedReason r)
