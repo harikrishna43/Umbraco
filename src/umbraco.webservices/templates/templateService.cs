@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Web.Services;
+using Umbraco.Core;
+using Umbraco.Web;
+using Umbraco.Web.Cache;
 
 namespace umbraco.webservices.templates
 {
@@ -63,7 +66,7 @@ namespace umbraco.webservices.templates
         {
             Authenticate(username, password);
 
-            if (id == 0) 
+            if (id == 0)
                 throw new Exception("ID must be specifed when updating");
 
             var template = new cms.businesslogic.template.Template(id);
@@ -90,8 +93,6 @@ namespace umbraco.webservices.templates
             template.Text = carrier.Name;
             template.Design = carrier.Design;
             template.Save();
-            ClearCachedTemplate(template);
-
             return template.Id;
         }
 
@@ -119,9 +120,6 @@ namespace umbraco.webservices.templates
             template.Text = carrier.Name;
             template.Design = carrier.Design;
             template.Save();
-
-
-            ClearCachedTemplate(template);
         }
 
         [WebMethod]
@@ -169,16 +167,6 @@ namespace umbraco.webservices.templates
             public string Name { get; set; }
             public string Alias { get; set; }
             public string Design { get; set; }
-            }
-
-        private static void ClearCachedTemplate(cms.businesslogic.template.Template cachedTemplate)
-        {
-            // Clear cache in rutime
-            if (UmbracoSettings.UseDistributedCalls)
-                presentation.cache.dispatcher.Refresh(new Guid("dd12b6a0-14b9-46e8-8800-c154f74047c8"), cachedTemplate.Id);
-            else
-                template.ClearCachedTemplate(cachedTemplate.Id);
         }
-
     }
 }
