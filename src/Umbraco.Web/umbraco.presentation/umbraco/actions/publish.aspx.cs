@@ -9,6 +9,7 @@ using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 using umbraco.cms.businesslogic.web;
+using Umbraco.Core;
 
 namespace umbraco.presentation.actions
 {
@@ -20,7 +21,7 @@ namespace umbraco.presentation.actions
         {
             d = new Document(int.Parse(helper.Request("id")));
 
-            if (!base.ValidateUserApp("content"))
+            if (!base.ValidateUserApp(Constants.Applications.Content))
                 throw new ArgumentException("The current user doesn't have access to this application. Please contact the system administrator.");
 
             if (!base.ValidateUserNodeTreePermissions(d.Path, "U"))
@@ -38,9 +39,8 @@ namespace umbraco.presentation.actions
             deleteMessage.Text = ui.Text("editContentPublishedHeader");
 
             confirm.Visible = false;
-            d.Publish(getUser());
-            library.UpdateDocumentCache(d);
-
+            d.SaveAndPublish(UmbracoUser);
+            
             deleted.Text = ui.Text("editContentPublishedHeader") + " ('" + d.Text + "') " + ui.Text("editContentPublishedText") + "</p><p><a href=\"" + library.NiceUrl(d.Id) + "\"> " + ui.Text("view") + " " + d.Text + "</a>";
         }
     }
