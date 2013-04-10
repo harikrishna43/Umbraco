@@ -47,7 +47,7 @@ namespace umbraco.cms.presentation
             int parentId;
             if (int.TryParse(Request.GetItemAsString("ID"), out parentId))
             {
-                if (app == "media")
+                if (app == Constants.Applications.Media)
                 {
                     icon = "../images/umbraco/mediaPhoto.gif";
                     var mediaService = ApplicationContext.Current.Services.MediaService;
@@ -65,7 +65,7 @@ namespace umbraco.cms.presentation
                     }
                 }
 
-                if (app == "content")
+                if (app == Constants.Applications.Content)
                 {
                     var contentService = ApplicationContext.Current.Services.ContentService;
 
@@ -84,7 +84,7 @@ namespace umbraco.cms.presentation
 
                 // "hack for stylesheet"
                 // TODO: I can't see where this is being used at all..?
-                if (app == "settings")
+                if (app == Constants.Applications.Settings)
                 {
                     icon = "../images/umbraco/settingCss.gif";
                     var ss = new StyleSheet(parentId);
