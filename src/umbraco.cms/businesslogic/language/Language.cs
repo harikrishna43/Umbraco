@@ -306,10 +306,10 @@ namespace umbraco.cms.businesslogic.language
                     }
                 }
                 else
-                {
-                    var e = new DataException("Cannot remove language " + _friendlyName + " because it's attached to a domain on a node");
-                    LogHelper.Error<Language>("Cannot remove language " + _friendlyName + " because it's attached to a domain on a node", e);
-                    throw e;
+            {   
+                var e = new DataException("Cannot remove language " + _friendlyName + " because it's attached to a domain on a node");
+	            LogHelper.Error<Language>("Cannot remove language " + _friendlyName + " because it's attached to a domain on a node", e);
+	            throw e;
                 }   
             }            
         }
