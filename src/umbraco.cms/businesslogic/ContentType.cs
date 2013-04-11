@@ -5,6 +5,7 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Linq;
 using Umbraco.Core;
+using Umbraco.Core.Cache;
 using Umbraco.Core.Models;
 using Umbraco.Core.Models.Rdbms;
 using Umbraco.Core.Persistence.Caching;
@@ -89,7 +90,7 @@ namespace umbraco.cms.businesslogic
                 allowAtRoot, isContainer, Alias,icon,thumbnail,description 
             FROM umbracoNode INNER JOIN cmsContentType ON umbracoNode.id = cmsContentType.nodeId
             WHERE nodeObjectType = @nodeObjectType";
-
+        
         #endregion
 
         #region Static Methods
@@ -154,13 +155,13 @@ namespace umbraco.cms.businesslogic
                         // With 4.10 we can't do this via direct SQL as we have content type mixins
                         var controlId = Guid.Empty;
                         var ct = GetByAlias(contentTypeAlias);
-                        PropertyType pt = ct.getPropertyType(propertyTypeAlias);
-                        if (pt != null)
-                        {
-                            controlId = pt.DataTypeDefinition.DataType.Id;
-                        }
+                    var pt = ct.getPropertyType(propertyTypeAlias);
+                    if (pt != null)
+                    {
+                        controlId = pt.DataTypeDefinition.DataType.Id;
+                    }
                         return controlId;     
-                    });                          
+                });  
         }
 
         /// <summary>
@@ -182,6 +183,7 @@ namespace umbraco.cms.businesslogic
         /// Flushes the tab cache.
         /// </summary>
         /// <param name="TabId">The tab id.</param>
+        [Obsolete("There is no cache to flush for tabs")]
         public static void FlushTabCache(int TabId, int ContentTypeId)
         {
             Tab.FlushCache(TabId, ContentTypeId);
@@ -712,7 +714,7 @@ namespace umbraco.cms.businesslogic
         [Obsolete("Use PropertyTypeGroup methods instead", false)]
         public void ClearVirtualTabs()
         {
-            // zb-00040 #29889 : clear the right cache! t.contentType is the ctype which _defines_ the tab, not the current one.
+            //NOTE: SD: There is no cache to clear so this doesn't actually do anything
             //NOTE: SD: There is no cache to clear so this doesn't actually do anything
             foreach (var t in getVirtualTabs)
                 Tab.FlushCache(t.Id, Id);
@@ -797,9 +799,6 @@ namespace umbraco.cms.businesslogic
         public override void Save()
         {
             base.Save();
-
-            // Remove from all doctypes from cache
-            FlushAllFromCache();
         }
 
         /// <summary>
@@ -1044,7 +1043,7 @@ namespace umbraco.cms.businesslogic
             base.setupNode();
 
             //Try to load the ContentType/MediaType through the new public api
-            if (nodeObjectType == new Guid("A2CB7800-F571-4787-9638-BC48539A0EFB"))
+            if (nodeObjectType == new Guid(Constants.ObjectTypes.DocumentType))
             {
                 var contentType = ApplicationContext.Current.Services.ContentTypeService.GetContentType(Id);
                 if (contentType != null)
@@ -1053,7 +1052,7 @@ namespace umbraco.cms.businesslogic
                     return;
                 }
             }
-            else if (nodeObjectType == new Guid("4EA4382B-2F5A-4C2B-9587-AE9B3CF3602E"))
+            else if (nodeObjectType == new Guid(Constants.ObjectTypes.MediaType))
             {
                 var mediaType = ApplicationContext.Current.Services.ContentTypeService.GetMediaType(Id);
                 if (mediaType != null)
@@ -1088,7 +1087,7 @@ namespace umbraco.cms.businesslogic
             InMemoryCacheProvider.Current.Clear();
 
             var ct = new ContentType(id);
-            ApplicationContext.Current.ApplicationCache.ClearCacheItem(string.Format("UmbracoContentType{0}", id));
+            ApplicationContext.Current.ApplicationCache.ClearCacheItem(string.Format("{0}{1}", CacheKeys.ContentTypeCacheKey, id));
             ApplicationContext.Current.ApplicationCache.ClearCacheItem(ct.GetPropertiesCacheKey());
             ct.ClearVirtualTabs();
 
@@ -1110,10 +1109,11 @@ namespace umbraco.cms.businesslogic
             }
         }
 
+        [Obsolete("The content type cache is automatically cleared by Umbraco when a content type is saved, this method is no longer used")]
         protected internal void FlushAllFromCache()
         {
-            ApplicationContext.Current.ApplicationCache.ClearCacheByKeySearch("UmbracoContentType");
-            ApplicationContext.Current.ApplicationCache.ClearCacheByKeySearch("ContentType_PropertyTypes_Content");
+            ApplicationContext.Current.ApplicationCache.ClearCacheByKeySearch(CacheKeys.ContentTypeCacheKey);
+            ApplicationContext.Current.ApplicationCache.ClearCacheByKeySearch(CacheKeys.ContentTypePropertiesCacheKey);
 
             RemoveAllDataTypeCache();
             ClearVirtualTabs();
@@ -1128,7 +1128,7 @@ namespace umbraco.cms.businesslogic
         /// <returns></returns>
         private string GetPropertiesCacheKey()
         {
-            return "ContentType_PropertyTypes_Content:" + Id;
+            return CacheKeys.ContentTypePropertiesCacheKey + this.Id;
         }
 
 
@@ -1287,7 +1287,6 @@ namespace umbraco.cms.businesslogic
         public class Tab : TabI
         {
             private readonly ContentType _contenttype;
-            public static readonly string CacheKey = "Tab_PropertyTypes_Content:";
 
             /// <summary>
             /// Initializes a new instance of the <see cref="Tab"/> class.
@@ -1381,14 +1380,11 @@ namespace umbraco.cms.businesslogic
             /// </summary>
             /// <param name="id">The id.</param>
             /// <param name="contentTypeId"></param>
+            [Obsolete("There is no cache to flush for tabs")]
             public static void FlushCache(int id, int contentTypeId)
             {
-                ApplicationContext.Current.ApplicationCache.ClearCacheItem(GenerateCacheKey(id, contentTypeId));
-            }
-
-            private static string GenerateCacheKey(int tabId, int contentTypeId)
-            {
-                return String.Format("{0}_{1}_{2}", CacheKey, tabId, contentTypeId);
+                //at some stage there was probably caching for tabs but this hasn't been in place for some time, so this method
+                //now does nothing.
             }
 
             /// <summary>
@@ -1411,7 +1407,7 @@ namespace umbraco.cms.businesslogic
             {
                 try
                 {
-                    string tempCaption = SqlHelper.ExecuteScalar<string>("Select text from cmsPropertyTypeGroup where id = " + id.ToString());
+                    var tempCaption = SqlHelper.ExecuteScalar<string>("Select text from cmsPropertyTypeGroup where id = " + id.ToString());
                     if (!tempCaption.StartsWith("#"))
                         return tempCaption;
                     var lang = Language.GetByCultureCode(Thread.CurrentThread.CurrentCulture.Name);

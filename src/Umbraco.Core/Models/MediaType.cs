@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.Serialization;
+using Umbraco.Core.Persistence.Mappers;
 
 namespace Umbraco.Core.Models
 {

@@ -9,6 +9,14 @@ namespace Umbraco.Core.Persistence
     /// </summary>
     public class RepositoryFactory
     {
+        
+        internal virtual ServerRegistrationRepository CreateServerRegistrationRepository(IDatabaseUnitOfWork uow)
+        {
+            return new ServerRegistrationRepository(
+                uow,
+                NullCacheProvider.Current);
+        }
+
 		internal virtual IUserTypeRepository CreateUserTypeRepository(IDatabaseUnitOfWork uow)
         {
             return new UserTypeRepository(
@@ -22,6 +30,11 @@ namespace Umbraco.Core.Persistence
                 uow,
                 NullCacheProvider.Current,
                 CreateUserTypeRepository(uow));
+        }
+
+        internal virtual IEntityRepository CreateEntityRepository(IDatabaseUnitOfWork uow)
+        {
+            return new EntityRepository(uow);
         }
 
         public virtual IContentRepository CreateContentRepository(IDatabaseUnitOfWork uow)
@@ -59,13 +72,6 @@ namespace Umbraco.Core.Persistence
         public virtual ILanguageRepository CreateLanguageRepository(IDatabaseUnitOfWork uow)
         {
             return new LanguageRepository(
-                uow,
-                InMemoryCacheProvider.Current);
-        }
-
-		internal virtual IMacroRepository CreateMacroRepository(IUnitOfWork uow)
-        {
-            return new MacroRepository(
                 uow,
                 InMemoryCacheProvider.Current);
         }
