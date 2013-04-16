@@ -12,6 +12,7 @@ using System.Xml;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Web.Script.Services;
+using Umbraco.Core;
 
 namespace umbraco.webservices.media
 {
@@ -49,7 +50,7 @@ namespace umbraco.webservices.media
             {
                 foreach (mediaProperty updatedproperty in carrier.MediaProperties)
                 {
-                    if (!(updatedproperty.Key.ToLower().Equals("umbracofile")))
+                    if (!string.Equals(updatedproperty.Key, Constants.Conventions.Media.File, StringComparison.OrdinalIgnoreCase))
                     {
                         Property property = m.getProperty(updatedproperty.Key);
                         if (property == null)
@@ -81,7 +82,7 @@ namespace umbraco.webservices.media
             {
                 foreach (mediaProperty updatedproperty in carrier.MediaProperties)
                 {
-                    if (!(updatedproperty.Key.ToLower().Equals("umbracofile")))
+                    if (!string.Equals(updatedproperty.Key, Constants.Conventions.Media.File, StringComparison.OrdinalIgnoreCase))
                     {
                         Property property = m.getProperty(updatedproperty.Key);
                         if (property == null)
@@ -104,7 +105,7 @@ namespace umbraco.webservices.media
             if (m.HasChildren)
                 throw new Exception("Cannot delete Media " + id + " as it has child nodes");
 
-            Property p = m.getProperty("umbracoFile");
+            Property p = m.getProperty(Constants.Conventions.Media.File);
             if (p != null)
             {
                 if (!(p.Value == System.DBNull.Value))
@@ -139,9 +140,9 @@ namespace umbraco.webservices.media
 
             _fs.AddFile(path, stream);
 
-            m.getProperty("umbracoFile").Value = _fs.GetUrl(path);
-            m.getProperty("umbracoExtension").Value = Path.GetExtension(filename).Substring(1);
-            m.getProperty("umbracoBytes").Value = _fs.GetSize(path);
+            m.getProperty(Constants.Conventions.Media.File).Value = _fs.GetUrl(path);
+            m.getProperty(Constants.Conventions.Media.Extension).Value = Path.GetExtension(filename).Substring(1);
+            m.getProperty(Constants.Conventions.Media.Bytes).Value = _fs.GetSize(path);
 
             m.Save();
         }
