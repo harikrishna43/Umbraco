@@ -1,16 +1,8 @@
 using System;
-using System.Collections;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Web;
-using System.Web.SessionState;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using System.Web.UI.HtmlControls;
-
 using System.Xml;
-using umbraco.cms.helpers;
+using Umbraco.Core;
 using umbraco.cms.businesslogic.datatype.controls;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,7 +35,11 @@ namespace umbraco.cms.presentation
         {
             base.OnInit(e);
 
-            _media = new cms.businesslogic.media.Media(int.Parse(Request.QueryString["id"]));
+            int id = int.Parse(Request.QueryString["id"]);
+
+            //Loading Media via new public service to ensure that the Properties are loaded correct
+            var media = ApplicationContext.Current.Services.MediaService.GetById(id);
+            _media = new cms.businesslogic.media.Media(media);
 
             // Save media on first load
             bool exists = SqlHelper.ExecuteScalar<int>("SELECT COUNT(nodeId) FROM cmsContentXml WHERE nodeId = @nodeId",
@@ -108,6 +104,15 @@ namespace umbraco.cms.presentation
                         tp.ErrorControl.Visible = false;
                     }
                 }    
+
+            //The value of the properties has been set on IData through IDataEditor in the ContentControl
+            //so we need to 'retrieve' that value and set it on the property of the new IContent object.
+            //NOTE This is a workaround for the legacy approach to saving values through the DataType instead of the Property 
+            //- (The DataType shouldn't be responsible for saving the value - especically directly to the db).
+            foreach (var item in _contentControl.DataTypes)
+            {
+                _media.getProperty(item.Key).Value = item.Value.Data.Value;
+            }
 
                 _media.Save();
 
