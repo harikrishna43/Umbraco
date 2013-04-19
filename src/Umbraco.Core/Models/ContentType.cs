@@ -15,12 +15,22 @@ namespace Umbraco.Core.Models
     {
         private int _defaultTemplate;
         private IEnumerable<ITemplate> _allowedTemplates;
-
+        
+        /// <summary>
+        /// Constuctor for creating a ContentType with the parent's id.
+        /// </summary>
+        /// <remarks>You usually only want to use this for creating ContentTypes at the root.</remarks>
+        /// <param name="parentId"></param>
         public ContentType(int parentId) : base(parentId)
         {
             _allowedTemplates = new List<ITemplate>();
         }
 
+        /// <summary>
+        /// Constuctor for creating a ContentType with the parent as an inherited type.
+        /// </summary>
+        /// <remarks>Use this to ensure inheritance from parent.</remarks>
+        /// <param name="parent"></param>
 		public ContentType(IContentType parent) : base(parent)
 		{
 			_allowedTemplates = new List<ITemplate>();
@@ -47,8 +57,11 @@ namespace Umbraco.Core.Models
             get { return _defaultTemplate; }
             set
             {
-                _defaultTemplate = value;
-                OnPropertyChanged(DefaultTemplateSelector);
+                SetPropertyValueAndDetectChanges(o =>
+                {
+                    _defaultTemplate = value;
+                    return _defaultTemplate;
+                }, _defaultTemplate, DefaultTemplateSelector);
             }
         }
 
@@ -61,8 +74,11 @@ namespace Umbraco.Core.Models
             get { return _allowedTemplates; }
             set
             {
-                _allowedTemplates = value;
-                OnPropertyChanged(AllowedTemplatesSelector);
+                SetPropertyValueAndDetectChanges(o =>
+                {
+                    _allowedTemplates = value;
+                    return _allowedTemplates;
+                }, _allowedTemplates, AllowedTemplatesSelector);
             }
         }
 
