@@ -27,9 +27,9 @@ namespace Umbraco.Tests.BootManagers
         public void TearDown()
         {
             _testApp = null;
+            
             ApplicationEventsResolver.Reset();
             SqlSyntaxProvidersResolver.Reset();
-            Resolution.IsFrozen = false;
         }
 
         /// <summary>
