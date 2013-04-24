@@ -59,7 +59,8 @@ namespace Umbraco.Core.Configuration
 			_useLegacySchema = null;
 			_useDomainPrefixes = null;
 			_umbracoLibraryCacheDuration = null;
-			_trySkipIisCustomErrors = null;
+            _trySkipIisCustomErrors = null;
+		    SettingsFilePath = null;
 		}
 
 		internal const string TempFriendlyXmlChildContainerNodename = ""; // "children";
@@ -1261,7 +1262,7 @@ namespace Umbraco.Core.Configuration
 				return _macroErrorBehaviour.Value;
 			}
 		}
-
+		
 		private static IconPickerBehaviour? _iconPickerBehaviour;
 
         /// <summary>

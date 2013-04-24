@@ -10,6 +10,9 @@ using System.Web.Compilation;
 using System.Xml.Linq;
 using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
+using Umbraco.Core.Persistence.Migrations;
+using Umbraco.Core.Persistence.SqlSyntax;
 using Umbraco.Core.PropertyEditors;
 using umbraco.interfaces;
 using File = System.IO.File;
@@ -395,6 +398,15 @@ namespace Umbraco.Core
         private IEnumerable<Assembly> _assemblies;
 
         /// <summary>
+        /// Returns all available IApplicationStartupHandler objects
+        /// </summary>
+        /// <returns></returns>
+        internal IEnumerable<Type> ResolveApplicationStartupHandlers()
+        {
+            return ResolveTypes<IApplicationStartupHandler>();
+        }
+
+        /// <summary>
         /// Returns all classes attributed with XsltExtensionAttribute attribute
         /// </summary>
         /// <returns></returns>
@@ -446,6 +458,33 @@ namespace Umbraco.Core
         internal IEnumerable<Type> ResolveActions()
         {
             return ResolveTypes<IAction>();
+        }
+
+        /// <summary>
+        /// Returns all available IMacroPropertyTypes in application
+        /// </summary>
+        /// <returns></returns>
+        internal IEnumerable<Type> ResolveMacroPropertyTypes()
+        {
+            return ResolveTypes<IMacroPropertyType>();
+        }
+
+        /// <summary>
+        /// Returns all available IMigrations in application
+        /// </summary>
+        /// <returns></returns>
+        internal IEnumerable<Type> ResolveMigrationTypes()
+        {
+            return ResolveTypes<IMigration>();
+        }
+
+        /// <summary>
+        /// Returns all SqlSyntaxProviders with the SqlSyntaxProviderAttribute
+        /// </summary>
+        /// <returns></returns>
+        internal IEnumerable<Type> ResolveSqlSyntaxProviders()
+        {
+            return ResolveTypesWithAttribute<ISqlSyntaxProvider, SqlSyntaxProviderAttribute>();
         }
 
         /// <summary>
