@@ -47,6 +47,16 @@ namespace umbraco
             mediaType.IconUrl = UmbracoSettings.IconPickerBehaviour == IconPickerBehaviour.HideFileDuplicates ? ".sprTreeFolder" : "folder.gif";
             
             m_returnUrl = string.Format("settings/editMediaType.aspx?id={0}", mediaType.Id);
+            var mediaType = cms.businesslogic.media.MediaType.MakeNew(User.GetUser(_userID), Alias.Replace("'", "''"),
+                                                                      ParentID);
+
+            if (ParentID != -1)
+            {
+                mediaType.MasterContentType = ParentID;
+                mediaType.Save();
+            }
+
+            m_returnUrl = string.Format("settings/editMediaType.aspx?id={0}", mediaType.Id);
             return true;
         }
 
