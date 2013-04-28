@@ -1,5 +1,5 @@
 <%@ Page Language="C#" AutoEventWireup="True" Inherits="Umbraco.Web.UI.Config.Splashes.NoNodes" CodeBehind="NoNodes.aspx.cs" %>
-
+<%@ Import Namespace="Umbraco.Core.Configuration" %>
 <%@ Import Namespace="Umbraco.Core.IO" %>
 
 <!DOCTYPE html>
@@ -9,6 +9,7 @@
     <meta charset="utf-8">
 
     <title>Umbraco - no pages found</title>
+    <link rel="icon" type="image/png" href="<%=umbraco.GlobalSettings.Path + "/images/pinnedIcons/umb.ico" %>" />
 
     <link media="all" rel="stylesheet" href="../../umbraco_client/installer/css/jquery-ui-1.8.6.custom.css" />
 
