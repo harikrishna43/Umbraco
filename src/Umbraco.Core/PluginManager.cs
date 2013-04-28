@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
+using Umbraco.Core.Persistence.Mappers;
 using Umbraco.Core.Persistence.Migrations;
 using Umbraco.Core.Persistence.SqlSyntax;
 using Umbraco.Core.PropertyEditors;
@@ -144,7 +145,7 @@ namespace Umbraco.Core
                 if (_cachedAssembliesHash != -1)
                     return _cachedAssembliesHash;
 
-                var filePath = Path.Combine(_tempFolder, "umbraco-plugins.hash");
+                var filePath = GetPluginHashFilePath();
                 if (!File.Exists(filePath))
                     return 0;
                 var hash = File.ReadAllText(filePath, Encoding.UTF8);
@@ -192,7 +193,7 @@ namespace Umbraco.Core
         /// </summary>
         private void WriteCachePluginsHash()
         {
-            var filePath = Path.Combine(_tempFolder, "umbraco-plugins.hash");
+            var filePath = GetPluginHashFilePath();
             File.WriteAllText(filePath, CurrentAssembliesHash.ToString(), Encoding.UTF8);
         }
 
@@ -286,9 +287,35 @@ namespace Umbraco.Core
             }
         }
 
+        /// <summary>
+        /// Removes cache files and internal cache as well
+        /// </summary>
+        /// <remarks>
+        /// Generally only used for resetting cache, for example during the install process
+        /// </remarks>
+        internal void ClearPluginCache()
+        {
+            var path = GetPluginListFilePath();
+            if (File.Exists(path))
+                File.Delete(path);
+            path = GetPluginHashFilePath();
+            if (File.Exists(path))
+                File.Delete(path);
+
+            if (_appContext != null)
+            {
+               _appContext.ApplicationCache.ClearCacheItem("umbraco-plugins.list");
+            }
+        }
+
         private string GetPluginListFilePath()
         {
             return Path.Combine(_tempFolder, "umbraco-plugins.list");
+        }
+
+        private string GetPluginHashFilePath()
+        {
+            return Path.Combine(_tempFolder, "umbraco-plugins.hash");
         }
 
         /// <summary>
@@ -461,13 +488,13 @@ namespace Umbraco.Core
         }
 
         /// <summary>
-        /// Returns all available IMacroPropertyTypes in application
+        /// Returns all mapper types that have a MapperFor attribute defined
         /// </summary>
         /// <returns></returns>
-        internal IEnumerable<Type> ResolveMacroPropertyTypes()
+        internal IEnumerable<Type> ResolveAssignedMapperTypes()
         {
-            return ResolveTypes<IMacroPropertyType>();
-        }
+            return ResolveTypesWithAttribute<BaseMapper, MapperForAttribute>();
+        } 
 
         /// <summary>
         /// Returns all available IMigrations in application
