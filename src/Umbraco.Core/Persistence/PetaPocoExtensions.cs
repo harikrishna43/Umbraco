@@ -149,6 +149,12 @@ namespace Umbraco.Core.Persistence
             CreateDatabaseSchema(db, true);
         }
 
+        internal static void UninstallDatabaseSchema(this Database db)
+        {
+            var creation = new DatabaseSchemaCreation(db);
+            creation.UninstallDatabaseSchema();
+        }
+
         internal static void CreateDatabaseSchema(this Database db, bool guardConfiguration)
         {
             if (guardConfiguration && ApplicationContext.Current.IsConfigured)

@@ -6,6 +6,8 @@ using System.Text;
 using NUnit.Framework;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web;
+using Umbraco.Web.PublishedCache;
+using Umbraco.Web.PublishedCache.XmlPublishedCache;
 using umbraco;
 
 namespace Umbraco.Tests
@@ -18,12 +20,8 @@ namespace Umbraco.Tests
 	public class LibraryTests : BaseRoutingTest
 	{
 		public override void Initialize()
-		{
+		{            
 			base.Initialize();
-
-			//set the current umbraco context and a published content store
-			PublishedContentStoreResolver.Current = new PublishedContentStoreResolver(
-				new DefaultPublishedContentStore());
 
 			var routingContext = GetRoutingContext("/test", 1234);
 			UmbracoContext.Current = routingContext.UmbracoContext;
@@ -44,13 +42,12 @@ namespace Umbraco.Tests
 		{
 			base.TearDown();
 			UmbracoContext.Current = null;
-			PublishedContentStoreResolver.Reset();
 		}
 
-		protected override bool RequiresDbSetup
-		{
-			get { return false; }
-		}
+        protected override DatabaseBehavior DatabaseTestBehavior
+        {
+            get { return DatabaseBehavior.NoDatabasePerFixture; }
+        }
 
 		[Test]
 		public void Get_Item_User_Property()
@@ -96,8 +93,11 @@ namespace Umbraco.Tests
 		/// <returns></returns>
 		private string LegacyGetItem(int nodeId, string alias)
 		{
-			var umbracoXML = UmbracoContext.Current.GetXml();
-			string xpath = UmbracoSettings.UseLegacyXmlSchema ? "./data [@alias='{0}']" : "./{0}";
+            var cache = UmbracoContext.Current.ContentCache.InnerCache as PublishedContentCache;
+            if (cache == null) throw new Exception("Unsupported IPublishedContentCache, only the Xml one is supported.");
+            var umbracoXML = cache.GetXml(UmbracoContext.Current, UmbracoContext.Current.InPreviewMode);
+
+            string xpath = UmbracoSettings.UseLegacyXmlSchema ? "./data [@alias='{0}']" : "./{0}";
 			if (umbracoXML.GetElementById(nodeId.ToString()) != null)
 				if (
 					",id,parentID,level,writerID,template,sortOrder,createDate,updateDate,nodeName,writerName,path,"
