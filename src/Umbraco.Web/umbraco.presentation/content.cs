@@ -9,6 +9,7 @@ using System.Web;
 using System.Xml;
 using System.Xml.XPath;
 using Umbraco.Core;
+using Umbraco.Core.Cache;
 using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
 using umbraco.BusinessLogic;
@@ -21,6 +22,7 @@ using umbraco.DataLayer;
 using umbraco.presentation.nodeFactory;
 using Action = umbraco.BusinessLogic.Actions.Action;
 using Node = umbraco.NodeFactory.Node;
+using Umbraco.Core;
 
 namespace umbraco
 {
@@ -137,17 +139,7 @@ namespace umbraco
             set
             {
                 lock (XmlContentInternalSyncLock)
-                {
-                    // Clear macro cache
-                    Cache.ClearCacheObjectTypes("umbraco.MacroCacheContent");
-                    Cache.ClearCacheByKeySearch("macroHtml_");
-
-                    // Clear library cache
-                    if (UmbracoSettings.UmbracoLibraryCacheDuration > 0)
-                    {
-                        Cache.ClearCacheObjectTypes("MS.Internal.Xml.XPath.XPathSelectionIterator");
-                    }
-
+                {                    
                     _xmlContent = value;
 
                     if (!UmbracoSettings.isXmlContentCacheDisabled && UmbracoSettings.continouslyUpdateXmlDiskCache)
@@ -317,8 +309,7 @@ namespace umbraco
                         // queues this up, because this delegate is executing on a different thread and may complete
                         // after the request which invoked it (which would normally persist the file on completion)
                         // So we are responsible for ensuring the content is persisted in this case.
-                        if (!UmbracoSettings.isXmlContentCacheDisabled &&
-                            UmbracoSettings.continouslyUpdateXmlDiskCache)
+                        if (!UmbracoSettings.isXmlContentCacheDisabled && UmbracoSettings.continouslyUpdateXmlDiskCache)
                             PersistXmlToFile(xmlDoc);
                     });
 
@@ -484,7 +475,6 @@ namespace umbraco
             UpdateDocumentCache(d);
         }
 
-
         /// <summary>
         /// Updates the document cache.
         /// </summary>
@@ -512,23 +502,9 @@ namespace umbraco
                     ClearContextCache();
                 }
 
-                // clear cached field values
-                if (HttpContext.Current != null)
-                {
-                    System.Web.Caching.Cache httpCache = HttpContext.Current.Cache;
-                    string cachedFieldKeyStart = String.Format("contentItem{0}_", d.Id);
-                    var foundKeys = new List<string>();
-                    foreach (DictionaryEntry cacheItem in httpCache)
-                    {
-                        string key = cacheItem.Key.ToString();
-                        if (key.StartsWith(cachedFieldKeyStart))
-                            foundKeys.Add(key);
-                    }
-                    foreach (string foundKey in foundKeys)
-                    {
-                        httpCache.Remove(foundKey);
-                    }
-                }
+                var cachedFieldKeyStart = string.Format("{0}{1}_", CacheKeys.ContentItemCacheKey, d.Id);
+                ApplicationContext.Current.ApplicationCache.ClearCacheByKeySearch(cachedFieldKeyStart);                    
+
                 Action.RunActionHandlers(d, ActionPublish.Instance);
 
                 FireAfterUpdateDocumentCache(d, e);
@@ -571,7 +547,12 @@ namespace umbraco
         [Obsolete("Method obsolete in version 4.1 and later, please use UpdateDocumentCache", true)]
         public virtual void UpdateDocumentCacheAsync(int documentId)
         {
-            ThreadPool.QueueUserWorkItem(delegate { UpdateDocumentCache(documentId); });
+            //SD: WE've obsoleted this but then didn't make it call the method it should! So we've just 
+            // left a bug behind...???? ARGH. 
+            //.... changed now.
+            //ThreadPool.QueueUserWorkItem(delegate { UpdateDocumentCache(documentId); });
+
+            UpdateDocumentCache(documentId);
         }
 
         /// <summary>
@@ -581,7 +562,12 @@ namespace umbraco
         [Obsolete("Method obsolete in version 4.1 and later, please use ClearDocumentCache", true)]
         public virtual void ClearDocumentCacheAsync(int documentId)
         {
-            ThreadPool.QueueUserWorkItem(delegate { ClearDocumentCache(documentId); });
+            //SD: WE've obsoleted this but then didn't make it call the method it should! So we've just 
+            // left a bug behind...???? ARGH.
+            //.... changed now.
+            //ThreadPool.QueueUserWorkItem(delegate { ClearDocumentCache(documentId); });
+
+            ClearDocumentCache(documentId);
         }
 
         public virtual void ClearDocumentCache(int documentId)
@@ -638,14 +624,15 @@ namespace umbraco
                     Action.RunActionHandlers(doc, ActionUnPublish.Instance);
                 }
 
+                //SD: changed to fire event BEFORE running the sitemap!! argh.
+                FireAfterClearDocumentCache(doc, e);
+
                 // update sitemapprovider
                 if (SiteMap.Provider is UmbracoSiteMapProvider)
                 {
                     var prov = (UmbracoSiteMapProvider)SiteMap.Provider;
                     prov.RemoveNode(doc.Id);
-                }
-
-                FireAfterClearDocumentCache(doc, e);
+                }                
             }
         }
 
@@ -1092,7 +1079,7 @@ order by umbracoNode.level, umbracoNode.sortOrder";
                             IRecordsReader dr = SqlHelper.ExecuteReader(sql,
                                                                         SqlHelper.CreateParameter("@type",
                                                                                                   new Guid(
-                                                                                                      "C66BA18E-EAF3-4CFF-8A22-41B16D66A972")))
+                                                                                                      Constants.ObjectTypes.Document)))
                             )
                         {
                             while (dr.Read())
