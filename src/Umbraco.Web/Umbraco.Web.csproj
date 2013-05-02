@@ -323,8 +323,12 @@
     <Compile Include="Routing\LookupByPageIdQuery.cs" />
     <Compile Include="Mvc\SurfaceControllerResolver.cs" />
     <Compile Include="Routing\NotFoundHandlerHelper.cs" />
+    <Compile Include="Security\LegacyDefaultAppMapping.cs" />
     <Compile Include="Templates\TemplateRenderer.cs" />
     <Compile Include="Templates\TemplateUtilities.cs" />
+    <Compile Include="UI\IAssignedApp.cs" />
+    <Compile Include="UI\LegacyDialogHandler.cs" />
+    <Compile Include="UI\LegacyDialogTask.cs" />
     <Compile Include="umbraco.presentation\Default.aspx.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -1981,9 +1985,11 @@
       <SubType>UserControl</SubType>
     </Content>
     <Content Include="umbraco.presentation\umbraco\create\media.ascx" />
-    <Content Include="umbraco.presentation\umbraco\create\member.ascx" />
+    <Content Include="umbraco.presentation\umbraco\create\member.ascx">
+      <SubType>ASPXCodeBehind</SubType>
+    </Content>
     <Content Include="umbraco.presentation\umbraco\create\nodeType.ascx">
-      <SubType>UserControl</SubType>
+      <SubType>ASPXCodeBehind</SubType>
     </Content>
     <Content Include="umbraco.presentation\umbraco\create\simple.ascx" />
     <Content Include="umbraco.presentation\umbraco\create\xslt.ascx">
