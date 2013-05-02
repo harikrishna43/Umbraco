@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -10,6 +11,12 @@ namespace Umbraco.Core
 	/// </summary>
 	internal static class XmlExtensions
 	{
+
+        public static bool HasAttribute(this XmlAttributeCollection attributes, string attributeName)
+        {
+            return attributes.Cast<XmlAttribute>().Any(x => x.Name == attributeName);
+        }	
+		
         /// <summary>
         /// Converts from an XDocument to an XmlDocument
         /// </summary>
