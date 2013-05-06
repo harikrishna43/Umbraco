@@ -60,6 +60,12 @@ namespace Umbraco.Tests
 			    };
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            PluginManager.Current = null;
+        }
+
         private DirectoryInfo PrepareFolder()
         {
             var assDir = new FileInfo(Assembly.GetExecutingAssembly().Location).Directory;
@@ -255,6 +261,13 @@ namespace Umbraco.Tests
             Assert.AreEqual(1,
                             PluginManager.Current.GetTypeLists()
                                 .Count(x => x.IsTypeList<IFindMe>(PluginManager.TypeResolutionKind.FindAllTypes)));
+        }
+
+        [Test]
+        public void Resolves_Assigned_Mappers()
+        {
+            var foundTypes1 = PluginManager.Current.ResolveAssignedMapperTypes();
+            Assert.AreEqual(17, foundTypes1.Count());
         }
 
         [Test]
