@@ -313,7 +313,7 @@ namespace Umbraco.Web
 
 
 		    var item = new Item()
-		                   {
+		                   {		        
 		                       Field = fieldAlias,
 		                       TextIfEmpty = altText,
 		                       LegacyAttributes = attributesForItem
