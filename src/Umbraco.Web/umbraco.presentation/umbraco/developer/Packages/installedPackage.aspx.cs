@@ -3,6 +3,7 @@ using System.Data;
 using System.Configuration;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
@@ -11,15 +12,17 @@ using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 using Umbraco.Core.IO;
+using Umbraco.Core;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
 using umbraco.BusinessLogic;
-using umbraco.cms.businesslogic.template;
 using umbraco.cms.businesslogic.web;
-using umbraco.cms.businesslogic.macro;
 using runtimeMacro = umbraco.macro;
 using System.Xml;
 using umbraco.cms.presentation.Trees;
 using BizLogicAction = umbraco.BusinessLogic.Actions.Action;
+using Macro = umbraco.cms.businesslogic.macro.Macro;
+using Template = umbraco.cms.businesslogic.template.Template;
 
 namespace umbraco.presentation.developer.packages
 {
@@ -419,7 +422,9 @@ namespace umbraco.presentation.developer.packages
                 }
             }
             
-            //Remove Document types
+            //Remove Document Types
+            var contentTypes = new List<IContentType>();
+            var contentTypeService = ApplicationContext.Current.Services.ContentTypeService;
             foreach (ListItem li in documentTypes.Items)
             {
                 if (li.Selected)
@@ -428,13 +433,27 @@ namespace umbraco.presentation.developer.packages
 
                     if (int.TryParse(li.Value, out nId))
                     {
-                        var s = new DocumentType(nId);
-                        s.delete();
-                        _pack.Data.Documenttypes.Remove(nId.ToString());
-
-                        // refresh content cache when document types are removed
-                        refreshCache = true;
+                        var contentType = contentTypeService.GetContentType(nId);
+                        if (contentType != null)
+                        {
+                            contentTypes.Add(contentType);
+                            _pack.Data.Documenttypes.Remove(nId.ToString(CultureInfo.InvariantCulture));
+                            // refresh content cache when document types are removed
+                            refreshCache = true;
+                        }
                     }
+                }
+            }
+            //Order the DocumentTypes before removing them
+            if (contentTypes.Any())
+            {
+                var orderedTypes = (from contentType in contentTypes
+                                    orderby contentType.ParentId descending, contentType.Id descending 
+                                    select contentType);
+
+                foreach (var contentType in orderedTypes)
+                {
+                    contentTypeService.Delete(contentType);
                 }
             }
 
@@ -496,15 +515,15 @@ namespace umbraco.presentation.developer.packages
                         catch (Exception ex)
                         {
                             LogHelper.Error<installedPackage>("An error occurred running undo actions", ex);
-                        }
-                    }
+						}
+					}
                 }
                 catch (Exception ex)
                 {
                     LogHelper.Error<installedPackage>("An error occurred running undo actions", ex);
-                }
+				}
 
-                //moved remove of files here so custom package actions can still undo
+	            //moved remove of files here so custom package actions can still undo
                 //Remove files
                 foreach (ListItem li in files.Items)
                 {
