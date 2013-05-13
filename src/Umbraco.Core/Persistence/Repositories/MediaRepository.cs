@@ -53,7 +53,9 @@ namespace Umbraco.Core.Persistence.Repositories
 
             media.Properties = GetPropertyCollection(id, dto.VersionId, mediaType, media.CreateDate, media.UpdateDate);
 
-            ((ICanBeDirty)media).ResetDirtyProperties();
+            //on initial construction we don't want to have dirty properties tracked
+            // http://issues.umbraco.org/issue/U4-1946
+            ((Entity)media).ResetDirtyProperties(false);
             return media;
         }
 
@@ -134,7 +136,7 @@ namespace Umbraco.Core.Persistence.Repositories
 
         protected override Guid NodeObjectTypeId
         {
-            get { return new Guid("B796F64C-1F99-4FFB-B886-4BF4BC011A9C"); }
+            get { return new Guid(Constants.ObjectTypes.Media); }
         }
 
         #endregion
@@ -159,7 +161,9 @@ namespace Umbraco.Core.Persistence.Repositories
 
             media.Properties = GetPropertyCollection(dto.NodeId, dto.VersionId, mediaType, media.CreateDate, media.UpdateDate);
 
-            ((ICanBeDirty)media).ResetDirtyProperties();
+            //on initial construction we don't want to have dirty properties tracked
+            // http://issues.umbraco.org/issue/U4-1946
+            ((Entity)media).ResetDirtyProperties(false);
             return media;
         }
 
@@ -311,7 +315,7 @@ namespace Umbraco.Core.Persistence.Repositories
         protected override void PersistDeletedItem(IMedia entity)
         {
             var fs = FileSystemProviderManager.Current.GetFileSystemProvider<MediaFileSystem>();
-            var uploadFieldId = new Guid("5032a6e6-69e3-491d-bb28-cd31cd11086c");
+            var uploadFieldId = new Guid(Constants.PropertyEditors.UploadField);
             //Loop through properties to check if the media item contains images/file that should be deleted
             foreach (var property in entity.Properties)
             {
