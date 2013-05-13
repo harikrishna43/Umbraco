@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -12,6 +13,7 @@ using Umbraco.Core.Configuration;
 using Umbraco.Core.IO;
 using Umbraco.Core.Media;
 using Umbraco.Core.Models.Membership;
+using Umbraco.Core.Strings;
 using Umbraco.Core.Persistence;
 using Umbraco.Core.Persistence.UnitOfWork;
 
@@ -19,6 +21,90 @@ namespace Umbraco.Core.Models
 {
     public static class ContentExtensions
     {
+        #region IContent
+        /// <summary>
+        /// Returns a list of the current contents ancestors, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Ancestors(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetAncestors(content);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents children.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Children(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetChildren(content.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current contents descendants, not including the content itself.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An enumerable list of <see cref="IContent"/> objects</returns>
+        public static IEnumerable<IContent> Descendants(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetDescendants(content);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current content.
+        /// </summary>
+        /// <param name="content">Current content</param>
+        /// <returns>An <see cref="IContent"/> object</returns>
+        public static IContent Parent(this IContent content)
+        {
+            return ApplicationContext.Current.Services.ContentService.GetById(content.ParentId);
+        }
+        #endregion
+
+        #region IMedia
+        /// <summary>
+        /// Returns a list of the current medias ancestors, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Ancestors(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetAncestors(media);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias children.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Children(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetChildren(media.Id);
+        }
+
+        /// <summary>
+        /// Returns a list of the current medias descendants, not including the media itself.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An enumerable list of <see cref="IMedia"/> objects</returns>
+        public static IEnumerable<IMedia> Descendants(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetDescendants(media);
+        }
+
+        /// <summary>
+        /// Returns the parent of the current media.
+        /// </summary>
+        /// <param name="media">Current media</param>
+        /// <returns>An <see cref="IMedia"/> object</returns>
+        public static IMedia Parent(this IMedia media)
+        {
+            return ApplicationContext.Current.Services.MediaService.GetById(media.ParentId);
+        }
+        #endregion
+
         /// <summary>
         /// Set property values by alias with an annonymous object
         /// </summary>
@@ -165,7 +251,7 @@ namespace Umbraco.Core.Models
                 var thumbUrl = Resize(fs, fileName, extension, 100, "thumb");
 
                 //Look up Prevalues for this upload datatype - if it is an upload datatype
-                var uploadFieldId = new Guid("5032a6e6-69e3-491d-bb28-cd31cd11086c");
+                var uploadFieldId = new Guid(Constants.PropertyEditors.UploadField);
                 if (property.PropertyType.DataTypeId == uploadFieldId)
                 {
                     //Get Prevalues by the DataType's Id: property.PropertyType.DataTypeId
@@ -337,8 +423,16 @@ namespace Umbraco.Core.Models
             return new Tuple<int, int, string>(widthTh, heightTh, newFileName);
         }
 
+		/// <summary>
+		/// Gets the <see cref="IProfile"/> for the Creator of this media item.
+		/// </summary>
+		public static IProfile GetCreatorProfile(this IMedia media)
+		{
+            return ApplicationContext.Current.Services.UserService.GetProfileById(media.CreatorId);
+        }
+
         /// <summary>
-        /// Gets the <see cref="IProfile"/> for the Creator of this content/media item.
+        /// Gets the <see cref="IProfile"/> for the Creator of this content item.
         /// </summary>
         public static IProfile GetCreatorProfile(this IContentBase content)
         {
@@ -367,14 +461,55 @@ namespace Umbraco.Core.Models
         }
 
         /// <summary>
+        /// Creates the full xml representation for the <see cref="IContent"/> object and all of it's descendants
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to generate xml for</param>
+        /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
+        internal static XElement ToDeepXml(this IContent content)
+        {
+            var xml = content.ToXml();
+            
+            var descendants = content.Descendants().ToArray();
+            var currentChildren = descendants.Where(x => x.ParentId == content.Id);
+            AddChildXml(descendants, currentChildren, xml);      
+
+            return xml;
+        }
+
+        /// <summary>
+        /// Used by ToDeepXml to recursively add children
+        /// </summary>
+        /// <param name="originalDescendants"></param>
+        /// <param name="currentChildren"></param>
+        /// <param name="currentXml"></param>
+        private static void AddChildXml(
+            IContent[] originalDescendants, 
+            IEnumerable<IContent> currentChildren, 
+            XElement currentXml)
+        {
+            foreach (var child in currentChildren)
+            {
+                //add the child's xml
+                var childXml = child.ToXml();
+                currentXml.Add(childXml);
+                //copy local (out of closure)
+                var c = child;
+                //get this item's children                
+                var children = originalDescendants.Where(x => x.ParentId == c.Id);
+                //recurse and add it's children to the child xml element
+                AddChildXml(originalDescendants, children, childXml);
+            }
+        }
+
+        /// <summary>
         /// Creates the xml representation for the <see cref="IContent"/> object
         /// </summary>
         /// <param name="content"><see cref="IContent"/> to generate xml for</param>
         /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
         public static XElement ToXml(this IContent content)
         {
-            //nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
-            var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
+			//nodeName should match Casing.SafeAliasWithForcingCheck(content.ContentType.Alias);
+			var nodeName = UmbracoSettings.UseLegacyXmlSchema ? "node" : content.ContentType.Alias.ToSafeAliasWithForcingCheck();
 
             var x = content.ToXml(nodeName);
             x.Add(new XAttribute("nodeType", content.ContentType.Id));
@@ -422,9 +557,10 @@ namespace Umbraco.Core.Models
         /// <returns>Xml representation of the passed in <see cref="IContent"/></returns>
         private static XElement ToXml(this IContentBase contentBase, string nodeName)
         {
-            var niceUrl = contentBase.Name.FormatUrl().ToLower();
+            // note: that one will take care of umbracoUrlName
+            var url = contentBase.GetUrlSegment();
 
-            var xml = new XElement(nodeName,
+			var xml = new XElement(nodeName,
                                    new XAttribute("id", contentBase.Id),
                                    new XAttribute("parentID", contentBase.Level > 1 ? contentBase.ParentId : -1),
                                    new XAttribute("level", contentBase.Level),
@@ -433,24 +569,15 @@ namespace Umbraco.Core.Models
                                    new XAttribute("createDate", contentBase.CreateDate.ToString("s")),
                                    new XAttribute("updateDate", contentBase.UpdateDate.ToString("s")),
                                    new XAttribute("nodeName", contentBase.Name),
-                                   new XAttribute("urlName", niceUrl),//Format Url ?								   
+                                   new XAttribute("urlName", url),
                                    new XAttribute("path", contentBase.Path),
                                    new XAttribute("isDoc", ""));
 
-            foreach (var property in contentBase.Properties)
-            {
-                if (property == null) continue;
+            foreach (var property in contentBase.Properties.Where(p => p != null))
+				xml.Add(property.ToXml());
 
-                xml.Add(property.ToXml());
-
-                //Check for umbracoUrlName convention
-                if (property.Alias == "umbracoUrlName" && property.Value != null && 
-                        property.Value.ToString().Trim() != string.Empty)
-                    xml.SetAttributeValue("urlName", property.Value.ToString().FormatUrl().ToLower());
-            }
-
-            return xml;
-        }
+			return xml;
+		}
 
         /// <summary>
         /// Creates the xml representation for the <see cref="IContent"/> object

@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Web;
-using System.Web.Compilation;
-using System.Web.Mvc;
 using System.Web.Routing;
-using System.Web.UI;
 using Umbraco.Core;
 using Umbraco.Core.IO;
 using Umbraco.Core.Logging;
@@ -16,6 +10,7 @@ using Umbraco.Web.Routing;
 using umbraco;
 using GlobalSettings = Umbraco.Core.Configuration.GlobalSettings;
 using UmbracoSettings = Umbraco.Core.Configuration.UmbracoSettings;
+using Umbraco.Web.Configuration;
 
 namespace Umbraco.Web
 {
@@ -46,7 +41,7 @@ namespace Umbraco.Web
             }
 
 			// do not process if client-side request
-			if (IsClientSideRequest(httpContext.Request.Url))
+			if (httpContext.Request.Url.IsClientSideRequest())
 				return;
 
 			//write the trace output for diagnostics at the end of the request
@@ -71,13 +66,13 @@ namespace Umbraco.Web
 		void ProcessRequest(HttpContextBase httpContext)
 		{
 			// do not process if client-side request
-			if (IsClientSideRequest(httpContext.Request.Url))
+			if (httpContext.Request.Url.IsClientSideRequest())
 				return;
 
 			if (UmbracoContext.Current == null)
-				throw new NullReferenceException("The UmbracoContext.Current is null, ProcessRequest cannot proceed unless there is a current UmbracoContext");
+				throw new InvalidOperationException("The UmbracoContext.Current is null, ProcessRequest cannot proceed unless there is a current UmbracoContext");
 			if (UmbracoContext.Current.RoutingContext == null)
-				throw new NullReferenceException("The UmbracoContext.RoutingContext has not been assigned, ProcessRequest cannot proceed unless there is a RoutingContext assigned to the UmbracoContext");
+				throw new InvalidOperationException("The UmbracoContext.RoutingContext has not been assigned, ProcessRequest cannot proceed unless there is a RoutingContext assigned to the UmbracoContext");
 
 			var umbracoContext = UmbracoContext.Current;		
 
@@ -89,24 +84,87 @@ namespace Umbraco.Web
 			}
 
 			// do not process if this request is not a front-end routable page
-			if (!EnsureUmbracoRoutablePage(umbracoContext, httpContext))
-				return;
+		    var isRoutableAttempt = EnsureUmbracoRoutablePage(umbracoContext, httpContext);
+            //raise event here
+            OnRouteAttempt(new RoutableAttemptEventArgs(isRoutableAttempt.Result, umbracoContext, httpContext));
+            if (!isRoutableAttempt.Success)
+			{
+                return;
+			}
+				
 
 			httpContext.Trace.Write("UmbracoModule", "Umbraco request confirmed");
 
 			// ok, process
 
-			var uri = umbracoContext.OriginalRequestUrl;
+			// note: requestModule.UmbracoRewrite also did some stripping of &umbPage
+			// from the querystring... that was in v3.x to fix some issues with pre-forms
+			// auth. Paul Sterling confirmed in jan. 2013 that we can get rid of it.
 
-			// legacy - no idea what this is but does something with the query strings
-			LegacyCleanUmbPageFromQueryString(ref uri);
-
-			// instanciate a request a process
+			// instanciate, prepare and process the published content request
 			// important to use CleanedUmbracoUrl - lowercase path-only version of the current url
-			var docreq = new PublishedContentRequest(umbracoContext.CleanedUmbracoUrl, umbracoContext.RoutingContext);
-			docreq.ProcessRequest(httpContext, umbracoContext, 
-				docreq2 => RewriteToUmbracoHandler(HttpContext.Current, uri.Query, docreq2.RenderingEngine));
+			var pcr = new PublishedContentRequest(umbracoContext.CleanedUmbracoUrl, umbracoContext.RoutingContext);
+			umbracoContext.PublishedContentRequest = pcr;
+			pcr.Prepare();
+
+            // HandleHttpResponseStatus returns a value indicating that the request should
+            // not be processed any further, eg because it has been redirect. then, exit.
+            if (HandleHttpResponseStatus(httpContext, pcr))
+		        return;
+
+            if (!pcr.HasPublishedContent)
+				httpContext.RemapHandler(new PublishedContentNotFoundHandler());
+			else
+				RewriteToUmbracoHandler(httpContext, pcr);
 		}
+
+        // returns a value indicating whether redirection took place and the request has
+        // been completed - because we don't want to Response.End() here to terminate
+        // everything properly.
+        internal static bool HandleHttpResponseStatus(HttpContextBase context, PublishedContentRequest pcr)
+        {
+            var end = false;
+            var response = context.Response;
+
+            LogHelper.Debug<UmbracoModule>("Response status: Redirect={0}, Is404={1}, StatusCode={2}",
+                () => pcr.IsRedirect ? (pcr.IsRedirectPermanent ? "permanent" : "redirect") : "none",
+                () => pcr.Is404 ? "true" : "false", () => pcr.ResponseStatusCode);
+
+            if (pcr.IsRedirect)
+            {
+                if (pcr.IsRedirectPermanent)
+                    response.Redirect(pcr.RedirectUrl, false); // do not end response
+                else
+                    response.RedirectPermanent(pcr.RedirectUrl, false); // do not end response
+                end = true;
+            }
+            else if (pcr.Is404)
+            {
+                response.StatusCode = 404;
+                response.TrySkipIisCustomErrors = UmbracoSettings.For<WebRouting>().TrySkipIisCustomErrors;
+            }
+
+            if (pcr.ResponseStatusCode > 0)
+            {
+                // set status code -- even for redirects
+                response.StatusCode = pcr.ResponseStatusCode;
+                response.StatusDescription = pcr.ResponseStatusDescription;
+            }
+            //if (pcr.IsRedirect)
+            //    response.End(); // end response -- kills the thread and does not return!
+
+            if (pcr.IsRedirect)
+            {
+                response.Flush();
+                // bypass everything and directly execute EndRequest event -- but returns
+                context.ApplicationInstance.CompleteRequest();
+                // though some say that .CompleteRequest() does not properly shutdown the response
+                // and the request will hang until the whole code has run... would need to test?
+                LogHelper.Debug<UmbracoModule>("Response status: redirecting, complete request now.");
+            }
+
+            return end;
+        }
 
 		/// <summary>
 		/// Checks if the xml cache file needs to be updated/persisted
@@ -130,42 +188,39 @@ namespace Umbraco.Web
 		#region Route helper methods
 
 		/// <summary>
-		/// This is a performance tweak to check if this is a .css, .js or .ico file request since
-		/// .Net will pass these requests through to the module when in integrated mode.
-		/// We want to ignore all of these requests immediately.
-		/// </summary>
-		/// <param name="url"></param>
-		/// <returns></returns>
-		internal bool IsClientSideRequest(Uri url)
-		{
-			var toIgnore = new[] { ".js", ".css", ".ico" };
-			return toIgnore.Any(x => Path.GetExtension(url.LocalPath).InvariantEquals(x));
-		}
-
-		/// <summary>
 		/// Checks the current request and ensures that it is routable based on the structure of the request and URI
 		/// </summary>		
 		/// <param name="context"></param>
 		/// <param name="httpContext"></param>
 		/// <returns></returns>
-		internal bool EnsureUmbracoRoutablePage(UmbracoContext context, HttpContextBase httpContext)
+        internal Attempt<EnsureRoutableOutcome> EnsureUmbracoRoutablePage(UmbracoContext context, HttpContextBase httpContext)
 		{
 			var uri = context.OriginalRequestUrl;
 
+		    var reason = EnsureRoutableOutcome.IsRoutable;
+
 			// ensure this is a document request
 			if (!EnsureDocumentRequest(httpContext, uri))
-				return false;
+			{
+			    reason = EnsureRoutableOutcome.NotDocumentRequest;
+			}
 			// ensure Umbraco is ready to serve documents
-			if (!EnsureIsReady(httpContext, uri))
-				return false;
+			else if (!EnsureIsReady(httpContext, uri))
+			{
+			    reason = EnsureRoutableOutcome.NotReady;
+			}                
 			// ensure Umbraco is properly configured to serve documents
-			if (!EnsureIsConfigured(httpContext, uri))
-				return false;
+			else if (!EnsureIsConfigured(httpContext, uri))
+            {
+                reason = EnsureRoutableOutcome.NotConfigured;
+            }                
             // ensure Umbraco has documents to serve
-            if (!EnsureHasContent(context, httpContext))
-                return false;
+            else if (!EnsureHasContent(context, httpContext))
+            {
+                reason = EnsureRoutableOutcome.NoContent;
+            }
 
-			return true;
+            return new Attempt<EnsureRoutableOutcome>(reason == EnsureRoutableOutcome.IsRoutable, reason);
 		}
 
 		/// <summary>
@@ -181,9 +236,9 @@ namespace Umbraco.Web
 
 			// handle directory-urls used for asmx
 			// legacy - what's the point really?
-			if (maybeDoc && GlobalSettings.UseDirectoryUrls)
+			if (/*maybeDoc &&*/ GlobalSettings.UseDirectoryUrls)
 			{
-				int asmxPos = lpath.IndexOf(".asmx/");
+				int asmxPos = lpath.IndexOf(".asmx/", StringComparison.OrdinalIgnoreCase);
 				if (asmxPos >= 0)
 				{
 					// use uri.AbsolutePath, not path, 'cos path has been lowercased
@@ -257,41 +312,35 @@ namespace Umbraco.Web
 		// ensures Umbraco has at least one published node
 		// if not, rewrites to splash and return false
 		// if yes, return true
-		bool EnsureHasContent(UmbracoContext context, HttpContextBase httpContext)
+	    private static bool EnsureHasContent(UmbracoContext context, HttpContextBase httpContext)
 		{
-			var store = context.RoutingContext.PublishedContentStore;
-			if (!store.HasContent(context))
-			{
-				LogHelper.Warn<UmbracoModule>("Umbraco has no content");
+            if (context.ContentCache.HasContent())
+		        return true;
 
-				httpContext.Response.StatusCode = 503;
+            LogHelper.Warn<UmbracoModule>("Umbraco has no content");
 
-				var noContentUrl = "~/config/splashes/noNodes.aspx";
-				httpContext.RewritePath(UriUtility.ToAbsolute(noContentUrl));
+			httpContext.Response.StatusCode = 503;
 
-				return false;
-			}
-			else
-			{
-				return true;
-			}
+			const string noContentUrl = "~/config/splashes/noNodes.aspx";
+			httpContext.RewritePath(UriUtility.ToAbsolute(noContentUrl));
+
+			return false;
 		}
 
 		// ensures Umbraco is configured
 		// if not, redirect to install and return false
 		// if yes, return true
-		bool EnsureIsConfigured(HttpContextBase httpContext, Uri uri)
-		{
-			if (!ApplicationContext.Current.IsConfigured)
-			{
-				LogHelper.Warn<UmbracoModule>("Umbraco is not configured");
+	    private static bool EnsureIsConfigured(HttpContextBase httpContext, Uri uri)
+	    {
+	        if (ApplicationContext.Current.IsConfigured)
+	            return true;
 
-				string installPath = UriUtility.ToAbsolute(SystemDirectories.Install);
-				string installUrl = string.Format("{0}/default.aspx?redir=true&url={1}", installPath, HttpUtility.UrlEncode(uri.ToString()));
-				httpContext.Response.Redirect(installUrl, true);
-				return false;
-			}
-			return true;
+            LogHelper.Warn<UmbracoModule>("Umbraco is not configured");
+
+			var installPath = UriUtility.ToAbsolute(Core.IO.SystemDirectories.Install);
+			var installUrl = string.Format("{0}/default.aspx?redir=true&url={1}", installPath, HttpUtility.UrlEncode(uri.ToString()));
+			httpContext.Response.Redirect(installUrl, true);
+			return false;
 		}
 
 		#endregion
@@ -300,24 +349,34 @@ namespace Umbraco.Web
 		/// Rewrites to the correct Umbraco handler, either WebForms or Mvc
 		/// </summary>		
 		/// <param name="context"></param>
-		/// <param name="currentQuery"></param>
-		/// <param name="engine"> </param>
-		private void RewriteToUmbracoHandler(HttpContext context, string currentQuery, RenderingEngine engine)
+        /// <param name="pcr"> </param>
+		private void RewriteToUmbracoHandler(HttpContextBase context, PublishedContentRequest pcr)
 		{
+			// NOTE: we do not want to use TransferRequest even though many docs say it is better with IIS7, turns out this is
+			// not what we need. The purpose of TransferRequest is to ensure that .net processes all of the rules for the newly
+			// rewritten url, but this is not what we want!
+			// read: http://forums.iis.net/t/1146511.aspx
 
-			//NOTE: We do not want to use TransferRequest even though many docs say it is better with IIS7, turns out this is
-			//not what we need. The purpose of TransferRequest is to ensure that .net processes all of the rules for the newly
-			//rewritten url, but this is not what we want!
-			// http://forums.iis.net/t/1146511.aspx
+			string query = pcr.Uri.Query.TrimStart(new[] { '?' });
 
 			string rewritePath;
-			switch (engine)
+
+            if (pcr.RenderingEngine == RenderingEngine.Unknown)
+            {
+                // Unkwnown means that no template was found. Default to Mvc because Mvc supports hijacking
+                // routes which sometimes doesn't require a template since the developer may want full control
+                // over the rendering. Can't do it in WebForms, so Mvc it is. And Mvc will also handle what to
+                // do if no template or hijacked route is exist.
+                pcr.RenderingEngine = RenderingEngine.Mvc;
+            }
+
+			switch (pcr.RenderingEngine)
 			{
 				case RenderingEngine.Mvc:
 					// GlobalSettings.Path has already been through IOHelper.ResolveUrl() so it begins with / and vdir (if any)
 					rewritePath = GlobalSettings.Path.TrimEnd(new[] { '/' }) + "/RenderMvc";
-					// we rewrite the path to the path of the handler (i.e. default.aspx or /umbraco/RenderMvc )
-					context.RewritePath(rewritePath, "", currentQuery.TrimStart(new[] { '?' }), false);
+					// rewrite the path to the path of the handler (i.e. /umbraco/RenderMvc)
+					context.RewritePath(rewritePath, "", query, false);
 
 					//if it is MVC we need to do something special, we are not using TransferRequest as this will 
 					//require us to rewrite the path with query strings and then reparse the query strings, this would 
@@ -328,63 +387,20 @@ namespace Umbraco.Web
 					//we also cannot re-create this functionality because the setter for the HttpContext.Request.RequestContext is internal
 					//so really, this is pretty much the only way without using Server.TransferRequest and if we did that, we'd have to rethink
 					//a bunch of things!
-
 					var urlRouting = new UrlRoutingModule();
-					urlRouting.PostResolveRequestCache(new HttpContextWrapper(context));
-
+					urlRouting.PostResolveRequestCache(context);
 					break;
+
 				case RenderingEngine.WebForms:
-				default:
 					rewritePath = "~/default.aspx";
-					// rewrite the path to the path of the handler (i.e. default.aspx or /umbraco/RenderMvc )
-					context.RewritePath(rewritePath, "", currentQuery.TrimStart(new[] { '?' }), false);
-
+					// rewrite the path to the path of the handler (i.e. default.aspx)
+					context.RewritePath(rewritePath, "", query, false);
 					break;
-			}
 
+                default:
+                    throw new Exception("Invalid RenderingEngine.");
+            }
 		}
-
-		#region Legacy
-
-		// "Clean umbPage from querystring, caused by .NET 2.0 default Auth Controls"
-		// but really, at the moment I have no idea what this does, and why...
-		// SD: I also have no idea what this does, I've googled umbPage and really nothing shows up
-		internal static void LegacyCleanUmbPageFromQueryString(ref Uri uri)
-		{
-			string receivedQuery = uri.Query;
-			string path = uri.AbsolutePath;
-			string query = null;
-
-			if (receivedQuery.Length > 0)
-			{
-				// Clean umbPage from querystring, caused by .NET 2.0 default Auth Controls
-				if (receivedQuery.IndexOf("umbPage") > 0)
-				{
-					int ampPos = receivedQuery.IndexOf('&');
-					// query contains no ampersand?
-					if (ampPos < 0)
-					{
-						// no ampersand means no original query string
-						query = String.Empty;
-						// ampersand would occur past then end the of received query
-						ampPos = receivedQuery.Length;
-					}
-					else
-					{
-						// original query string past ampersand
-						query = receivedQuery.Substring(ampPos + 1,
-														receivedQuery.Length - ampPos - 1);
-					}
-					// get umbPage out of query string (9 = "&umbPage".Length() + 1)
-					path = receivedQuery.Substring(9, ampPos - 9); //this will fail if there are < 9 characters before the &umbPage query string
-
-					// --added when refactoring--
-					uri = uri.Rewrite(path, query);
-				}
-			}
-		}
-
-		#endregion
 
 		#region IHttpModule
 
@@ -397,11 +413,13 @@ namespace Umbraco.Web
 		{
 			app.BeginRequest += (sender, e) =>
 				{
-					var httpContext = ((HttpApplication)sender).Context;					
-					BeginRequest(new HttpContextWrapper(httpContext));
+					var httpContext = ((HttpApplication)sender).Context;
+                    httpContext.Trace.Write("UmbracoModule", "Umbraco request begins");
+				    LogHelper.Debug<UmbracoModule>("Begin request: {0}.", () => httpContext.Request.Url);
+                    BeginRequest(new HttpContextWrapper(httpContext));
 				};
 
-			app.PostResolveRequestCache += (sender, e) =>
+            app.PostResolveRequestCache += (sender, e) =>
 				{
 					var httpContext = ((HttpApplication)sender).Context;
 					ProcessRequest(new HttpContextWrapper(httpContext));
@@ -455,5 +473,14 @@ namespace Umbraco.Web
 				i.DisposeIfDisposable();
 			}
 		}
+
+        #region Events
+        internal static event EventHandler<RoutableAttemptEventArgs> RouteAttempt;
+        private void OnRouteAttempt(RoutableAttemptEventArgs args)
+        {
+            if (RouteAttempt != null)
+                RouteAttempt(this, args);
+        } 
+        #endregion
 	}
 }
