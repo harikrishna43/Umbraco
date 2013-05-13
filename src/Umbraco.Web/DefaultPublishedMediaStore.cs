@@ -1,20 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.XPath;
 using Examine;
+using Examine.LuceneEngine.SearchCriteria;
 using Examine.Providers;
 using Lucene.Net.Documents;
 using Umbraco.Core;
 using Umbraco.Core.Dynamics;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
+using Umbraco.Web.Models;
 using UmbracoExamine;
 using umbraco;
 using umbraco.cms.businesslogic;
-using Examine.LuceneEngine.SearchCriteria;
+using ContentType = umbraco.cms.businesslogic.ContentType;
 
 namespace Umbraco.Web
 {
@@ -133,7 +136,11 @@ namespace Umbraco.Web
 				{
 					//first check in Examine as this is WAY faster
 					var criteria = searchProvider.CreateSearchCriteria("media");
-					var filter = criteria.Id(id);
+				    
+                    var filter = criteria.Id(id).Not().Field(UmbracoContentIndexer.IndexPathFieldName, "-1,-21,".MultipleCharacterWildcard());
+                    //the above filter will create a query like this, NOTE: That since the use of the wildcard, it automatically escapes it in Lucene.
+                    //+(+__NodeId:3113 -__Path:-1,-21,*) +__IndexType:media
+                    
 					var results = searchProvider.Search(filter.Compile());
 					if (results.Any())
 					{
@@ -359,9 +366,17 @@ namespace Umbraco.Web
 						
 						if (results.Any())
 						{
-						    return useLuceneSort 
-                                ? results.Select(ConvertFromSearchResult) //will already be sorted by lucene
-                                : results.Select(ConvertFromSearchResult).OrderBy(x => x.SortOrder);
+						    return useLuceneSort
+						               ? results.Select(ConvertFromSearchResult) //will already be sorted by lucene
+						               : results.Select(ConvertFromSearchResult).OrderBy(x => x.SortOrder);
+						}
+						else
+						{
+						    //if there's no result then return null. Previously we defaulted back to library.GetMedia below
+                            //but this will always get called for when we are getting descendents since many items won't have 
+                            //children and then we are hitting the database again!
+                            //So instead we're going to rely on Examine to have the correct results like it should.
+						    return Enumerable.Empty<IPublishedContent>();
 						}
 					}
 					catch (FileNotFoundException)
@@ -372,23 +387,27 @@ namespace Umbraco.Web
 					}	
 				}				
 
+
+                //falling back to get media
+
 				var media = library.GetMedia(parentId, true);
 				if (media != null && media.Current != null)
 				{
+				    media.MoveNext();
 					xpath = media.Current;
 				}
 				else
 				{
-					return null;
+                    return Enumerable.Empty<IPublishedContent>();
 				}
 			}
 
-			//The xpath might be the whole xpath including the current ones ancestors so we need to select the current node
-			var item = xpath.Select("//*[@id='" + parentId + "']");
-			if (item.Current == null)
-			{
-				return null;
-			}
+            //The xpath might be the whole xpath including the current ones ancestors so we need to select the current node
+            var item = xpath.Select("//*[@id='" + parentId + "']");
+            if (item.Current == null)
+            {
+                return Enumerable.Empty<IPublishedContent>();
+            }
 			var children = item.Current.SelectChildren(XPathNodeType.Element);
 
 			var mediaList = new List<IPublishedContent>();
@@ -416,7 +435,7 @@ namespace Umbraco.Web
 		/// This is a helper class and definitely not intended for public use, it expects that all of the values required 
 		/// to create an IPublishedContent exist in the dictionary by specific aliases.
 		/// </remarks>
-		internal class DictionaryPublishedContent : IPublishedContent
+		internal class DictionaryPublishedContent : PublishedContentBase
 		{
 
 			public DictionaryPublishedContent(
@@ -436,21 +455,21 @@ namespace Umbraco.Web
 
 				LoadedFromExamine = fromExamine;
 
-				ValidateAndSetProperty(valueDictionary, val => Id = int.Parse(val), "id", "nodeId", "__NodeId"); //should validate the int!
-				ValidateAndSetProperty(valueDictionary, val => TemplateId = int.Parse(val), "template", "templateId");
-				ValidateAndSetProperty(valueDictionary, val => SortOrder = int.Parse(val), "sortOrder");
-				ValidateAndSetProperty(valueDictionary, val => Name = val, "nodeName", "__nodeName");
-				ValidateAndSetProperty(valueDictionary, val => UrlName = val, "urlName");
-				ValidateAndSetProperty(valueDictionary, val => DocumentTypeAlias = val, "nodeTypeAlias", UmbracoContentIndexer.NodeTypeAliasFieldName);
-				ValidateAndSetProperty(valueDictionary, val => DocumentTypeId = int.Parse(val), "nodeType");
-				ValidateAndSetProperty(valueDictionary, val => WriterName = val, "writerName");
-				ValidateAndSetProperty(valueDictionary, val => CreatorName = val, "creatorName", "writerName"); //this is a bit of a hack fix for: U4-1132
-				ValidateAndSetProperty(valueDictionary, val => WriterId = int.Parse(val), "writerID");
-				ValidateAndSetProperty(valueDictionary, val => CreatorId = int.Parse(val), "creatorID", "writerID"); //this is a bit of a hack fix for: U4-1132
-				ValidateAndSetProperty(valueDictionary, val => Path = val, "path", "__Path");
-				ValidateAndSetProperty(valueDictionary, val => CreateDate = ParseDateTimeValue(val), "createDate");
-				ValidateAndSetProperty(valueDictionary, val => UpdateDate = ParseDateTimeValue(val), "updateDate");
-				ValidateAndSetProperty(valueDictionary, val => Level = int.Parse(val), "level");
+				ValidateAndSetProperty(valueDictionary, val => _id = int.Parse(val), "id", "nodeId", "__NodeId"); //should validate the int!
+				ValidateAndSetProperty(valueDictionary, val => _templateId = int.Parse(val), "template", "templateId");
+				ValidateAndSetProperty(valueDictionary, val => _sortOrder = int.Parse(val), "sortOrder");
+				ValidateAndSetProperty(valueDictionary, val => _name = val, "nodeName", "__nodeName");
+				ValidateAndSetProperty(valueDictionary, val => _urlName = val, "urlName");
+				ValidateAndSetProperty(valueDictionary, val => _documentTypeAlias = val, "nodeTypeAlias", "__NodeTypeAlias");
+				ValidateAndSetProperty(valueDictionary, val => _documentTypeId = int.Parse(val), "nodeType");
+				ValidateAndSetProperty(valueDictionary, val => _writerName = val, "writerName");
+				ValidateAndSetProperty(valueDictionary, val => _creatorName = val, "creatorName", "writerName"); //this is a bit of a hack fix for: U4-1132
+				ValidateAndSetProperty(valueDictionary, val => _writerId = int.Parse(val), "writerID");
+				ValidateAndSetProperty(valueDictionary, val => _creatorId = int.Parse(val), "creatorID", "writerID"); //this is a bit of a hack fix for: U4-1132
+				ValidateAndSetProperty(valueDictionary, val => _path = val, "path", "__Path");
+				ValidateAndSetProperty(valueDictionary, val => _createDate = ParseDateTimeValue(val), "createDate");
+				ValidateAndSetProperty(valueDictionary, val => _updateDate = ParseDateTimeValue(val), "updateDate");
+				ValidateAndSetProperty(valueDictionary, val => _level = int.Parse(val), "level");
 				ValidateAndSetProperty(valueDictionary, val =>
 					{
 						int pId;
@@ -461,13 +480,13 @@ namespace Umbraco.Web
 						}						
 					}, "parentID");
 
-				Properties = new Collection<IPublishedContentProperty>();
+				_properties = new Collection<IPublishedContentProperty>();
 
 				//loop through remaining values that haven't been applied
 				foreach (var i in valueDictionary.Where(x => !_keysAdded.Contains(x.Key)))
 				{
 					//this is taken from examine
-					Properties.Add(i.Key.InvariantStartsWith("__") 
+					_properties.Add(i.Key.InvariantStartsWith("__") 
 					               	? new PropertyResult(i.Key, i.Value, Guid.Empty, PropertyResultType.CustomProperty) 
 					               	: new PropertyResult(i.Key, i.Value, Guid.Empty, PropertyResultType.UserProperty));
 				}
@@ -500,40 +519,138 @@ namespace Umbraco.Web
 			private readonly Func<DictionaryPublishedContent, IEnumerable<IPublishedContent>> _getChildren;
 			private readonly Func<DictionaryPublishedContent, string, IPublishedContentProperty> _getProperty;
 
-			public IPublishedContent Parent
+			/// <summary>
+			/// Returns 'Media' as the item type
+			/// </summary>
+			public override PublishedItemType ItemType
+			{
+				get { return PublishedItemType.Media; }
+			}
+
+			public override IPublishedContent Parent
 			{
 				get { return _getParent(this); }
 			}
 
 			public int ParentId { get; private set; }
-			public int Id { get; private set; }
-			public int TemplateId { get; private set; }
-			public int SortOrder { get; private set; }
-			public string Name { get; private set; }
-			public string UrlName { get; private set; }
-			public string DocumentTypeAlias { get; private set; }
-			public int DocumentTypeId { get; private set; }
-			public string WriterName { get; private set; }
-			public string CreatorName { get; private set; }
-			public int WriterId { get; private set; }
-			public int CreatorId { get; private set; }
-			public string Path { get; private set; }
-			public DateTime CreateDate { get; private set; }
-			public DateTime UpdateDate { get; private set; }
-			public Guid Version { get; private set; }
-			public int Level { get; private set; }
-			public Collection<IPublishedContentProperty> Properties { get; private set; }
-			public IEnumerable<IPublishedContent> Children
+			public override int Id
+			{
+				get { return _id; }
+			}
+
+			public override int TemplateId
+			{
+				get
+				{
+					//TODO: should probably throw a not supported exception since media doesn't actually support this.
+					return _templateId;
+				}
+			}
+
+			public override int SortOrder
+			{
+				get { return _sortOrder; }
+			}
+
+			public override string Name
+			{
+				get { return _name; }
+			}
+
+			public override string UrlName
+			{
+				get { return _urlName; }
+			}
+
+			public override string DocumentTypeAlias
+			{
+				get { return _documentTypeAlias; }
+			}
+
+			public override int DocumentTypeId
+			{
+				get { return _documentTypeId; }
+			}
+
+			public override string WriterName
+			{
+				get { return _writerName; }
+			}
+
+			public override string CreatorName
+			{
+				get { return _creatorName; }
+			}
+
+			public override int WriterId
+			{
+				get { return _writerId; }
+			}
+
+			public override int CreatorId
+			{
+				get { return _creatorId; }
+			}
+
+			public override string Path
+			{
+				get { return _path; }
+			}
+
+			public override DateTime CreateDate
+			{
+				get { return _createDate; }
+			}
+
+			public override DateTime UpdateDate
+			{
+				get { return _updateDate; }
+			}
+
+			public override Guid Version
+			{
+				get { return _version; }
+			}
+
+			public override int Level
+			{
+				get { return _level; }
+			}
+
+			public override ICollection<IPublishedContentProperty> Properties
+			{
+				get { return _properties; }
+			}
+
+			public override IEnumerable<IPublishedContent> Children
 			{
 				get { return _getChildren(this); }
 			}
 
-			public IPublishedContentProperty GetProperty(string alias)
+			public override IPublishedContentProperty GetProperty(string alias)
 			{
 				return _getProperty(this, alias);
 			}
 
 			private readonly List<string> _keysAdded = new List<string>();
+			private int _id;
+			private int _templateId;
+			private int _sortOrder;
+			private string _name;
+			private string _urlName;
+			private string _documentTypeAlias;
+			private int _documentTypeId;
+			private string _writerName;
+			private string _creatorName;
+			private int _writerId;
+			private int _creatorId;
+			private string _path;
+			private DateTime _createDate;
+			private DateTime _updateDate;
+			private Guid _version;
+			private int _level;
+			private readonly ICollection<IPublishedContentProperty> _properties;
+
 			private void ValidateAndSetProperty(IDictionary<string, string> valueDictionary, Action<string> setProperty, params string[] potentialKeys)
 			{
 				var key = potentialKeys.FirstOrDefault(x => valueDictionary.ContainsKey(x) && valueDictionary[x] != null);
