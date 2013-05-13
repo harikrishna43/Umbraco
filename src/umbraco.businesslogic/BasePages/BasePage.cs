@@ -1,12 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Web;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Security;
+using Umbraco.Core;
 using Umbraco.Core.IO;
+using Umbraco.Core.Cache;
 using Umbraco.Core.Logging;
+using Umbraco.Core.Services;
 using umbraco.BusinessLogic;
 using umbraco.DataLayer;
 using Umbraco.Core;
@@ -19,6 +23,7 @@ namespace umbraco.BasePages
     /// Restrict access to the page itself.
     /// The keep the page secure, the umbracoEnsuredPage class should be used instead
     /// </summary>
+    [Obsolete("This class has been superceded by Umbraco.Web.UI.Pages.BasePage")]
     public class BasePage : System.Web.UI.Page
     {
         private User _user;
@@ -50,25 +55,53 @@ namespace umbraco.BasePages
         /// <value>The SQL helper.</value>
         protected static ISqlHelper SqlHelper
         {
-            get { return umbraco.BusinessLogic.Application.SqlHelper; }
+            get { return BusinessLogic.Application.SqlHelper; }
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="BasePage"/> class.
+        /// Returns the current ApplicationContext
         /// </summary>
-        public BasePage()
+        public ApplicationContext ApplicationContext
         {
+            get { return ApplicationContext.Current; }
+        }
+
+        /// <summary>
+        /// Returns a ServiceContext
+        /// </summary>
+        public ServiceContext Services
+        {
+            get { return ApplicationContext.Services; }
+        }
+
+        /// <summary>
+        /// Returns a DatabaseContext
+        /// </summary>
+        public DatabaseContext DatabaseContext
+        {
+            get { return ApplicationContext.DatabaseContext; }
         }
 
         /// <summary>
         /// Returns the current BasePage for the current request. 
         /// This assumes that the current page is a BasePage, otherwise, returns null;
         /// </summary>
+        [Obsolete("Should use the Umbraco.Web.UmbracoContext.Current singleton instead to access common methods and properties")]
         public static BasePage Current
         {
             get
             {
-                return HttpContext.Current.CurrentHandler as BasePage;
+                var page = HttpContext.Current.CurrentHandler as BasePage;
+                if (page != null) return page;
+                //the current handler is not BasePage but people might be expecting this to be the case if they 
+                // are using this singleton accesor... which is legacy code now and shouldn't be used. When people
+                // start using Umbraco.Web.UI.Pages.BasePage then this will not be the case! So, we'll just return a 
+                // new instance of BasePage as a hack to make it work.
+                if (HttpContext.Current.Items["umbraco.BasePages.BasePage"] == null)
+                {
+                    HttpContext.Current.Items["umbraco.BasePages.BasePage"] = new BasePage();
+                }
+                return (BasePage)HttpContext.Current.Items["umbraco.BasePages.BasePage"];
             }
         }
 
@@ -143,42 +176,25 @@ namespace umbraco.BasePages
         /// </summary>
         /// <param name="umbracoUserContextID">The umbraco user context ID.</param>
         /// <returns></returns>
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.GetUserId instead")]
         public static int GetUserId(string umbracoUserContextID)
         {
-
-            Guid contextId;
-            if (!Guid.TryParse(umbracoUserContextID, out contextId))
+            //need to parse to guid
+            Guid gid;
+            if (!Guid.TryParse(umbracoUserContextID, out gid))
             {
                 return -1;
             }
 
-            try
-            {
-                if (HttpRuntime.Cache["UmbracoUserContext" + umbracoUserContextID] == null)
-                {
-                    var uId = SqlHelper.ExecuteScalar<int?>(
-                        "select userID from umbracoUserLogins where contextID = @contextId",
-                        SqlHelper.CreateParameter("@contextId", new Guid(umbracoUserContextID)));
-                    if (!uId.HasValue)
-                    {
-                        return -1;
-                    }
-
-                    HttpRuntime.Cache.Insert(
-                        "UmbracoUserContext" + umbracoUserContextID,
-                        uId.Value,
-                        null,
-                        System.Web.Caching.Cache.NoAbsoluteExpiration,
-                        new TimeSpan(0, (int) (UmbracoTimeOutInMinutes/10), 0));
-                }
-
-                return (int)HttpRuntime.Cache["UmbracoUserContext" + umbracoUserContextID];
-
-            }
-            catch
-            {
+            var id = ApplicationContext.Current.ApplicationCache.GetCacheItem<int?>(
+                CacheKeys.UserContextCacheKey + umbracoUserContextID,
+                new TimeSpan(0, UmbracoTimeOutInMinutes / 10, 0),
+                () => SqlHelper.ExecuteScalar<int?>(
+                    "select userID from umbracoUserLogins where contextID = @contextId",
+                    SqlHelper.CreateParameter("@contextId", gid)));
+            if (id == null)
                 return -1;
-            }
+            return id.Value;    
         }
 
 
@@ -188,6 +204,7 @@ namespace umbraco.BasePages
         /// </summary>
         /// <param name="currentUmbracoUserContextID">The umbraco user context ID.</param>
         /// <returns></returns>
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.ValidateUserContextId instead")]
         public static bool ValidateUserContextID(string currentUmbracoUserContextID)
         {
             if (!currentUmbracoUserContextID.IsNullOrWhiteSpace())
@@ -208,31 +225,19 @@ namespace umbraco.BasePages
 
         private static long GetTimeout(string umbracoUserContextID)
         {
-            if (System.Web.HttpRuntime.Cache["UmbracoUserContextTimeout" + umbracoUserContextID] == null)
-            {
-                System.Web.HttpRuntime.Cache.Insert(
-                    "UmbracoUserContextTimeout" + umbracoUserContextID,
-                        GetTimeout(true),
-                    null,
-                    DateTime.Now.AddMinutes(UmbracoTimeOutInMinutes / 10), System.Web.Caching.Cache.NoSlidingExpiration);
-
-
-            }
-
-            object timeout = HttpRuntime.Cache["UmbracoUserContextTimeout" + umbracoUserContextID];
-            if (timeout != null)
-                return (long)timeout;
-
-            return 0;
-
+            return ApplicationContext.Current.ApplicationCache.GetCacheItem(
+                CacheKeys.UserContextTimeoutCacheKey + umbracoUserContextID,
+                new TimeSpan(0, UmbracoTimeOutInMinutes / 10, 0),
+                () => GetTimeout(true));
         }
 
-        public static long GetTimeout(bool byPassCache)
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.GetTimeout instead")]
+        public static long GetTimeout(bool bypassCache)
         {
             if (UmbracoSettings.KeepUserLoggedIn)
                 RenewLoginTimeout();
 
-            if (byPassCache)
+            if (bypassCache)
             {
                 return SqlHelper.ExecuteScalar<long>("select timeout from umbracoUserLogins where contextId=@contextId",
                                                           SqlHelper.CreateParameter("@contextId", new Guid(umbracoUserContextID))
@@ -247,6 +252,7 @@ namespace umbraco.BasePages
         /// Gets or sets the umbraco user context ID.
         /// </summary>
         /// <value>The umbraco user context ID.</value>
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.UmbracoUserContextId instead")]
         public static string umbracoUserContextID
         {
             get
@@ -263,7 +269,6 @@ namespace umbraco.BasePages
                     }
                     catch (Exception ex)
                     {
-                        // we swallow this type of exception as it happens if a legacy (pre 4.8.1) cookie is set
                         if (ex is ArgumentException || ex is FormatException || ex is HttpException)
                         {
                             StateHelper.Cookies.UserContext.Clear();
@@ -337,6 +342,7 @@ namespace umbraco.BasePages
                     SqlHelper.CreateParameter("@contextId", umbracoUserContextID));
         }
 
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.RenewLoginTimeout instead")]
         public static void RenewLoginTimeout()
         {
             // only call update if more than 1/10 of the timeout has passed
@@ -350,6 +356,7 @@ namespace umbraco.BasePages
         /// Logs a user in.
         /// </summary>
         /// <param name="u">The user</param>
+        //[Obsolete("Use Umbraco.Web.Security.WebSecurity.PerformLogin instead")]
         public static void doLogin(User u)
         {
             Guid retVal = Guid.NewGuid();
@@ -361,7 +368,6 @@ namespace umbraco.BasePages
             umbracoUserContextID = retVal.ToString();
 
 			LogHelper.Info<BasePage>("User {0} (Id: {1}) logged in", () => u.Name, () => u.Id);
-
         }
 
 
@@ -369,10 +375,23 @@ namespace umbraco.BasePages
         /// Gets the user.
         /// </summary>
         /// <returns></returns>
+        [Obsolete("Use UmbracoUser property instead.")]
         public User getUser()
         {
-            if (!_userisValidated) ValidateUser();
-            return _user;
+            return UmbracoUser;
+        }
+
+        /// <summary>
+        /// Gets the user.
+        /// </summary>
+        /// <value></value>
+        public User UmbracoUser
+        {
+            get
+            {
+                if (!_userisValidated) ValidateUser();
+                return _user;
+            }
         }
 
         /// <summary>
@@ -398,6 +417,7 @@ namespace umbraco.BasePages
         /// <summary>
         /// a collection of available speechbubble icons
         /// </summary>
+        [Obsolete("This has been superceded by Umbraco.Web.UI.SpeechBubbleIcon but that requires the use of the Umbraco.Web.UI.Pages.BasePage or Umbraco.Web.UI.Pages.EnsuredPage objects")]
         public enum speechBubbleIcon
         {
             /// <summary>
