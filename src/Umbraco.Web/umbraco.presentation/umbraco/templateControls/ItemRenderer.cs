@@ -8,6 +8,8 @@ using System.Web;
 using System.Web.UI;
 using System.Xml;
 using Umbraco.Core.Macros;
+using Umbraco.Web;
+using Umbraco.Web.Routing;
 using Umbraco.Web.Templates;
 using umbraco.cms.businesslogic;
 using umbraco.cms.businesslogic.property;
