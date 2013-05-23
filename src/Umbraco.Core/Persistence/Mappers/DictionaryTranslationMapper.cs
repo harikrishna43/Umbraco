@@ -10,13 +10,15 @@ namespace Umbraco.Core.Persistence.Mappers
     /// Represents a <see cref="DictionaryTranslation"/> to DTO mapper used to translate the properties of the public api 
     /// implementation to that of the database's DTO as sql: [tableName].[columnName].
     /// </summary>
-    internal class DictionaryTranslationMapper : BaseMapper
+    [MapperFor(typeof(DictionaryTranslation))]
+    [MapperFor(typeof(IDictionaryTranslation))]
+    public class DictionaryTranslationMapper : BaseMapper
     {
         private static readonly ConcurrentDictionary<string, DtoMapModel> PropertyInfoCache = new ConcurrentDictionary<string, DtoMapModel>();
 
-        internal static DictionaryTranslationMapper Instance = new DictionaryTranslationMapper();
-
-        private DictionaryTranslationMapper()
+        //NOTE: its an internal class but the ctor must be public since we're using Activator.CreateInstance to create it
+        // otherwise that would fail because there is no public constructor.
+        public DictionaryTranslationMapper()
         {
             BuildMap();
         }

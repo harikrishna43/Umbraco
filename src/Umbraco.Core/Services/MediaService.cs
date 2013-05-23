@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
@@ -200,6 +201,34 @@ namespace Umbraco.Core.Services
             }
         }
 
+        /// <summary>
+        /// Gets a collection of <see cref="IMedia"/> objects, which are ancestors of the current media.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IMedia"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IMedia"/> objects</returns>
+        public IEnumerable<IMedia> GetAncestors(int id)
+        {
+            var media = GetById(id);
+            return GetAncestors(media);
+        }
+
+        /// <summary>
+        /// Gets a collection of <see cref="IMedia"/> objects, which are ancestors of the current media.
+        /// </summary>
+        /// <param name="media"><see cref="IMedia"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IMedia"/> objects</returns>
+        public IEnumerable<IMedia> GetAncestors(IMedia media)
+        {
+            var ids = media.Path.Split(',').Where(x => x != "-1" && x != media.Id.ToString(CultureInfo.InvariantCulture)).Select(int.Parse).ToArray();
+            if(ids.Any() == false)
+                return new List<IMedia>();
+
+            using (var repository = _repositoryFactory.CreateMediaRepository(_uowProvider.GetUnitOfWork()))
+            {
+                return repository.GetAll(ids);
+            }
+        }
+
 		/// <summary>
 		/// Gets a collection of <see cref="IMedia"/> objects by Parent Id
 		/// </summary>
@@ -243,6 +272,30 @@ namespace Umbraco.Core.Services
 
                 return medias;
             }
+        }
+
+        /// <summary>
+        /// Gets the parent of the current media as an <see cref="IMedia"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IMedia"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IMedia"/> object</returns>
+        public IMedia GetParent(int id)
+        {
+            var media = GetById(id);
+            return GetParent(media);
+        }
+
+        /// <summary>
+        /// Gets the parent of the current media as an <see cref="IMedia"/> item.
+        /// </summary>
+        /// <param name="media"><see cref="IMedia"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IMedia"/> object</returns>
+        public IMedia GetParent(IMedia media)
+        {
+            if (media.ParentId == -1 || media.ParentId == -21)
+                return null;
+
+            return GetById(media.ParentId);
         }
 
 		/// <summary>
@@ -646,6 +699,72 @@ namespace Umbraco.Core.Services
 
 			Audit.Add(AuditTypes.Save, "Save Media items performed by user", userId, -1);
 	    }
+
+        /// <summary>
+        /// Rebuilds all xml content in the cmsContentXml table for all media
+        /// </summary>
+        /// <param name="contentTypeIds">
+        /// Only rebuild the xml structures for the content type ids passed in, if none then rebuilds the structures
+        /// for all media
+        /// </param>
+        /// <returns>True if publishing succeeded, otherwise False</returns>
+        internal void RebuildXmlStructures(params int[] contentTypeIds)
+        {
+            using (new WriteLock(Locker))
+            {
+                var list = new List<IMedia>();
+
+                var uow = _uowProvider.GetUnitOfWork();
+                using (var repository = _repositoryFactory.CreateContentRepository(uow))
+                {
+                    if (contentTypeIds.Any() == false)
+                    {
+                        //Remove all media records from the cmsContentXml table (DO NOT REMOVE Content/Members!)
+                        uow.Database.Execute(@"DELETE FROM cmsContentXml WHERE nodeId IN
+                                                (SELECT DISTINCT cmsContentXml.nodeId FROM cmsContentXml 
+                                                    INNER JOIN umbracoNode ON cmsContentXml.nodeId = umbracoNode.id
+                                                    WHERE nodeObjectType = @nodeObjectType)",
+                                             new {nodeObjectType = Constants.ObjectTypes.Media});
+                        
+                        //  Consider creating a Path query instead of recursive method:
+                        //  var query = Query<IContent>.Builder.Where(x => x.Path.StartsWith("-1"));
+                        var rootMedia = GetRootMedia();
+                        foreach (var media in rootMedia)
+                        {
+                            list.Add(media);
+                            list.AddRange(GetDescendants(media));
+                        }
+                    }
+                    else
+                    {
+                        foreach (var id in contentTypeIds)
+                        {
+                            //first we'll clear out the data from the cmsContentXml table for this type
+                            uow.Database.Execute(@"delete from cmsContentXml where nodeId in 
+                                (SELECT DISTINCT cmsContentXml.nodeId FROM cmsContentXml 
+                                INNER JOIN umbracoNode ON cmsContentXml.nodeId = umbracoNode.id
+                                INNER JOIN cmsContent ON cmsContent.nodeId = umbracoNode.id
+                                WHERE nodeObjectType = @nodeObjectType AND cmsContent.contentType = @contentTypeId)",
+                                                 new {contentTypeId = id, nodeObjectType = Constants.ObjectTypes.Media});
+
+                            //now get all media objects of this type and add to the list
+                            list.AddRange(GetMediaOfMediaType(id));
+                        }
+                    }
+
+                    foreach (var c in list)
+                    {
+                        //generate the xml
+                        var xml = c.ToXml();
+                        //create the dto to insert
+                        var poco = new ContentXmlDto { NodeId = c.Id, Xml = xml.ToString(SaveOptions.None) };
+                        //insert it into the database
+                        uow.Database.Insert(poco);
+                    }
+                }
+                Audit.Add(AuditTypes.Publish, "RebuildXmlStructures completed, the xml has been regenerated in the database", 0, -1);
+            }
+        }
 
         /// <summary>
         /// Sorts a collection of <see cref="IMedia"/> objects by updating the SortOrder according

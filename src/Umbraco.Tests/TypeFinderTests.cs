@@ -15,6 +15,7 @@ using NUnit.Framework;
 using SqlCE4Umbraco;
 using Umbraco.Core;
 using Umbraco.Core.IO;
+using Umbraco.Core.Logging;
 using Umbraco.Tests;
 using Umbraco.Tests.TestHelpers;
 using Umbraco.Web.BaseRest;
@@ -64,13 +65,12 @@ namespace Umbraco.Tests
 			        typeof(ISqlHelper).Assembly,
 			        typeof(ICultureDictionary).Assembly,
                     typeof(Tag).Assembly,
-                    typeof(UmbracoExamine.BaseUmbracoIndexer).Assembly
+                    typeof(global::UmbracoExamine.BaseUmbracoIndexer).Assembly
 			    };
 
 		}
 
-
-		[Test]
+        [Test]
 		public void Find_Class_Of_Type_With_Attribute()
 		{
 

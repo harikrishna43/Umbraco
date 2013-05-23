@@ -21,7 +21,7 @@ namespace Umbraco.Core.Persistence.Repositories
     /// <typeparam name="TId"></typeparam>
     /// <typeparam name="TEntity"></typeparam>
     internal abstract class ContentTypeBaseRepository<TId, TEntity> : PetaPocoRepositoryBase<TId, TEntity>
-        where TEntity : IContentTypeComposition
+        where TEntity : class, IContentTypeComposition
     {
 		protected ContentTypeBaseRepository(IDatabaseUnitOfWork work)
 			: base(work)
@@ -53,6 +53,20 @@ namespace Umbraco.Core.Persistence.Repositories
             {
                 yield return dto.ContentTypeNodeId;
             }
+        }
+
+        /// <summary>
+        /// We need to override this method to ensure that any content cache is cleared
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <remarks>
+        /// see: http://issues.umbraco.org/issue/U4-1963
+        /// </remarks>
+        public override void PersistUpdatedItem(IEntity entity)
+        {
+            InMemoryCacheProvider.Current.Clear(typeof(IContent));
+            RuntimeCacheProvider.Current.Clear(typeof(IContent));
+            base.PersistUpdatedItem(entity);
         }
 
         protected void PersistNewBaseContentType(ContentTypeDto dto, IContentTypeComposition entity)
@@ -186,7 +200,7 @@ namespace Umbraco.Core.Persistence.Repositories
                    .From<ContentDto>()
                    .InnerJoin<NodeDto>()
                    .On<ContentDto, NodeDto>(left => left.NodeId, right => right.NodeId)
-                   .Where<NodeDto>(x => x.NodeObjectType == new Guid("C66BA18E-EAF3-4CFF-8A22-41B16D66A972"))
+                   .Where<NodeDto>(x => x.NodeObjectType == new Guid(Constants.ObjectTypes.Document))
                    .Where<ContentDto>(x => x.ContentTypeId == entity.Id);
 
                 var contentDtos = Database.Fetch<DocumentDto, ContentVersionDto, ContentDto, NodeDto>(sql);
@@ -363,7 +377,7 @@ namespace Umbraco.Core.Persistence.Repositories
                                 }).ToList();
 
             //Reset dirty properties
-            Parallel.ForEach(list, currentFile => currentFile.ResetDirtyProperties());
+            Parallel.ForEach(list, currentFile => currentFile.ResetDirtyProperties(false));
 
             return new PropertyTypeCollection(list);
         }

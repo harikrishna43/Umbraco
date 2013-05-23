@@ -6,11 +6,14 @@ using System.Web.Services;
 using System.Xml;
 using Umbraco.Core.Logging;
 using Umbraco.Core.Persistence.Caching;
+using Umbraco.Web;
 using Umbraco.Web.WebServices;
+using Umbraco.Web.Security;
 using umbraco.BasePages;
 using umbraco.BusinessLogic;
 using umbraco.BusinessLogic.Actions;
 using umbraco.cms.businesslogic.web;
+using Umbraco.Core;
 
 namespace umbraco.presentation.webservices
 {
@@ -36,7 +39,7 @@ namespace umbraco.presentation.webservices
                 // Root nodes?
                 if (ParentId == -1)
                 {
-                    if (App == "media")
+                    if (App == Constants.Applications.Media)
                     {
                         foreach (cms.businesslogic.media.Media child in cms.businesslogic.media.Media.GetRootMedias())
                             nodes.Add(new SortNode(child.Id, child.sortOrder, child.Text, child.CreateDateTime));
@@ -48,7 +51,7 @@ namespace umbraco.presentation.webservices
                 else
                 {
                     // "hack for stylesheet"
-                    if (App == "settings")
+                    if (App == Constants.Applications.Settings)
                     {
                         var styleSheet = new StyleSheet(cmsNode.Id);
                         foreach (var child in styleSheet.Properties)
@@ -84,8 +87,9 @@ namespace umbraco.presentation.webservices
                 if (SortOrder.Trim().Length <= 0) return;
                 var ids = SortOrder.Split(',');
 
-                var isContent = helper.Request("app") == "content" | helper.Request("app") == "";
-                var isMedia = helper.Request("app") == "media";
+                var isContent = Context.Request.GetItemAsString("app") == Constants.Applications.Content | helper.Request("app") == "";
+                var isMedia = Context.Request.GetItemAsString("app") == Constants.Applications.Media;
+
                 //ensure user is authorized for the app requested
                 if (isContent && AuthorizeRequest(DefaultApps.content.ToString()) == false) return;
                 if (isMedia && AuthorizeRequest(DefaultApps.media.ToString()) == false) return;
@@ -103,10 +107,8 @@ namespace umbraco.presentation.webservices
 
                         if (document.Published)
                         {
-                            document.Publish(BusinessLogic.User.GetCurrent());
+                            document.SaveAndPublish(UmbracoUser);
 
-                            //TODO: WE don't want to have to republish the entire document !!!!
-                            library.UpdateDocumentCache(document);
                         }
                         else
                         {
@@ -136,6 +138,9 @@ namespace umbraco.presentation.webservices
                             content.SortNodes(ref parentNode);
 
                         // Load balancing - then refresh entire cache
+                            // NOTE: SD: This seems a bit excessive to do simply for sorting! I'm going to leave this here for now but 
+                            //  the sort order should be updated in distributed calls when an item is Published (and it most likely is)
+                            //  but I guess this was put here for a reason at some point.
                         if (UmbracoSettings.UseDistributedCalls)
                             library.RefreshContent();
 
