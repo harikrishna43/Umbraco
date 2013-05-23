@@ -289,6 +289,18 @@ namespace Umbraco.Core.Services
         bool IsPublishable(IContent content);
 
         /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects, which are ancestors of the current content.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        IEnumerable<IContent> GetAncestors(int id);
+
+        /// <summary>
+        /// Gets a collection of <see cref="IContent"/> objects, which are ancestors of the current content.
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to retrieve ancestors for</param>
+        /// <returns>An Enumerable list of <see cref="IContent"/> objects</returns>
+        IEnumerable<IContent> GetAncestors(IContent content);
         /// Sorts a collection of <see cref="IContent"/> objects by updating the SortOrder according
         /// to the ordering of items in the passed in <see cref="SortedSet{T}"/>.
         /// </summary>
@@ -301,5 +313,19 @@ namespace Umbraco.Core.Services
         /// <param name="raiseEvents"></param>
         /// <returns>True if sorting succeeded, otherwise False</returns>
         bool Sort(SortedSet<IContent> items, int userId = 0, bool raiseEvents = true);
+
+        /// <summary>
+        /// Gets the parent of the current content as an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="id">Id of the <see cref="IContent"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IContent"/> object</returns>
+        IContent GetParent(int id);
+
+        /// <summary>
+        /// Gets the parent of the current content as an <see cref="IContent"/> item.
+        /// </summary>
+        /// <param name="content"><see cref="IContent"/> to retrieve the parent from</param>
+        /// <returns>Parent <see cref="IContent"/> object</returns>
+        IContent GetParent(IContent content);
     }
 }
