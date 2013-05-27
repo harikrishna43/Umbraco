@@ -53,10 +53,8 @@ namespace Umbraco.Web.Templates
 			// important to use CleanedUmbracoUrl - lowercase path-only version of the current url, though this isn't going to matter
 			// terribly much for this implementation since we are just creating a doc content request to modify it's properties manually.
 			var contentRequest = new PublishedContentRequest(_umbracoContext.CleanedUmbracoUrl, _umbracoContext.RoutingContext);
-			
-			var doc = contentRequest.RoutingContext.PublishedContentStore.GetDocumentById(
-					contentRequest.RoutingContext.UmbracoContext,
-					PageId);
+
+            var doc = contentRequest.RoutingContext.UmbracoContext.ContentCache.GetById(PageId);
 
 			if (doc == null)
 			{
@@ -82,9 +80,9 @@ namespace Umbraco.Web.Templates
 			//set the doc that was found by id
 			contentRequest.PublishedContent = doc;
 			//set the template, either based on the AltTemplate found or the standard template of the doc
-			contentRequest.Template = !AltTemplate.HasValue 
-				? global::umbraco.cms.businesslogic.template.Template.GetTemplate(doc.TemplateId)
-				: global::umbraco.cms.businesslogic.template.Template.GetTemplate(AltTemplate.Value);
+			contentRequest.TemplateModel = !AltTemplate.HasValue 
+				? ApplicationContext.Current.Services.FileService.GetTemplate(doc.TemplateId)
+				: ApplicationContext.Current.Services.FileService.GetTemplate(AltTemplate.Value);
 
 			//if there is not template then exit
 			if (!contentRequest.HasTemplate)
@@ -99,11 +97,6 @@ namespace Umbraco.Web.Templates
 				}
 				return;
 			}
-
-			//ok, we have a document and a template assigned, now to do some rendering.
-			var builder = new PublishedContentRequestBuilder(contentRequest);
-			//determine the rendering engine
-			builder.DetermineRenderingEngine();
 
 			//First, save all of the items locally that we know are used in the chain of execution, we'll need to restore these
 			//after this page has rendered.
@@ -169,9 +162,9 @@ namespace Umbraco.Web.Templates
 			// handlers like default.aspx will want it and most macros currently need it
 			contentRequest.UmbracoPage = new page(contentRequest);
 			//now, set the new ones for this page execution
-			_umbracoContext.HttpContext.Items["pageID"] = contentRequest.DocumentId;
+			_umbracoContext.HttpContext.Items["pageID"] = contentRequest.PublishedContent.Id;
 			_umbracoContext.HttpContext.Items["pageElements"] = contentRequest.UmbracoPage.Elements;
-			_umbracoContext.HttpContext.Items["altTemplate"] = null;
+			_umbracoContext.HttpContext.Items[Umbraco.Core.Constants.Conventions.Url.AltTemplate] = null;
 			_umbracoContext.PublishedContentRequest = contentRequest;
 		}
 
@@ -185,7 +178,7 @@ namespace Umbraco.Web.Templates
 			_oldPageId = _umbracoContext.HttpContext.Items["pageID"];
 			_oldPageElements = _umbracoContext.HttpContext.Items["pageElements"];
 			_oldPublishedContentRequest = _umbracoContext.PublishedContentRequest;
-			_oldAltTemplate = _umbracoContext.HttpContext.Items["altTemplate"];
+			_oldAltTemplate = _umbracoContext.HttpContext.Items[Umbraco.Core.Constants.Conventions.Url.AltTemplate];
 		}
 
 		/// <summary>
@@ -196,7 +189,7 @@ namespace Umbraco.Web.Templates
 			_umbracoContext.PublishedContentRequest = _oldPublishedContentRequest;
 			_umbracoContext.HttpContext.Items["pageID"] = _oldPageId;
 			_umbracoContext.HttpContext.Items["pageElements"] = _oldPageElements;
-			_umbracoContext.HttpContext.Items["altTemplate"] = _oldAltTemplate;
+			_umbracoContext.HttpContext.Items[Umbraco.Core.Constants.Conventions.Url.AltTemplate] = _oldAltTemplate;
 		}
 
 	}

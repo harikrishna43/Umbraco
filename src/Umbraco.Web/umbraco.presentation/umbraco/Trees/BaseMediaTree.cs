@@ -1,24 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Text;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
 using umbraco.BasePages;
 using umbraco.BusinessLogic;
 using umbraco.BusinessLogic.Actions;
-using umbraco.cms.businesslogic.media;
-using umbraco.cms.businesslogic.property;
 using umbraco.interfaces;
+using Umbraco.Core;
+using Media = umbraco.cms.businesslogic.media.Media;
+using Property = umbraco.cms.businesslogic.property.Property;
 
 namespace umbraco.cms.presentation.Trees
 {
 	public abstract class BaseMediaTree : BaseTree
 	{
+        private DisposableTimer _timer;
+        private User _user;
+
 		public BaseMediaTree(string application)
 			: base(application)
 		{
 						
 		}
-
-		private User m_user;
 
 		/// <summary>
 		/// Returns the current User. This ensures that we don't instantiate a new User object 
@@ -28,11 +34,10 @@ namespace umbraco.cms.presentation.Trees
 		{
 			get
 			{
-				return (m_user == null ? (m_user = UmbracoEnsuredPage.CurrentUser) : m_user);
+				return (_user == null ? (_user = UmbracoEnsuredPage.CurrentUser) : _user);
 			}
 		}
       		
-
         public override void RenderJS(ref StringBuilder Javascript)
         {
             if (!string.IsNullOrEmpty(this.FunctionToCall))
@@ -52,8 +57,80 @@ function openMedia(id) {
             }
         }
 
+        //Updated Render method for improved performance, but currently not usable because of backwards compatibility 
+        //with the OnBeforeTreeRender/OnAfterTreeRender events, which sends an array for legacy Media items.
         public override void Render(ref XmlTree tree)
         {
+            _timer = DisposableTimer.Start(x => LogHelper.Debug<BaseMediaTree>("Media tree loaded" + " (took " + x + "ms)"));
+
+            var entities = Services.EntityService.GetChildren(m_id, UmbracoObjectTypes.Media).ToArray();
+            
+            var args = new TreeEventArgs(tree);
+            OnBeforeTreeRender(entities, args, false);
+
+            foreach (UmbracoEntity entity in entities)
+            {
+                XmlTreeNode xNode = XmlTreeNode.Create(this);
+                xNode.NodeID = entity.Id.ToString(CultureInfo.InvariantCulture);
+                xNode.Text = entity.Name;
+
+                xNode.HasChildren = entity.HasChildren;
+                xNode.Source = this.IsDialog ? GetTreeDialogUrl(entity.Id) : GetTreeServiceUrl(entity.Id);
+
+                xNode.Icon = entity.ContentTypeIcon;
+                xNode.OpenIcon = entity.ContentTypeIcon;
+
+                xNode.Menu = this.ShowContextMenu ? new List<IAction>(new IAction[] { ActionRefresh.Instance }) : null;
+
+                if (IsDialog == false)
+                {
+                    xNode.Action = "javascript:openMedia(" + entity.Id + ");";
+                }
+                else
+                {
+                    if (this.DialogMode == TreeDialogModes.fulllink)
+                    {
+                        if (string.IsNullOrEmpty(entity.UmbracoFile) == false)
+                        {
+                            xNode.Action = "javascript:openMedia('" + entity.UmbracoFile + "');";
+                        }
+                        else
+                        {
+                            if (string.Equals(entity.ContentTypeAlias, Constants.Conventions.MediaTypes.Folder, StringComparison.OrdinalIgnoreCase))
+                            {
+                                xNode.Action = "javascript:jQuery('.umbTree #" + entity.Id.ToString(CultureInfo.InvariantCulture) + "').click();";
+                            }
+                            else
+                            {
+                                xNode.Action = null;
+                                xNode.Style.DimNode();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        xNode.Action = "javascript:openMedia('" + entity.Id.ToString(CultureInfo.InvariantCulture) + "');";
+                    }
+                }
+
+                OnBeforeNodeRender(ref tree, ref xNode, EventArgs.Empty);
+                if (xNode != null)
+                {
+                    tree.Add(xNode);
+                    OnAfterNodeRender(ref tree, ref xNode, EventArgs.Empty);
+                }
+            }
+
+            //stop the timer and log the output
+            _timer.Dispose();
+
+            OnAfterTreeRender(entities, args, false);
+        }
+
+        /*public override void Render(ref XmlTree tree)
+        {
+            //_timer = DisposableTimer.Start(x => LogHelper.Debug<BaseMediaTree>("Media tree loaded" + " (took " + x + "ms)"));
+          
 			Media[] docs = new Media(m_id).Children;
 
             var args = new TreeEventArgs(tree);
@@ -87,7 +164,7 @@ function openMedia(id) {
                         }
                         else
                         {
-                            if (dd.ContentType.Alias.ToLower() == "folder")
+                            if (string.Equals(dd.ContentType.Alias, Constants.Conventions.MediaTypes.Folder, StringComparison.OrdinalIgnoreCase))
                             {
                                 xNode.Action = "javascript:jQuery('.umbTree #" + dd.Id.ToString() + "').click();";
                             }
@@ -123,10 +200,11 @@ function openMedia(id) {
                     OnAfterNodeRender(ref tree, ref xNode, EventArgs.Empty);
                 }
             }
+            //_timer.Dispose();
             OnAfterTreeRender(docs, args);
-        }
+        }*/
 
-		/// <summary>
+        /// <summary>
 		/// Returns the value for a link in WYSIWYG mode, by default only media items that have a 
 		/// DataTypeUploadField are linkable, however, a custom tree can be created which overrides
 		/// this method, or another GUID for a custom data type can be added to the LinkableMediaDataTypes
