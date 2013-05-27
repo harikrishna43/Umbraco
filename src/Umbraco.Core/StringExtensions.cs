@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using System.Xml;
+using Umbraco.Core.Configuration;
 using System.Web.Security;
 
 namespace Umbraco.Core
@@ -23,9 +25,9 @@ namespace Umbraco.Core
 		/// Encrypt the string using the MachineKey in medium trust
 		/// </summary>
 		/// <param name="value">The string value to be encrypted.</param>
-		/// <returns></returns>
+		/// <returns>The encrypted string.</returns>
 		public static string EncryptWithMachineKey(this string value)
-		{
+        {
 			if (value == null)
 				return null;
 
@@ -54,15 +56,14 @@ namespace Umbraco.Core
 			}
 
 			return encrpytedValue.ToString().TrimEnd();
-		}
-
+        }
 		/// <summary>
 		/// Decrypt the encrypted string using the Machine key in medium trust
 		/// </summary>
 		/// <param name="value">The string value to be decrypted</param>
-		/// <returns></returns>
+		/// <returns>The decrypted string.</returns>
 		public static string DecryptWithMachineKey(this string value)
-		{
+        {
 			if (value == null)
 				return null;
 
@@ -76,49 +77,48 @@ namespace Umbraco.Core
 			}
 
 			return decryptedValue.ToString();
-		}
+        }
+        //this is from SqlMetal and just makes it a bit of fun to allow pluralisation
+        public static string MakePluralName(this string name)
+        {
+            if ((name.EndsWith("x", StringComparison.OrdinalIgnoreCase) || name.EndsWith("ch", StringComparison.OrdinalIgnoreCase)) || (name.EndsWith("ss", StringComparison.OrdinalIgnoreCase) || name.EndsWith("sh", StringComparison.OrdinalIgnoreCase)))
+            {
+                name = name + "es";
+                return name;
+            }
+            if ((name.EndsWith("y", StringComparison.OrdinalIgnoreCase) && (name.Length > 1)) && !IsVowel(name[name.Length - 2]))
+            {
+                name = name.Remove(name.Length - 1, 1);
+                name = name + "ies";
+                return name;
+            }
+            if (!name.EndsWith("s", StringComparison.OrdinalIgnoreCase))
+            {
+                name = name + "s";
+            }
+            return name;
+        }
 
-		//this is from SqlMetal and just makes it a bit of fun to allow pluralisation
-		public static string MakePluralName(this string name)
-		{
-			if ((name.EndsWith("x", StringComparison.OrdinalIgnoreCase) || name.EndsWith("ch", StringComparison.OrdinalIgnoreCase)) || (name.EndsWith("ss", StringComparison.OrdinalIgnoreCase) || name.EndsWith("sh", StringComparison.OrdinalIgnoreCase)))
-			{
-				name = name + "es";
-				return name;
-			}
-			if ((name.EndsWith("y", StringComparison.OrdinalIgnoreCase) && (name.Length > 1)) && !IsVowel(name[name.Length - 2]))
-			{
-				name = name.Remove(name.Length - 1, 1);
-				name = name + "ies";
-				return name;
-			}
-			if (!name.EndsWith("s", StringComparison.OrdinalIgnoreCase))
-			{
-				name = name + "s";
-			}
-			return name;
-		}
-
-		public static bool IsVowel(this char c)
-		{
-			switch (c)
-			{
-				case 'O':
-				case 'U':
-				case 'Y':
-				case 'A':
-				case 'E':
-				case 'I':
-				case 'o':
-				case 'u':
-				case 'y':
-				case 'a':
-				case 'e':
-				case 'i':
-					return true;
-			}
-			return false;
-		}
+        public static bool IsVowel(this char c)
+        {
+            switch (c)
+            {
+                case 'O':
+                case 'U':
+                case 'Y':
+                case 'A':
+                case 'E':
+                case 'I':
+                case 'o':
+                case 'u':
+                case 'y':
+                case 'a':
+                case 'e':
+                case 'i':
+                    return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// Trims the specified value from a string; accepts a string input whereas the in-built implementation only accepts char or char[].
@@ -132,49 +132,49 @@ namespace Umbraco.Core
             return value.TrimEnd(forRemoving).TrimStart(forRemoving);
         }
 
-		public static string EncodeJsString(this string s)
-		{
-			var sb = new StringBuilder();
-			foreach (var c in s)
-			{
-				switch (c)
-				{
-					case '\"':
-						sb.Append("\\\"");
-						break;
-					case '\\':
-						sb.Append("\\\\");
-						break;
-					case '\b':
-						sb.Append("\\b");
-						break;
-					case '\f':
-						sb.Append("\\f");
-						break;
-					case '\n':
-						sb.Append("\\n");
-						break;
-					case '\r':
-						sb.Append("\\r");
-						break;
-					case '\t':
-						sb.Append("\\t");
-						break;
-					default:
-						int i = (int)c;
-						if (i < 32 || i > 127)
-						{
-							sb.AppendFormat("\\u{0:X04}", i);
-						}
-						else
-						{
-							sb.Append(c);
-						}
-						break;
-				}
-			}
-			return sb.ToString();
-		}
+        public static string EncodeJsString(this string s)
+        {
+            var sb = new StringBuilder();
+            foreach (var c in s)
+            {
+                switch (c)
+                {
+                    case '\"':
+                        sb.Append("\\\"");
+                        break;
+                    case '\\':
+                        sb.Append("\\\\");
+                        break;
+                    case '\b':
+                        sb.Append("\\b");
+                        break;
+                    case '\f':
+                        sb.Append("\\f");
+                        break;
+                    case '\n':
+                        sb.Append("\\n");
+                        break;
+                    case '\r':
+                        sb.Append("\\r");
+                        break;
+                    case '\t':
+                        sb.Append("\\t");
+                        break;
+                    default:
+                        int i = (int)c;
+                        if (i < 32 || i > 127)
+                        {
+                            sb.AppendFormat("\\u{0:X04}", i);
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
 
         public static string TrimEnd(this string value, string forRemoving)
         {
@@ -206,25 +206,25 @@ namespace Umbraco.Core
             return toStartWith + input.TrimStart(toStartWith.ToArray()); // Ensure each char is removed first from input, e.g. ~/ plus /Path will equal ~/Path not ~//Path
         }
 
-		public static string EnsureStartsWith(this string input, char value)
-		{
+        public static string EnsureStartsWith(this string input, char value)
+        {
 			return input.StartsWith(value.ToString(CultureInfo.InvariantCulture)) ? input : value + input;
-		}
+        }
 
-		public static string EnsureEndsWith(this string input, char value)
-		{
+        public static string EnsureEndsWith(this string input, char value)
+        {
 			return input.EndsWith(value.ToString(CultureInfo.InvariantCulture)) ? input : input + value;
-		}
+        }
 
         public static bool IsLowerCase(this char ch)
         {
             return ch.ToString(CultureInfo.InvariantCulture) == ch.ToString(CultureInfo.InvariantCulture).ToLowerInvariant();
         }
 
-		public static bool IsUpperCase(this char ch)
-		{
+        public static bool IsUpperCase(this char ch)
+        {
 			return ch.ToString(CultureInfo.InvariantCulture) == ch.ToString(CultureInfo.InvariantCulture).ToUpperInvariant();
-		}
+        }
 
         /// <summary>Is null or white space.</summary>
         /// <param name="str">The str.</param>
@@ -274,6 +274,20 @@ namespace Umbraco.Core
                 result = default(T);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Parse string to Enum
+        /// </summary>
+        /// <typeparam name="T">The enum type</typeparam>
+        /// <param name="strType">The string to parse</param>
+        /// <param name="ignoreCase">The ignore case</param>
+        /// <returns>The parsed enum</returns>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes", Justification = "By Design")]
+        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", MessageId = "2#", Justification = "By Design")]
+        public static T EnumParse<T>(this string strType, bool ignoreCase)
+        {
+            return (T)Enum.Parse(typeof(T), strType, ignoreCase);
         }
 
         /// <summary>
@@ -369,6 +383,17 @@ namespace Umbraco.Core
             if (removeSpaces)
                 result = result.Replace(" ", "");
 
+            return result;
+        }
+
+        /// <summary>
+        /// Splits a Pascal cased string into a phrase seperated by spaces.
+        /// </summary>
+        /// <param name="phrase">String to split</param>
+        /// <returns></returns>
+        public static string SplitPascalCasing(this string phrase)
+        {
+            string result = Regex.Replace(phrase, "([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", "$1 ");
             return result;
         }
 
@@ -516,10 +541,10 @@ namespace Umbraco.Core
             return String.Equals(compare, compareTo, StringComparison.InvariantCultureIgnoreCase);
         }
 
-		public static bool InvariantStartsWith(this string compare, string compareTo)
-		{
-			return compare.StartsWith(compareTo, StringComparison.InvariantCultureIgnoreCase);			
-		}
+        public static bool InvariantStartsWith(this string compare, string compareTo)
+        {
+            return compare.StartsWith(compareTo, StringComparison.InvariantCultureIgnoreCase);
+        }
 
         public static bool InvariantContains(this string compare, string compareTo)
         {
@@ -734,7 +759,6 @@ namespace Umbraco.Core
                                 .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             return currentFolder;
         }
-       
 
         /// <summary>
         /// Truncates the specified text string.
@@ -777,6 +801,74 @@ namespace Umbraco.Core
             return !string.IsNullOrWhiteSpace(input)
                        ? input
                        : alternative;
+        }
+
+        public static string FormatUrl(this string url)
+        {
+            string newUrl = url;
+            XmlNode replaceChars = UmbracoSettings.UrlReplaceCharacters;
+            foreach (XmlNode n in replaceChars.SelectNodes("char"))
+            {
+                if (n.Attributes.GetNamedItem("org") != null && n.Attributes.GetNamedItem("org").Value != "")
+                    newUrl = newUrl.Replace(n.Attributes.GetNamedItem("org").Value, XmlHelper.GetNodeValue(n));
+            }
+
+            // check for double dashes
+            if (UmbracoSettings.RemoveDoubleDashesFromUrlReplacing)
+            {
+                newUrl = Regex.Replace(newUrl, @"[-]{2,}", "-");
+            }
+
+            return newUrl;
+        }
+
+        /// <summary>
+        /// An extention method to ensure that an Alias string doesn't contains any illegal characters
+        /// which is defined in a private constant 'ValidCharacters' in this class. 
+        /// Conventions over configuration, baby. You can't touch this - MC Hammer!
+        /// </summary>
+        /// <remarks>
+        /// Copied and cleaned up a bit from umbraco.cms.helpers.Casing.
+        /// </remarks>
+        /// <param name="alias">The alias.</param>
+        /// <returns>An alias guaranteed not to contain illegal characters</returns>
+        public static string ToSafeAlias(this string alias)
+        {
+            const string validAliasCharacters = "_-abcdefghijklmnopqrstuvwxyz1234567890";
+            const string invalidFirstCharacters = "0123456789";
+            var safeString = new StringBuilder();
+            int aliasLength = alias.Length;
+            for (int i = 0; i < aliasLength; i++)
+            {
+                string currentChar = alias.Substring(i, 1);
+                if (validAliasCharacters.Contains(currentChar.ToLowerInvariant()))
+                {
+                    // check for camel (if previous character is a space, we'll upper case the current one
+                    if (safeString.Length == 0 && invalidFirstCharacters.Contains(currentChar.ToLowerInvariant()))
+                    {
+                        currentChar = "";
+                    }
+                    else
+                    {
+                        if (i < aliasLength - 1 && i > 0 && alias.Substring(i - 1, 1) == " ")
+                            currentChar = currentChar.ToUpperInvariant();
+
+                        safeString.Append(currentChar);
+                    }
+                }
+            }
+
+            return safeString.ToString();
+        }
+
+        public static string ToSafeAliasWithForcingCheck(this string alias)
+        {
+            if (UmbracoSettings.ForceSafeAliases)
+            {
+                return alias.ToSafeAlias();
+            }
+            
+            return alias;
         }
     }
 }
