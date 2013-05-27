@@ -1,8 +1,13 @@
+using Umbraco.Core;
+using Umbraco.Core.Events;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
 using umbraco.businesslogic;
 using umbraco.cms.businesslogic;
 using umbraco.cms.businesslogic.media;
 using umbraco.cms.businesslogic.member;
 using umbraco.interfaces;
+using DeleteEventArgs = umbraco.cms.businesslogic.DeleteEventArgs;
 
 namespace umbraco
 {
@@ -13,46 +18,55 @@ namespace umbraco
 	{
 		public LibraryCacheRefresher()
 		{
-			if (UmbracoSettings.UmbracoLibraryCacheDuration > 0)
-			{
-				Member.AfterSave += MemberAfterSave;
-				Member.BeforeDelete += MemberBeforeDelete;
-				Media.AfterSave += MediaAfterSave;
-				Media.BeforeDelete += MediaBeforeDelete;
-                //we need to do this before the move so that we still have the item's current path
-                //in order to invalidate the media cache. Pretty sure this was why the BeforeDelete was
-                //occuring as well which must have been before we had a recycle bin for media.
-                //see : http://issues.umbraco.org/issue/U4-1653
-                CMSNode.BeforeMove += MediaBeforeMove;
-			}
+            if (UmbracoSettings.UmbracoLibraryCacheDuration <= 0) return;
+
+
+            Member.AfterSave += MemberAfterSave;
+            Member.BeforeDelete += MemberBeforeDelete;
+
+            MediaService.Saved += MediaServiceSaved;
+            //We need to perform all of the 'before' events here because we need a reference to the
+            //media item's Path before it is moved/deleting/trashed
+            //see: http://issues.umbraco.org/issue/U4-1653
+            MediaService.Deleting += MediaServiceDeleting;
+            MediaService.Moving += MediaServiceMoving;
+            MediaService.Trashing += MediaServiceTrashing;
 		}
 
-	    static void MediaBeforeMove(object sender, MoveEventArgs e)
+        static void MediaServiceTrashing(IMediaService sender, MoveEventArgs<IMedia> e)
         {
-            if (!(sender is Media))
-                return;
-
-            library.ClearLibraryCacheForMedia(((Media) sender).Id);
+            library.ClearLibraryCacheForMedia(e.Entity.Id);
         }
 
-	    static void MemberBeforeDelete(Member sender, DeleteEventArgs e)
-		{
-			library.ClearLibraryCacheForMember(sender.Id);
-		}
+        static void MediaServiceMoving(IMediaService sender, MoveEventArgs<IMedia> e)
+        {
+            library.ClearLibraryCacheForMedia(e.Entity.Id);
+        }
 
-	    static void MediaBeforeDelete(Media sender, DeleteEventArgs e)
-		{
-			library.ClearLibraryCacheForMedia(sender.Id);
-		}
+        static void MediaServiceDeleting(IMediaService sender, DeleteEventArgs<IMedia> e)
+        {
+            foreach (var item in e.DeletedEntities)
+            {
+                library.ClearLibraryCacheForMedia(item.Id);
+            }
+        }
 
-	    static void MediaAfterSave(Media sender, SaveEventArgs e)
-		{
-			library.ClearLibraryCacheForMedia(sender.Id);
-		}
+        static void MediaServiceSaved(IMediaService sender, SaveEventArgs<IMedia> e)
+        {
+            foreach (var item in e.SavedEntities)
+            {
+                library.ClearLibraryCacheForMedia(item.Id);
+            }
+        }
 
-	    static void MemberAfterSave(Member sender, SaveEventArgs e)
-		{
-			library.ClearLibraryCacheForMember(sender.Id);
-		}
+        static void MemberBeforeDelete(Member sender, DeleteEventArgs e)
+        {
+            library.ClearLibraryCacheForMember(sender.Id);
+        }
+
+        static void MemberAfterSave(Member sender, SaveEventArgs e)
+        {
+            library.ClearLibraryCacheForMember(sender.Id);
+        }
 	}
 }
