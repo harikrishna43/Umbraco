@@ -65,7 +65,7 @@ namespace Umbraco.Core.Services
                             select doc;
 
                 var contents = ParseDocumentRootXml(roots, parentId);
-                if(contents.Any())
+                if (contents.Any())
                     _contentService.Save(contents, userId);
 
                 return contents;
@@ -192,6 +192,71 @@ namespace Umbraco.Core.Services
 
         #region ContentTypes
 
+        public XElement Export(IContentType contentType)
+        {
+            var info = new XElement("Info",
+                                    new XElement("Name", contentType.Name),
+                                    new XElement("Alias", contentType.Alias),
+                                    new XElement("Icon", contentType.Icon),
+                                    new XElement("Thumbnail", contentType.Thumbnail),
+                                    new XElement("Description", contentType.Description),
+                                    new XElement("AllowAtRoot", contentType.AllowedAsRoot.ToString()));
+
+            var masterContentType = contentType.CompositionAliases().FirstOrDefault();
+            if(masterContentType != null)
+                info.Add(new XElement("Master", masterContentType));
+
+            var allowedTemplates = new XElement("AllowedTemplates");
+            foreach (var template in contentType.AllowedTemplates)
+            {
+                allowedTemplates.Add(new XElement("Template", template.Alias));
+            }
+            info.Add(allowedTemplates);
+            if(contentType.DefaultTemplate != null && contentType.DefaultTemplate.Id != 0)
+                info.Add(new XElement("DefaultTemplate", contentType.DefaultTemplate.Alias));
+            else
+                info.Add(new XElement("DefaultTemplate", ""));
+
+            var structure = new XElement("Structure");
+            foreach (var allowedType in contentType.AllowedContentTypes)
+            {
+                structure.Add(new XElement("DocumentType", allowedType.Alias));
+            }
+
+            var genericProperties = new XElement("GenericProperties");
+            foreach (var propertyType in contentType.PropertyTypes)
+            {
+                var definition = _dataTypeService.GetDataTypeDefinitionById(propertyType.DataTypeDefinitionId);
+                var propertyGroup = contentType.PropertyGroups.FirstOrDefault(x => x.Id == propertyType.PropertyGroupId.Value);
+                var genericProperty = new XElement("GenericProperty",
+                                                   new XElement("Name", propertyType.Name),
+                                                   new XElement("Alias", propertyType.Alias),
+                                                   new XElement("Type", propertyType.DataTypeId.ToString()),
+                                                   new XElement("Definition", definition.Key),
+                                                   new XElement("Tab", propertyGroup == null ? "" : propertyGroup.Name),
+                                                   new XElement("Mandatory", propertyType.Mandatory.ToString()),
+                                                   new XElement("Validation", propertyType.ValidationRegExp),
+                                                   new XElement("Description", new XCData(propertyType.Description)));
+                genericProperties.Add(genericProperty);
+            }
+            
+            var tabs = new XElement("Tabs");
+            foreach (var propertyGroup in contentType.PropertyGroups)
+            {
+                var tab = new XElement("Tab",
+                                       new XElement("Id", propertyGroup.Id.ToString()),
+                                       new XElement("Caption", propertyGroup.Name));
+                tabs.Add(tab);
+            }
+
+            var xml = new XElement("DocumentType",
+                                   info,
+                                   structure,
+                                   genericProperties,
+                                   tabs);
+            return xml;
+        }
+
         /// <summary>
         /// Imports and saves package xml as <see cref="IContentType"/>
         /// </summary>
@@ -221,7 +286,7 @@ namespace Umbraco.Core.Services
             _importedContentTypes = new Dictionary<string, IContentType>();
             var documentTypes = name.Equals("DocumentTypes")
                                     ? (from doc in element.Elements("DocumentType") select doc).ToList()
-                                    : new List<XElement> {element};
+                                    : new List<XElement> { element };
             //NOTE it might be an idea to sort the doctype XElements based on dependencies
             //before creating the doc types - should also allow for a better structure/inheritance support.
             foreach (var documentType in documentTypes)
@@ -358,7 +423,7 @@ namespace Umbraco.Core.Services
 
         private void UpdateContentTypesTabs(IContentType contentType, XElement tabElement)
         {
-            if(tabElement == null)
+            if (tabElement == null)
                 return;
 
             var tabs = tabElement.Elements("Tab");
@@ -392,10 +457,10 @@ namespace Umbraco.Core.Services
                         dataTypeDefinition = dataTypeDefinitions.First();
                     }
                 }
-                
+
                 // For backwards compatibility, if no datatype with that ID can be found, we're letting this fail silently.
                 // This means that the property will not be created.
-                if(dataTypeDefinition == null)
+                if (dataTypeDefinition == null)
                 {
                     LogHelper.Warn<PackagingService>(string.Format("Packager: Error handling creation of PropertyType '{0}'. Could not find DataTypeDefintion with unique id '{1}' nor one referencing the DataType with control id '{2}'. Did the package creator forget to package up custom datatypes?",
                                                         property.Element("Name").Value, dataTypeDefinitionId, dataTypeId));
@@ -404,7 +469,7 @@ namespace Umbraco.Core.Services
 
                 var propertyType = new PropertyType(dataTypeDefinition)
                                        {
-                                           Alias = property.Element("Alias").Value, 
+                                           Alias = property.Element("Alias").Value,
                                            Name = property.Element("Name").Value,
                                            Description = property.Element("Description").Value,
                                            Mandatory = property.Element("Mandatory").Value.ToLowerInvariant().Equals("true"),
@@ -500,7 +565,7 @@ namespace Umbraco.Core.Services
             var dataTypes = new Dictionary<string, IDataTypeDefinition>();
             var dataTypeElements = name.Equals("DataTypes")
                                        ? (from doc in element.Elements("DataType") select doc).ToList()
-                                       : new List<XElement> {element.Element("DataType")};
+                                       : new List<XElement> { element.Element("DataType") };
 
             foreach (var dataTypeElement in dataTypeElements)
             {
@@ -642,13 +707,13 @@ namespace Umbraco.Core.Services
                 {
                     template.MasterTemplateAlias = masterElement.Value;
                     var masterTemplate = templates.FirstOrDefault(x => x.Alias == masterElement.Value);
-                    if(masterTemplate != null)
+                    if (masterTemplate != null)
                         template.MasterTemplateId = new Lazy<int>(() => masterTemplate.Id);
                 }
                 templates.Add(template);
             }
 
-            if(templates.Any())
+            if (templates.Any())
                 _fileService.SaveTemplate(templates, userId);
 
             return templates;

@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Web;
 using System.Xml;
 using Umbraco.Core;
+using Umbraco.Core.Cache;
 using Umbraco.Core.Models.Rdbms;
 using umbraco.cms.businesslogic.cache;
 using umbraco.BusinessLogic;
@@ -31,7 +32,7 @@ namespace umbraco.cms.businesslogic.member
         #region Constants and static members
         public static readonly string UmbracoMemberProviderName = "UmbracoMembershipProvider";
         public static readonly string UmbracoRoleProviderName = "UmbracoRoleProvider";
-        public static readonly Guid _objectType = new Guid("39eb0f98-b348-42a1-8662-e7eb18487560");
+        public static readonly Guid _objectType = new Guid(Constants.ObjectTypes.Member);
 
         private static readonly object m_Locker = new object();
 
@@ -91,7 +92,6 @@ namespace umbraco.cms.businesslogic.member
         /// 
         /// Note: is ressource intensive, use with care.
         /// </summary>
-        [Obsolete("Use System.Web.Security.Membership.GetAllUsers()")]
         public static Member[] GetAll
         {
             get
@@ -146,13 +146,11 @@ namespace umbraco.cms.businesslogic.member
         /// </summary>
         /// <param name="letter">The first letter</param>
         /// <returns></returns>
-        [Obsolete("Use System.Web.Security.Membership.FindUsersByName(string letter)")]
         public static Member[] getMemberFromFirstLetter(char letter)
         {
             return GetMemberByName(letter.ToString(), true);
         }
 
-        [Obsolete("Use System.Web.Security.Membership.FindUsersByName(string letter)")]
         public static Member[] GetMemberByName(string usernameToMatch, bool matchByNameInsteadOfLogin)
         {
             string field = matchByNameInsteadOfLogin ? "umbracoNode.text" : "cmsMember.loginName";
@@ -184,7 +182,6 @@ namespace umbraco.cms.businesslogic.member
         /// <param name="mbt">Member type</param>
         /// <param name="u">The umbraco usercontext</param>
         /// <returns>The new member</returns>
-        [Obsolete("Use System.Web.Security.Membership.CreateUser")]
         public static Member MakeNew(string Name, MemberType mbt, User u)
         {
             return MakeNew(Name, "", "", mbt, u);
@@ -199,7 +196,6 @@ namespace umbraco.cms.businesslogic.member
         /// <param name="u">The umbraco usercontext</param>
         /// <param name="Email">The email of the user</param>
         /// <returns>The new member</returns>
-        [Obsolete("Use System.Web.Security.Membership.CreateUser")]
         public static Member MakeNew(string Name, string Email, MemberType mbt, User u)
         {
             return MakeNew(Name, "", Email, mbt, u);
@@ -213,7 +209,6 @@ namespace umbraco.cms.businesslogic.member
         /// <param name="u">The umbraco usercontext</param>
         /// <param name="Email">The email of the user</param>
         /// <returns>The new member</returns>
-        [Obsolete("Use System.Web.Security.Membership.CreateUser")]
         public static Member MakeNew(string Name, string LoginName, string Email, MemberType mbt, User u)
         {
             var loginName = (!String.IsNullOrEmpty(LoginName)) ? LoginName : Name;
@@ -265,7 +260,6 @@ namespace umbraco.cms.businesslogic.member
         /// </summary>
         /// <param name="loginName">The unique Loginname</param>
         /// <returns>The member with the specified loginname - null if no Member with the login exists</returns>
-        [Obsolete("Use System.Web.Security.Membership.GetUser")]
         public static Member GetMemberFromLoginName(string loginName)
         {
             if (String.IsNullOrEmpty(loginName))
@@ -298,7 +292,6 @@ namespace umbraco.cms.businesslogic.member
         /// </summary>
         /// <param name="email">The email of the member</param>
         /// <returns>The member with the specified email - null if no Member with the email exists</returns>
-        [Obsolete("Use System.Web.Security.Membership.GetUserNameByEmail")]
         public static Member GetMemberFromEmail(string email)
         {
             if (string.IsNullOrEmpty(email))
@@ -503,13 +496,12 @@ namespace umbraco.cms.businesslogic.member
         /// <summary>
         /// A list of groups the member are member of
         /// </summary>
-        [Obsolete("Use System.Web.Security.Roles.GetRolesForUser()")]
         public Hashtable Groups
         {
             get
             {
                 if (m_Groups == null)
-                    populateGroups();
+                    PopulateGroups();
                 return m_Groups;
             }
         }
@@ -668,7 +660,6 @@ namespace umbraco.cms.businesslogic.member
         /// <summary>
         /// Deltes the current member
         /// </summary>
-        [Obsolete("Use System.Web.Security.Membership.DeleteUser")]
         public override void delete()
         {
             DeleteEventArgs e = new DeleteEventArgs();
@@ -676,9 +667,6 @@ namespace umbraco.cms.businesslogic.member
 
             if (!e.Cancel)
             {
-                // Remove from cache (if exists)
-                Cache.ClearCacheItem(GetCacheKey(Id));
-
                 // delete all relations to groups
                 foreach (int groupId in this.Groups.Keys)
                 {
@@ -712,7 +700,6 @@ namespace umbraco.cms.businesslogic.member
         /// </summary>
         /// <param name="GroupId">The id of the group which the member is being added to</param>
         [MethodImpl(MethodImplOptions.Synchronized)]
-        [Obsolete("Use System.Web.Security.Roles.AddUserToRole")]
         public void AddGroup(int GroupId)
         {
             AddGroupEventArgs e = new AddGroupEventArgs();
@@ -728,7 +715,7 @@ namespace umbraco.cms.businesslogic.member
                 if (!exists)
                     SqlHelper.ExecuteNonQuery("INSERT INTO cmsMember2MemberGroup (member, memberGroup) values (@id, @groupId)",
                                               parameters);
-                populateGroups();
+                PopulateGroups();
 
                 FireAfterAddGroup(e);
             }
@@ -738,7 +725,6 @@ namespace umbraco.cms.businesslogic.member
         /// Removes the member from the MemberGroup specified
         /// </summary>
         /// <param name="GroupId">The MemberGroup from which the Member is removed</param>
-        [Obsolete("Use System.Web.Security.Roles.RemoveUserFromRole")]
         public void RemoveGroup(int GroupId)
         {
             RemoveGroupEventArgs e = new RemoveGroupEventArgs();
@@ -750,7 +736,7 @@ namespace umbraco.cms.businesslogic.member
                 SqlHelper.ExecuteNonQuery(
                     "delete from cmsMember2MemberGroup where member = @id and Membergroup = @groupId",
                     SqlHelper.CreateParameter("@id", Id), SqlHelper.CreateParameter("@groupId", GroupId));
-                populateGroups();
+                PopulateGroups();
                 FireAfterRemoveGroup(e);
             }
         }
@@ -788,10 +774,10 @@ namespace umbraco.cms.businesslogic.member
 
         #region Private methods
 
-        private void populateGroups()
+        private void PopulateGroups()
         {
-            Hashtable temp = new Hashtable();
-            using (IRecordsReader dr = SqlHelper.ExecuteReader(
+            var temp = new Hashtable();
+            using (var dr = SqlHelper.ExecuteReader(
                 "select memberGroup from cmsMember2MemberGroup where member = @id",
                 SqlHelper.CreateParameter("@id", Id)))
             {
@@ -804,7 +790,7 @@ namespace umbraco.cms.businesslogic.member
 
         private static string GetCacheKey(int id)
         {
-            return string.Format("MemberCacheItem_{0}", id);
+            return string.Format("{0}{1}", CacheKeys.MemberBusinessLogicCacheKey, id);
         }
 
         // zb-00035 #29931 : helper class to handle member state
@@ -977,17 +963,18 @@ namespace umbraco.cms.businesslogic.member
                     FormsAuthentication.SetAuthCookie(m.LoginName, true);
 
                     //cache the member
-                    var cachedMember = Cache.GetCacheItem<Member>(GetCacheKey(m.Id), m_Locker,
+                    var cachedMember = ApplicationContext.Current.ApplicationCache.GetCacheItem(
+                        GetCacheKey(m.Id),
                         TimeSpan.FromMinutes(30),
-                        delegate
-                        {
-                            // Debug information
-                            HttpContext.Current.Trace.Write("member",
-                                string.Format("Member added to cache: {0}/{1} ({2})",
-                                    m.Text, m.LoginName, m.Id));
+                        () =>
+                            {
+                                // Debug information
+                                HttpContext.Current.Trace.Write("member",
+                                                                string.Format("Member added to cache: {0}/{1} ({2})",
+                                                                              m.Text, m.LoginName, m.Id));
 
-                            return m;
-                        });
+                                return m;
+                            });
 
                     m.FireAfterAddToCache(e);
                 }
@@ -1006,13 +993,14 @@ namespace umbraco.cms.businesslogic.member
         /// Can be used in the runtime
         /// </summary>
         /// <param name="m">The member to log in</param>
-        /// <param name="UseSession">Use sessionbased recognition</param>
-        /// <param name="TimespanForCookie">The live time of the cookie</param>
+        /// <param name="UseSession">create a persistent cookie</param>
+        /// <param name="TimespanForCookie">Has no effect</param>
+        [Obsolete("Use the membership api and FormsAuthentication to log users in, this method is no longer used anymore")]
         public static void AddMemberToCache(Member m, bool UseSession, TimeSpan TimespanForCookie)
         {
             if (m != null)
             {
-                AddToCacheEventArgs e = new AddToCacheEventArgs();
+                var e = new AddToCacheEventArgs();
                 m.FireBeforeAddToCache(e);
 
                 if (!e.Cancel)
@@ -1024,19 +1012,18 @@ namespace umbraco.cms.businesslogic.member
                     FormsAuthentication.SetAuthCookie(m.LoginName, !UseSession);
 
                     //cache the member
-                    var cachedMember = Cache.GetCacheItem<Member>(GetCacheKey(m.Id), m_Locker,
+                    var cachedMember = ApplicationContext.Current.ApplicationCache.GetCacheItem(
+                        GetCacheKey(m.Id),
                         TimeSpan.FromMinutes(30),
-                        delegate
-                        {
-                            // Debug information
-                            HttpContext.Current.Trace.Write("member",
-                                string.Format("Member added to cache: {0}/{1} ({2})",
-                                    m.Text, m.LoginName, m.Id));
+                        () =>
+                            {
+                                // Debug information
+                                HttpContext.Current.Trace.Write("member",
+                                                                string.Format("Member added to cache: {0}/{1} ({2})",
+                                                                              m.Text, m.LoginName, m.Id));
 
-                            return m;
-                        });
-
-
+                                return m;
+                            });
 
                     m.FireAfterAddToCache(e);
                 }
@@ -1062,9 +1049,10 @@ namespace umbraco.cms.businesslogic.member
         /// Can be used in the public website
         /// </summary>
         /// <param name="NodeId">Node Id of the member to remove</param>
+        [Obsolete("Member cache is automatically cleared when members are updated")]
         public static void RemoveMemberFromCache(int NodeId)
         {
-            Cache.ClearCacheItem(GetCacheKey(NodeId));
+            ApplicationContext.Current.ApplicationCache.ClearCacheItem(GetCacheKey(NodeId));
         }
 
         /// <summary>
@@ -1095,6 +1083,7 @@ namespace umbraco.cms.businesslogic.member
         /// Can be used in the public website
         /// </summary>
         /// <param name="NodeId">The Node id of the member to clear</param>
+        [Obsolete("Use FormsAuthentication.SignOut instead")]
         public static void ClearMemberFromClient(int NodeId)
         {
             // zb-00035 #29931 : cleanup member state management
@@ -1116,15 +1105,13 @@ namespace umbraco.cms.businesslogic.member
         public static Hashtable CachedMembers()
         {
             var h = new Hashtable();
-            Cache.ReturnCacheItemsOrdred()
-                .Cast<DictionaryEntry>()
-                .Where(x => x.Key.ToString().StartsWith("MemberCacheItem_"))
-                .Select(x => (Member)x.Value)
-                .ToList()
-                .ForEach(x =>
-                {
-                    h.Add(x.Id, x);
-                });
+
+            var items = ApplicationContext.Current.ApplicationCache.GetCacheItemsByKeySearch<Member>(
+                CacheKeys.MemberBusinessLogicCacheKey);
+            foreach (var i in items)
+            {
+                h.Add(i.Id, i);
+            }
             return h;
         }
 
