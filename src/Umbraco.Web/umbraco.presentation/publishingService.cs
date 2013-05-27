@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Web;
 using System.Xml;
-
+using Umbraco.Core.Logging;
 using umbraco.BusinessLogic;
 using umbraco.cms.businesslogic.web;
 
@@ -42,11 +42,7 @@ namespace umbraco.presentation
 						}
 						catch(Exception ee)
 						{
-							Log.Add(
-								LogTypes.Error,
-								BusinessLogic.User.GetUser(0),
-								d.Id,
-								string.Format("Error publishing node: {0}", ee));
+						    LogHelper.Error<publishingService>(string.Format("Error publishing node {0}", d.Id), ee);
 						}
 					}
 					foreach(Document d in Document.GetDocumentsForExpiration())
@@ -61,11 +57,7 @@ namespace umbraco.presentation
                         }
                         catch (Exception ee)
                         {
-                            Log.Add(
-                                LogTypes.Error,
-                                BusinessLogic.User.GetUser(0),
-                                d.Id,
-                                string.Format("Error unpublishing node: {0}", ee));
+                            LogHelper.Error<publishingService>(string.Format("Error unpublishing node {0}", d.Id), ee);
                         }
                        
 					}
@@ -103,9 +95,7 @@ namespace umbraco.presentation
 								{
 									bool taskResult = getTaskByHttp(task.Attributes.GetNamedItem("url").Value);
 									if (bool.Parse(task.Attributes.GetNamedItem("log").Value))
-										Log.Add(LogTypes.ScheduledTask, User.GetUser(0), -1,
-										        string.Format("{0} has been called with response: {1}",
-										                      task.Attributes.GetNamedItem("alias").Value, taskResult));
+                                        LogHelper.Info<publishingService>(string.Format("{0} has been called with response: {1}", task.Attributes.GetNamedItem("alias").Value, taskResult));
 								}
 							}
 						}
@@ -113,8 +103,7 @@ namespace umbraco.presentation
 				}
 				catch(Exception ee)
 				{
-					Log.Add(LogTypes.Error, User.GetUser(0), -1,
-						string.Format("Error executing scheduled task: {0}", ee));
+                    LogHelper.Error<publishingService>("Error executing scheduled task", ee);
 				}
 			}
 			catch(Exception x)
