@@ -1,4 +1,5 @@
 using System;
+using Umbraco.Core.Logging;
 using System.Linq;
 using Umbraco.Core;
 using Umbraco.Core.IO;
@@ -56,7 +57,8 @@ namespace umbraco.BasePages
             if (permissions.IndexOf(Action) > -1 && (Path.Contains("-20") || ("," + Path + ",").Contains("," + getUser().StartNodeId.ToString() + ",")))
                 return true;
 
-            LogHelper.Info<UmbracoEnsuredPage>("Insufficient permissions in UmbracoEnsuredPage: '" + Path + "', '" + permissions + "', '" + Action + "'");
+	        var user = getUser();
+	        LogHelper.Info<UmbracoEnsuredPage>("User {0} has insufficient permissions in UmbracoEnsuredPage: '{1}', '{2}', '{3}'", () => user.Name, () => Path, () => permissions, () => Action);
             return false;
         }
 
@@ -89,7 +91,7 @@ namespace umbraco.BasePages
                         throw new UserAuthorizationException(String.Format("The current user doesn't have access to the section/app '{0}'", CurrentApp));
                 }
             }
-            catch (UserAuthorizationException)
+            catch (UserAuthorizationException ex)
             {
                 LogHelper.Warn<UmbracoEnsuredPage>(string.Format("{0} tried to access '{1}'", CurrentUser.Id, CurrentApp));
                 throw;
