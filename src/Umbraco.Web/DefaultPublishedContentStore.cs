@@ -157,9 +157,11 @@ namespace Umbraco.Web
 
 			if (rootNodeId > 0)
 				xpathBuilder.AppendFormat(XPathStrings.DescendantDocumentById, rootNodeId);
+
             XPathVariable var = null;
             if (alias.Contains('\'') || alias.Contains('"'))
             {
+                // use a var, escaping gets ugly pretty quickly
                 var = new XPathVariable("alias", alias);
                 alias = "$alias";
             }
@@ -245,6 +247,7 @@ namespace Umbraco.Web
                     var part = urlParts[partsIndex++];
                     if (part.Contains('\'') || part.Contains('"'))
                     {
+                        // use vars, escaping gets ugly pretty quickly
                         varsList = varsList ?? new List<XPathVariable>();
                         var varName = string.Format("var{0}", partsIndex);
                         varsList.Add(new XPathVariable(varName, part));
