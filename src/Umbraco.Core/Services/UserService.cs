@@ -1,13 +1,16 @@
 using System;
-using System.Web;
+using System.Globalization;
+using System.Linq;
 using Umbraco.Core.Models.Membership;
+using Umbraco.Core.Models.Rdbms;
 using Umbraco.Core.Persistence;
+using Umbraco.Core.Persistence.Querying;
 using Umbraco.Core.Persistence.UnitOfWork;
 
 namespace Umbraco.Core.Services
 {
     /// <summary>
-    /// Represents the UserService, which is an easy access to operations involving <see cref="IProfile"/> and eventually Users and Members.
+    /// Represents the UserService, which is an easy access to operations involving <see cref="IProfile"/>, <see cref="IMembershipUser"/> and eventually Backoffice Users.
     /// </summary>
     internal class UserService : IUserService
     {
@@ -29,69 +32,6 @@ namespace Umbraco.Core.Services
         #region Implementation of IUserService
 
         /// <summary>
-        /// Gets an <see cref="IProfile"/> for the current BackOffice User.
-        /// </summary>
-        /// <param name="httpContext">HttpContext to fetch the user through</param>
-        /// <returns><see cref="IProfile"/> containing the Name and Id of the logged in BackOffice User</returns>
-        public IProfile GetCurrentBackOfficeUser(HttpContextBase httpContext)
-        {
-            Mandate.That(httpContext != null,
-                         () =>
-                         new ArgumentException(
-                             "The HttpContext which is used to retrieve information about the currently logged in backoffice user was null and can therefor not be used",
-                             "HttpContextBase"));
-            if (httpContext == null) return null;
-
-            var cookie = httpContext.Request.Cookies["UMB_UCONTEXT"];
-            Mandate.That(cookie != null, () => new ArgumentException("The Cookie containing the UserContext Guid Id was null", "Cookie"));
-            if (cookie == null) return null;
-
-            string contextId = cookie.Value;
-            string cacheKey = string.Concat("UmbracoUserContext", contextId);
-
-            int userId = 0;
-
-            if(HttpRuntime.Cache[cacheKey] == null)
-            {
-                using (var uow = _uowProvider.GetUnitOfWork())
-                {
-					userId =
-						uow.Database.ExecuteScalar<int>(
-							"select userID from umbracoUserLogins where contextID = @ContextId",
-							new { ContextId = new Guid(contextId) });
-
-					HttpRuntime.Cache.Insert(cacheKey, userId,
-											 null,
-											 System.Web.Caching.Cache.NoAbsoluteExpiration,
-											 new TimeSpan(0, (int)(Umbraco.Core.Configuration.GlobalSettings.TimeOutInMinutes / 10), 0));    
-                }                
-            }
-            else
-            {
-                userId = (int) HttpRuntime.Cache[cacheKey];
-            }
-
-            var profile = GetProfileById(userId);
-            return profile;
-        }
-
-        /// <summary>
-        /// Gets an <see cref="IProfile"/> for the current BackOffice User.
-        /// </summary>
-        /// <remarks>
-        /// Requests the current HttpContext, so this method will only work in a web context.
-        /// </remarks>
-        /// <returns><see cref="IProfile"/> containing the Name and Id of the logged in BackOffice User</returns>
-        public IProfile GetCurrentBackOfficeUser()
-        {
-            var context = HttpContext.Current;
-            Mandate.That<Exception>(context != null);
-
-            var wrapper = new HttpContextWrapper(context);
-            return GetCurrentBackOfficeUser(wrapper);
-        }
-
-        /// <summary>
         /// Gets an IProfile by User Id.
         /// </summary>
         /// <param name="id">Id of the User to retrieve</param>
@@ -101,6 +41,76 @@ namespace Umbraco.Core.Services
             using (var repository = _repositoryFactory.CreateUserRepository(_uowProvider.GetUnitOfWork()))
             {
                 return repository.GetProfileById(id);
+            }
+        }
+
+        /// <summary>
+        /// Gets an IUserType by its Alias
+        /// </summary>
+        /// <param name="alias">Alias of the UserType to retrieve</param>
+        /// <returns><see cref="IUserType"/></returns>
+        public IUserType GetUserTypeByAlias(string alias)
+        {
+            using (var repository = _repositoryFactory.CreateUserTypeRepository(_uowProvider.GetUnitOfWork()))
+            {
+                var query = Query<IUserType>.Builder.Where(x => x.Alias == alias);
+                var contents = repository.GetByQuery(query);
+                return contents.SingleOrDefault();
+            }
+        }
+
+        /// <summary>
+        /// Gets an IUserType by its Name
+        /// </summary>
+        /// <param name="name">Name of the UserType to retrieve</param>
+        /// <returns><see cref="IUserType"/></returns>
+        public IUserType GetUserTypeByName(string name)
+        {
+            using (var repository = _repositoryFactory.CreateUserTypeRepository(_uowProvider.GetUnitOfWork()))
+            {
+                var query = Query<IUserType>.Builder.Where(x => x.Name == name);
+                var contents = repository.GetByQuery(query);
+                return contents.SingleOrDefault();
+            }
+        }
+
+        /// <summary>
+        /// Creates a new user for logging into the umbraco backoffice
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="login"></param>
+        /// <param name="password"></param>
+        /// <param name="userType"></param>
+        /// <param name="email"></param>
+        /// <returns></returns>
+        public IMembershipUser CreateUser(string name, string login, string password, IUserType userType, string email = "")
+        {
+            var uow = _uowProvider.GetUnitOfWork();
+            using (var repository = _repositoryFactory.CreateUserRepository(uow))
+            {
+                var loginExists = uow.Database.ExecuteScalar<int>("SELECT COUNT(id) FROM umbracoUser WHERE userLogin = @Login", new { Login = login }) != 0;
+                if (loginExists)
+                    throw new ArgumentException("Login already exists");
+
+                var user = new User(userType)
+                               {
+                                   DefaultToLiveEditing = false,
+                                   Email = email,
+                                   Language = Umbraco.Core.Configuration.GlobalSettings.DefaultUILanguage,
+                                   Name = name,
+                                   Password = password,
+                                   Permissions = userType.Permissions,
+                                   Username = login,
+                                   StartContentId = -1,
+                                   StartMediaId = -1,
+                                   NoConsole = false,
+                                   IsApproved = true
+                               };
+
+                repository.AddOrUpdate(user);
+                uow.Commit();
+
+                return user;
             }
         }
 
