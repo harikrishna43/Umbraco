@@ -138,7 +138,6 @@ namespace Umbraco.Core
             }
         }
         
-
         public static string StripDashesInElementOrAttributeNames(string xml)
         {
             using (var outputms = new MemoryStream())
@@ -191,6 +190,7 @@ namespace Umbraco.Core
                 }
             }
         }
+
 
 		/// <summary>
         /// Imports a XML node from text.
