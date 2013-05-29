@@ -4,6 +4,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using Umbraco.Core.Logging;
 using umbraco.BusinessLogic;
+using Umbraco.Core.Logging;
 using umbraco.BasePages;
 
 namespace umbraco.dialogs
@@ -31,7 +32,7 @@ namespace umbraco.dialogs
             var d = new cms.businesslogic.web.Document(_nodeId);
             pageName = d.Text;
 
-			if (d.Level > 1 && !(new cms.businesslogic.web.Document(d.ParentId).PathPublished))
+			if (d.Level > 1 && d.PathPublished == false)
 			{
 				TheForm.Visible = false;
 				theEnd.Visible = true;
