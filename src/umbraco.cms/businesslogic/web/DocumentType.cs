@@ -38,7 +38,7 @@ namespace umbraco.cms.businesslogic.web
 
         #region Constants and Static members
 
-        public static Guid _objectType = new Guid("a2cb7800-f571-4787-9638-bc48539a0efb");
+        public static Guid _objectType = new Guid(Constants.ObjectTypes.DocumentType);
 
         new internal const string m_SQLOptimizedGetAll = @"
             SELECT id, createDate, trashed, parentId, nodeObjectType, nodeUser, level, path, sortOrder, uniqueID, text,
@@ -642,7 +642,7 @@ namespace umbraco.cms.businesslogic.web
                 _defaultTemplate = _contentType.DefaultTemplate.Id;
 
             base.PopulateContentTypeFromContentTypeBase(_contentType);
-            base.PopulateCMSNodeFromContentTypeBase(_contentType, _objectType);
+            base.PopulateCMSNodeFromUmbracoEntity(_contentType, _objectType);
         }
         #endregion
 
