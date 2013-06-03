@@ -12,6 +12,8 @@ using System.Linq;
 using umbraco.cms.businesslogic;
 using umbraco.cms.presentation.user;
 using umbraco.interfaces;
+using Umbraco.Web;
+using Umbraco.Core;
 
 namespace umbraco.dialogs
 {
@@ -39,16 +41,16 @@ namespace umbraco.dialogs
 
                 //Document Type copy Hack...                
 
-                if (CurrentApp == "settings")
+                if (CurrentApp == Constants.Applications.Settings)
                 {
                     pane_form.Visible = false;
                     pane_form_notice.Visible = false;
                     pane_settings.Visible = true;
 
-                    ok.Text = ui.Text("general", "ok", this.getUser());
+                    ok.Text = ui.Text("general", "ok", UmbracoUser);
                     ok.Attributes.Add("style", "width: 60px");
 
-                    var documentType = new DocumentType(int.Parse(helper.Request("id")));
+                    var documentType = new DocumentType(int.Parse(Request.GetItemAsString("id")));
 
                     //Load master types... 
                     masterType.Attributes.Add("style", "width: 350px;");
@@ -72,25 +74,25 @@ namespace umbraco.dialogs
                     pane_settings.Visible = false;
 
                     // Caption and properies on BUTTON
-                    ok.Text = ui.Text("general", "ok", this.getUser());
+                    ok.Text = ui.Text("general", "ok", UmbracoUser);
                     ok.Attributes.Add("style", "width: 60px");
                     ok.Attributes.Add("disabled", "true");
 
-                    var cmsNode = new CMSNode(int.Parse(helper.Request("id")));
+                    var cmsNode = new CMSNode(int.Parse(Request.GetItemAsString("id")));
 
                     var validAction = true;
-                    if (CurrentApp == "content" && cmsNode.HasChildren)
-                        validAction = ValidAction(helper.Request("mode") == "cut" ? 'M' : 'O');
+                    if (CurrentApp == Constants.Applications.Content && cmsNode.HasChildren)
+                        validAction = ValidAction(Request.GetItemAsString("mode") == "cut" ? 'M' : 'O');
 
 
-                    if (helper.Request("mode") == "cut")
+                    if (Request.GetItemAsString("mode") == "cut")
                     {
-                        pane_form.Text = ui.Text("moveOrCopy", "moveTo", cmsNode.Text, base.getUser());
+                        pane_form.Text = ui.Text("moveOrCopy", "moveTo", cmsNode.Text, UmbracoUser);
                         pp_relate.Visible = false;
                     }
                     else
                     {
-                        pane_form.Text = ui.Text("moveOrCopy", "copyTo", cmsNode.Text, base.getUser());
+                        pane_form.Text = ui.Text("moveOrCopy", "copyTo", cmsNode.Text, UmbracoUser);
                         pp_relate.Visible = true;
                     }
 
@@ -127,21 +129,7 @@ namespace umbraco.dialogs
             return true;
         }
 
-        //PPH moving multiple nodes and publishing them aswell.
-        private void handleChildNodes(cms.businesslogic.web.Document document)
-        {
-            //store children array here because iterating over an Array object is very inneficient.
-            var children = document.Children;
-            foreach (Document child in children.Where(child => child.Published))
-            {
-                child.Publish(new BusinessLogic.User(0));
-
-                //using library.publish to support load balancing.
-                library.UpdateDocumentCache(child.Id);
-                if (child.HasChildren)
-                    handleChildNodes(child);
-            }
-        }
+        
 
         //PPH Handle doctype copies..
         private void HandleDocumentTypeCopy()
@@ -199,7 +187,7 @@ namespace umbraco.dialogs
 
         public void HandleMoveOrCopy(object sender, EventArgs e)
         {
-            if (CurrentApp == "settings")
+            if (CurrentApp == Constants.Applications.Settings)
 	            HandleDocumentTypeCopy();
 	        else
                 HandleDocumentMoveOrCopy();
@@ -214,17 +202,17 @@ namespace umbraco.dialogs
 
         private void HandleDocumentMoveOrCopy()
         {
-            if (helper.Request("copyTo") != "" && helper.Request("id") != "")
+            if (Request.GetItemAsString("copyTo") != "" && helper.Request("id") != "")
             {
                 // Check if the current node is allowed at new position
                 var nodeAllowed = false;
 
-                var currentNode = new cms.businesslogic.Content(int.Parse(helper.Request("id")));
+                var currentNode = new cms.businesslogic.Content(int.Parse(Request.GetItemAsString("id")));
 
-				var newNode = new cms.businesslogic.Content(int.Parse(helper.Request("copyTo")));
+                var newNode = new cms.businesslogic.Content(int.Parse(Request.GetItemAsString("copyTo")));
 
                 // Check on contenttypes
-                if (int.Parse(helper.Request("copyTo")) == -1)
+                if (int.Parse(Request.GetItemAsString("copyTo")) == -1)
                 {
                     nodeAllowed = true;
                 }
@@ -237,7 +225,7 @@ namespace umbraco.dialogs
 
                     if (nodeAllowed == false)
                     {
-                        feedback.Text = ui.Text("moveOrCopy", "notAllowedByContentType", base.getUser());
+                        feedback.Text = ui.Text("moveOrCopy", "notAllowedByContentType", UmbracoUser);
                         feedback.type = uicontrols.Feedback.feedbacktype.error;
                     }
                     else
@@ -246,7 +234,7 @@ namespace umbraco.dialogs
                         if ((string.Format(",{0},", newNode.Path)).IndexOf(string.Format(",{0},", currentNode.Id)) > -1)
                         {
                             nodeAllowed = false;
-                            feedback.Text = ui.Text("moveOrCopy", "notAllowedByPath", base.getUser());
+                            feedback.Text = ui.Text("moveOrCopy", "notAllowedByPath", UmbracoUser);
                             feedback.type = uicontrols.Feedback.feedbacktype.error;
                         }
                     }
@@ -264,24 +252,26 @@ namespace umbraco.dialogs
 
                     if (Request["mode"] == "cut")
                     {
-                        if (CurrentApp == "content")
+                        if (CurrentApp == Constants.Applications.Content)
                         {
                             //PPH changed this to document instead of cmsNode to handle republishing.
-                            var documentId = int.Parse(helper.Request("id"));
+                            var documentId = int.Parse(Request.GetItemAsString("id"));
                             var document = new Document(documentId);
-                            document.Move(int.Parse(helper.Request("copyTo")));
+                            document.Move(int.Parse(Request.GetItemAsString("copyTo")));
+
+                            //NOTE: This seems excessive to have to re-load all content from the database here!?
                             library.RefreshContent();
                         }
                         else
                         {
-                            var media = new Media(int.Parse(UmbracoContext.Current.Request["id"]));
-                            media.Move(int.Parse(UmbracoContext.Current.Request["copyTo"]));
-                            media = new Media(int.Parse(UmbracoContext.Current.Request["id"]));
+                            var media = new Media(int.Parse(Request["id"]));
+                            media.Move(int.Parse(Request["copyTo"]));
+                            media = new Media(int.Parse(Request["id"]));
                             media.XmlGenerate(new XmlDocument());
-                            library.ClearLibraryCacheForMedia(media.Id);
+                            media.Save();
                         }
 
-                        feedback.Text = ui.Text("moveOrCopy", "moveDone", nodes, getUser()) + "</p><p><a href='#' onclick='" + ClientTools.Scripts.CloseModalWindow() + "'>" + ui.Text("closeThisWindow") + "</a>";
+                        feedback.Text = ui.Text("moveOrCopy", "moveDone", nodes, UmbracoUser) + "</p><p><a href='#' onclick='" + ClientTools.Scripts.CloseModalWindow() + "'>" + ui.Text("closeThisWindow") + "</a>";
                         feedback.type = uicontrols.Feedback.feedbacktype.success;
 
                         // refresh tree
@@ -289,9 +279,9 @@ namespace umbraco.dialogs
                     }
                     else
                     {
-                        var document = new Document(int.Parse(helper.Request("id")));
-                        document.Copy(int.Parse(helper.Request("copyTo")), this.getUser(), RelateDocuments.Checked);
-                        feedback.Text = ui.Text("moveOrCopy", "copyDone", nodes, base.getUser()) + "</p><p><a href='#' onclick='" + ClientTools.Scripts.CloseModalWindow() + "'>" + ui.Text("closeThisWindow") + "</a>";
+                        var document = new Document(int.Parse(Request.GetItemAsString("id")));
+                        document.Copy(int.Parse(Request.GetItemAsString("copyTo")), UmbracoUser, RelateDocuments.Checked);
+                        feedback.Text = ui.Text("moveOrCopy", "copyDone", nodes, UmbracoUser) + "</p><p><a href='#' onclick='" + ClientTools.Scripts.CloseModalWindow() + "'>" + ui.Text("closeThisWindow") + "</a>";
                         feedback.type = uicontrols.Feedback.feedbacktype.success;
                         ClientTools.CopyNode(currentNode.Id.ToString(), newNode.Path);
                     }
