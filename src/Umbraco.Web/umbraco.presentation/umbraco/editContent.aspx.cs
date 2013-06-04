@@ -1,6 +1,8 @@
-using System;
+﻿using System;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using Umbraco.Core.Models;
+using Umbraco.Core.Persistence.Caching;
 using Umbraco.Core.IO;
 using Umbraco.Core.Services;
 using umbraco.BusinessLogic.Actions;
@@ -14,7 +16,7 @@ using Umbraco.Core;
 
 namespace umbraco.cms.presentation
 {
-    public partial class editContent : BasePages.UmbracoEnsuredPage
+    public class editContent : BasePages.UmbracoEnsuredPage
     {
         protected uicontrols.TabView TabView1;
         protected TextBox documentName;
@@ -71,15 +73,15 @@ namespace umbraco.cms.presentation
             }
 
             // we need to check if there's a published version of this document
-            _documentHasPublishedVersion = _document.HasPublishedVersion();
+            _documentHasPublishedVersion = _document.Content.HasPublishedVersion();
 
             // Check publishing permissions
-            if (base.getUser().GetPermissions(_document.Path).Contains(ActionPublish.Instance.Letter.ToString()) == false)
+            if (!UmbracoUser.GetPermissions(_document.Path).Contains(ActionPublish.Instance.Letter.ToString()))
             {
                 // Check to see if the user has send to publish permissions
-                if (!base.getUser().GetPermissions(_document.Path).Contains(ActionToPublish.Instance.Letter.ToString()))
+                if (!UmbracoUser.GetPermissions(_document.Path).Contains(ActionToPublish.Instance.Letter.ToString()))
                 {
-					//If no send to publish permission then revert to NoPublish mode
+                    //If no send to publish permission then revert to NoPublish mode
                     _canPublish = controls.ContentControl.publishModes.NoPublish;
                 }
                 else
@@ -108,32 +110,32 @@ namespace umbraco.cms.presentation
             var publishStatus = new PlaceHolder();
             if (_documentHasPublishedVersion)
             {
-                _littPublishStatus.Text = ui.Text("content", "lastPublished", base.getUser()) + ": " + _document.VersionDate.ToShortDateString() + " &nbsp; ";
+                _littPublishStatus.Text = ui.Text("content", "lastPublished", UmbracoUser) + ": " + _document.VersionDate.ToShortDateString() + " &nbsp; ";
 
                 publishStatus.Controls.Add(_littPublishStatus);
-                if (getUser().GetPermissions(_document.Path).IndexOf("U") > -1)
+                if (UmbracoUser.GetPermissions(_document.Path).IndexOf("U") > -1)
                     _unPublish.Visible = true;
                 else
                     _unPublish.Visible = false;
             }
             else
             {
-                _littPublishStatus.Text = ui.Text("content", "itemNotPublished", base.getUser());
+                _littPublishStatus.Text = ui.Text("content", "itemNotPublished", UmbracoUser);
                 publishStatus.Controls.Add(_littPublishStatus);
                 _unPublish.Visible = false;
             }
 
-            _unPublish.Text = ui.Text("content", "unPublish", base.getUser());
+            _unPublish.Text = ui.Text("content", "unPublish", UmbracoUser);
             _unPublish.ID = "UnPublishButton";
-            _unPublish.Attributes.Add("onClick", "if (!confirm('" + ui.Text("defaultdialogs", "confirmSure", base.getUser()) + "')) return false; ");
+            _unPublish.Attributes.Add("onClick", "if (!confirm('" + ui.Text("defaultdialogs", "confirmSure", UmbracoUser) + "')) return false; ");
             publishStatus.Controls.Add(_unPublish);
 
-            _publishProps.addProperty(ui.Text("content", "publishStatus", base.getUser()), publishStatus);
+            _publishProps.addProperty(ui.Text("content", "publishStatus", UmbracoUser), publishStatus);
 
             // Template
             var template = new PlaceHolder();
-            var DocumentType = new DocumentType(_document.ContentType.Id);
-            _cControl.PropertiesPane.addProperty(ui.Text("documentType"), new LiteralControl(DocumentType.Text));
+            var documentType = new DocumentType(_document.ContentType.Id);
+            _cControl.PropertiesPane.addProperty(ui.Text("documentType"), new LiteralControl(documentType.Text));
 
 
             //template picker
@@ -142,9 +144,9 @@ namespace umbraco.cms.presentation
             if (_document.Template != 0)
                 defaultTemplate = _document.Template;
             else
-                defaultTemplate = DocumentType.DefaultTemplate;
+                defaultTemplate = documentType.DefaultTemplate;
 
-            if (getUser().UserType.Name == "writer")
+            if (UmbracoUser.UserType.Name == "writer")
             {
                 if (defaultTemplate != 0)
                     template.Controls.Add(new LiteralControl(businesslogic.template.Template.GetTemplate(defaultTemplate).Text));
@@ -154,7 +156,7 @@ namespace umbraco.cms.presentation
             else
             {
                 _ddlDefaultTemplate.Items.Add(new ListItem(ui.Text("choose") + "...", ""));
-                foreach (var t in DocumentType.allowedTemplates)
+                foreach (var t in documentType.allowedTemplates)
                 {
 
                     var tTemp = new ListItem(t.Text, t.Id.ToString());
@@ -169,17 +171,17 @@ namespace umbraco.cms.presentation
             // Editable update date, release date and expire date added by NH 13.12.04
             _dp.ID = "updateDate";
             _dp.Text = _document.UpdateDate.ToShortDateString() + " " + _document.UpdateDate.ToShortTimeString();
-            _publishProps.addProperty(ui.Text("content", "updateDate", getUser()), _dp);
+            _publishProps.addProperty(ui.Text("content", "updateDate", UmbracoUser), _dp);
 
             _dpRelease.ID = "releaseDate";
             _dpRelease.DateTime = _document.ReleaseDate;
             _dpRelease.ShowTime = true;
-            _publishProps.addProperty(ui.Text("content", "releaseDate", getUser()), _dpRelease);
+            _publishProps.addProperty(ui.Text("content", "releaseDate", UmbracoUser), _dpRelease);
 
             _dpExpire.ID = "expireDate";
             _dpExpire.DateTime = _document.ExpireDate;
             _dpExpire.ShowTime = true;
-            _publishProps.addProperty(ui.Text("content", "expireDate", getUser()), _dpExpire);
+            _publishProps.addProperty(ui.Text("content", "expireDate", UmbracoUser), _dpExpire);
 
             _cControl.Save += Save;
             _cControl.SaveAndPublish += Publish;
@@ -210,7 +212,7 @@ namespace umbraco.cms.presentation
             if (!IsPostBack)
             {
 
-                Log.Add(LogTypes.Open, base.getUser(), _document.Id, "");
+                Log.Add(LogTypes.Open, UmbracoUser, _document.Id, "");
                 ClientTools.SyncTree(_document.Path, false);
             }
 
@@ -225,10 +227,210 @@ namespace umbraco.cms.presentation
             UpdateNiceUrls();
         }
 
+        /// <summary>
+        /// Handles the Save event for the ContentControl.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <remarks>
+        /// This will set the document's properties and persist a new document revision
+        /// </remarks>
         protected void Save(object sender, EventArgs e)
         {
+            //NOTE: This is only here because we have to keep backwards compatibility with events in the ContentControl.
+            // see: http://issues.umbraco.org/issue/U4-1660
+            // in this case both Save and SaveAndPublish will fire when we are publishing but we only want to handle that once,
+            // so if this is actually doing a publish, we'll exit and rely on the SaveAndPublish handler to do all the work.
+            if (_cControl.DoesPublish)
+            {
+                return;
+            }
+
+            //update UI and set document properties
+            PerformSaveLogic();
+            
+            //persist the document
+            _document.Save();
+
+            // Run Handler				
+            BusinessLogic.Actions.Action.RunActionHandlers(_document, ActionUpdate.Instance);
+
+            ClientTools.ShowSpeechBubble(
+                speechBubbleIcon.save, ui.Text("speechBubbles", "editContentSavedHeader", null), 
+                ui.Text("speechBubbles", "editContentSavedText", null));
+
+            ClientTools.SyncTree(_document.Path, true);
+        }
+
+        /// <summary>
+        /// Handles the SendToPublish event
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        protected void SendToPublish(object sender, EventArgs e)
+        {
+            if (Page.IsValid)
+            {
+                ClientTools.ShowSpeechBubble(
+                    speechBubbleIcon.save, ui.Text("speechBubbles", "editContentSendToPublish", UmbracoUser),
+                    ui.Text("speechBubbles", "editContentSendToPublishText", UmbracoUser));
+                _document.SendToPublication(UmbracoUser);
+            }
+        }
+
+        /// <summary>
+        /// Handles the SaveAndPublish event
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <remarks>
+        /// Sets the document's properties and if the page is valid continues to publish it, otherwise just saves a revision.
+        /// </remarks>
+        protected void Publish(object sender, EventArgs e)
+        {
+            //update UI and set document properties
+            PerformSaveLogic();
+
+            //the page is not valid, we'll still need to save the document and persist it
+            if (!Page.IsValid)
+            {                
+                ClientTools.ShowSpeechBubble(
+                    speechBubbleIcon.save, ui.Text("speechBubbles", "editContentSavedHeader", null),
+                    ui.Text("speechBubbles", "editContentSavedText", null));
+                _document.Save();
+                return;
+            }
+
+            //If the document is at a level deeper than the root but it's ancestor's path is not published, 
+            //it means that we cannot actually publish this document because one of it's parent's is not published.
+            //So, we still need to save the document but we'll show a different notification.
+            if (_document.Level > 1 && !Services.ContentService.IsPublishable(_document.Content))
+            {
+                ClientTools.ShowSpeechBubble(
+                    speechBubbleIcon.warning, ui.Text("publish"), 
+                    ui.Text("speechBubbles", "editContentPublishedFailedByParent"));
+                _document.Save();
+                return;
+            }
+                    
+            if (_document.SaveAndPublish(UmbracoUser))
+            {
+                //library.UpdateDocumentCache(_document.Id);
+
+                ClientTools.ShowSpeechBubble(speechBubbleIcon.save, ui.Text("speechBubbles", "editContentPublishedHeader", null), ui.Text("speechBubbles", "editContentPublishedText", null));
+
+                _littPublishStatus.Text = string.Format("{0}: {1}<br/>", ui.Text("content", "lastPublished", UmbracoUser), _document.VersionDate.ToString());
+
+                if (UmbracoUser.GetPermissions(_document.Path).IndexOf("U") > -1)
+                    _unPublish.Visible = true;
+
+                _documentHasPublishedVersion = _document.Content.HasPublishedVersion();
+
+                //if (previouslyPublished == false)
+                //{
+                //    var descendants = ((ContentService)ApplicationContext.Current.Services.ContentService)
+                //        .GetPublishedDescendants(_document.Content).ToList();
+
+                //    if (descendants.Any())
+                //    {
+                //        foreach (var descendant in descendants)
+                //        {
+                //            library.UpdateDocumentCache(descendant.Id);
+                //        }
+                //        library.RefreshContent();
+                //    }
+                //}
+            }
+            else
+            {
+                ClientTools.ShowSpeechBubble(speechBubbleIcon.warning, ui.Text("publish"), ui.Text("speechBubbles", "contentPublishedFailedByEvent"));
+            }
+
+            ClientTools.SyncTree(_document.Path, true);
+        }
+
+        protected void UnPublishDo(object sender, EventArgs e)
+        {
+            _document.UnPublish();
+            _littPublishStatus.Text = ui.Text("content", "itemNotPublished", UmbracoUser);
+            _unPublish.Visible = false;
+            _documentHasPublishedVersion = false;
+
+            //library.UnPublishSingleNode(_document.Id);
+
+            Current.ClientTools.SyncTree(_document.Path, true);
+            ClientTools.ShowSpeechBubble(speechBubbleIcon.success, ui.Text("unpublish"), ui.Text("speechBubbles", "contentUnpublished"));
+
+            //newPublishStatus.Text = "0";
+        }
+
+        void UpdateNiceUrlProperties(string niceUrlText, string altUrlsText)
+        {
+            _linkProps.Controls.Clear();
+
+            var lit = new Literal();
+            lit.Text = niceUrlText;
+            _linkProps.addProperty(ui.Text("content", "urls", UmbracoUser), lit);
+
+            if (!string.IsNullOrWhiteSpace(altUrlsText))
+            {
+                lit = new Literal();
+                lit.Text = altUrlsText;
+                _linkProps.addProperty(ui.Text("content", "alternativeUrls", UmbracoUser), lit);
+            }
+        }
+
+        void UpdateNiceUrls()
+        {
+            if (_documentHasPublishedVersion == false)
+            {
+                UpdateNiceUrlProperties("<i>" + ui.Text("content", "itemNotPublished", UmbracoUser) + "</i>", null);
+                return;
+            }
+
+            var urlProvider = Umbraco.Web.UmbracoContext.Current.RoutingContext.UrlProvider;
+            var url = urlProvider.GetUrl(_document.Id);
+            string niceUrlText = null;
+            var altUrlsText = new System.Text.StringBuilder();
+
+            if (url == "#")
+            {
+                // document as a published version yet it's url is "#" => a parent must be
+                // unpublished, walk up the tree until we find it, and report.
+                var parent = _document;
+                do
+                {
+                    parent = parent.ParentId > 0 ? new Document(parent.ParentId) : null;
+                }
+                while (parent != null && parent.Published);
+
+                if (parent == null) // oops - internal error
+                    niceUrlText = "<i>" + ui.Text("content", "parentNotPublishedAnomaly", UmbracoUser) + "</i>";
+                else
+                    niceUrlText = "<i>" + ui.Text("content", "parentNotPublished", parent.Text, UmbracoUser) + "</i>";
+            }
+            else
+            {
+                niceUrlText = string.Format("<a href=\"{0}\" target=\"_blank\">{0}</a>", url);
+
+                foreach (var otherUrl in urlProvider.GetOtherUrls(_document.Id))
+                    altUrlsText.AppendFormat("<a href=\"{0}\" target=\"_blank\">{0}</a><br />", otherUrl);
+            }
+
+            UpdateNiceUrlProperties(niceUrlText, altUrlsText.ToString());
+        }
+
+        /// <summary>
+        /// When a document is saved or published all of this logic must be performed.
+        /// </summary>
+        /// <remarks>
+        /// This updates both UI controls and business logic object properties but does not persist any data to 
+        /// business logic repositories.
+        /// </remarks>
+        private void PerformSaveLogic()
+        {
             // error handling test
-            if (Page.IsValid == false)
+            if (!Page.IsValid)
             {
                 foreach (uicontrols.TabPage tp in _cControl.GetPanels())
                 {
@@ -245,15 +447,6 @@ namespace umbraco.cms.presentation
                     tp.ErrorControl.Visible = false;
                 }
             }
-
-            // Update name if it has not changed and is not empty
-            if (_cControl.NameTxt != null && _document.Text != _cControl.NameTxt.Text && !_cControl.NameTxt.Text.IsNullOrWhiteSpace())
-            {
-                //_refreshTree = true;
-                _document.Text = _cControl.NameTxt.Text;
-                //newName.Text = _document.Text;
-            }
-
 
             if (_dpRelease.DateTime > new DateTime(1753, 1, 1) && _dpRelease.DateTime < new DateTime(9999, 12, 31))
                 _document.ReleaseDate = _dpRelease.DateTime;
@@ -285,144 +478,9 @@ namespace umbraco.cms.presentation
             {
                 _document.getProperty(item.Key).Value = item.Value.Data.Value;
             }
-            // Run Handler				
-            BusinessLogic.Actions.Action.RunActionHandlers(_document, ActionUpdate.Instance);
-            _document.Save();
 
             // Update the update date
             _dp.Text = _document.UpdateDate.ToShortDateString() + " " + _document.UpdateDate.ToShortTimeString();
-
-            if (_cControl.DoesPublish == false)
-                ClientTools.ShowSpeechBubble(speechBubbleIcon.save, ui.Text("speechBubbles", "editContentSavedHeader", null), ui.Text("speechBubbles", "editContentSavedText", null));
-
-            ClientTools.SyncTree(_document.Path, true);
-        }
-
-        protected void SendToPublish(object sender, EventArgs e)
-        {
-            if (Page.IsValid)
-            {
-                ClientTools.ShowSpeechBubble(speechBubbleIcon.save, ui.Text("speechBubbles", "editContentSendToPublish", base.getUser()), ui.Text("speechBubbles", "editContentSendToPublishText", base.getUser()));
-                _document.SendToPublication(getUser());
-            }
-        }
-
-        protected void Publish(object sender, EventArgs e)
-        {
-            if (Page.IsValid)
-            {
-                if (_document.Level == 1 || _document.PathPublished)
-                {
-                    var previouslyPublished = _document.HasPublishedVersion();
-                    
-                    if (_document.PublishWithResult(base.getUser(), false))
-                    {
-                        ClientTools.ShowSpeechBubble(speechBubbleIcon.save, ui.Text("speechBubbles", "editContentPublishedHeader", null), ui.Text("speechBubbles", "editContentPublishedText", null));
-
-                        _littPublishStatus.Text = string.Format("{0}: {1}<br/>", ui.Text("content", "lastPublished", base.getUser()), _document.VersionDate.ToString());
-
-                        if (getUser().GetPermissions(_document.Path).IndexOf("U") > -1)
-                            _unPublish.Visible = true;
-
-                        _documentHasPublishedVersion = _document.HasPublishedVersion();
-
-                        if (previouslyPublished == false)
-                        {
-                            var descendants = ((ContentService) ApplicationContext.Current.Services.ContentService)
-                                .GetPublishedDescendants(_document.Content).ToList();
-
-                            if (descendants.Any())
-                            {
-                                foreach (var descendant in descendants)
-                                {
-                                    library.UpdateDocumentCache(descendant.Id);
-                                }
-                                library.RefreshContent();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        ClientTools.ShowSpeechBubble(speechBubbleIcon.warning, ui.Text("publish"), ui.Text("speechBubbles", "contentPublishedFailedByEvent"));
-                    }
-                }
-                else
-                {
-                    ClientTools.ShowSpeechBubble(speechBubbleIcon.warning, ui.Text("publish"), ui.Text("speechBubbles", "editContentPublishedFailedByParent"));
-                    
-                }
-            }
-        }
-
-        protected void UnPublishDo(object sender, EventArgs e)
-        {
-            _document.UnPublish();
-            _littPublishStatus.Text = ui.Text("content", "itemNotPublished", base.getUser());
-            _unPublish.Visible = false;
-            _documentHasPublishedVersion = false;
-
-            library.UnPublishSingleNode(_document.Id);
-
-            Current.ClientTools.SyncTree(_document.Path, true);
-            ClientTools.ShowSpeechBubble(speechBubbleIcon.success, ui.Text("unpublish"), ui.Text("speechBubbles", "contentUnpublished"));
-
-            //newPublishStatus.Text = "0";
-        }
-
-        void UpdateNiceUrlProperties(string niceUrlText, string altUrlsText)
-        {
-            _linkProps.Controls.Clear();
-
-            var lit = new Literal();
-            lit.Text = niceUrlText;
-            _linkProps.addProperty(ui.Text("content", "urls", getUser()), lit);
-
-            if (!string.IsNullOrWhiteSpace(altUrlsText))
-            {
-                lit = new Literal();
-                lit.Text = altUrlsText;
-                _linkProps.addProperty(ui.Text("content", "alternativeUrls", getUser()), lit);
-            }
-        }
-
-        void UpdateNiceUrls()
-        {
-            if (_documentHasPublishedVersion == false)
-            {
-                UpdateNiceUrlProperties("<i>" + ui.Text("content", "itemNotPublished", base.getUser()) + "</i>", null);
-                return;
-            }
-
-            var niceUrlProvider = Umbraco.Web.UmbracoContext.Current.RoutingContext.NiceUrlProvider;
-            var url = niceUrlProvider.GetNiceUrl(_document.Id);
-            string niceUrlText = null;
-            var altUrlsText = new System.Text.StringBuilder();
-
-            if (url == "#")
-            {
-                // document as a published version yet it's url is "#" => a parent must be
-                // unpublished, walk up the tree until we find it, and report.
-                var parent = _document;
-                do
-                {
-                    parent = parent.ParentId > 0 ? new Document(parent.ParentId) : null;
-                }
-                while (parent != null && parent.Published);
-
-                if (parent == null) // oops - internal error
-                    niceUrlText = "<i>" + ui.Text("content", "parentNotPublishedAnomaly", base.getUser()) + "</i>";
-                else
-                    niceUrlText = "<i>" + ui.Text("content", "parentNotPublished", parent.Text, base.getUser()) + "</i>";
-            }
-            else
-            {
-                niceUrlText = string.Format("<a href=\"{0}\" target=\"_blank\">{0}</a>", url);
-
-                foreach (var altUrl in niceUrlProvider.GetAllAbsoluteNiceUrls(_document.Id).Where(u => u != url))
-                    altUrlsText.AppendFormat("<a href=\"{0}\" target=\"_blank\">{0}</a><br />", altUrl);
-            }
-
-            UpdateNiceUrlProperties(niceUrlText, altUrlsText.ToString());
         }
 
         /// <summary>
@@ -442,7 +500,7 @@ namespace umbraco.cms.presentation
         private bool CheckUserValidation()
         {
             // Validate permissions
-            if (!ValidateUserApp("content"))
+            if (!base.ValidateUserApp(Constants.Applications.Content))
             {
                 ShowUserValidationError("<h3>The current user doesn't have access to this application</h3><p>Please contact the system administrator if you think that you should have access.</p>");
                 return false;
@@ -468,37 +526,91 @@ namespace umbraco.cms.presentation
 
             // Find the first splitter in the Menu - Should be the rte toolbar's splitter
             var startIndex = menu.FindSplitter(1);
-            
+
             if (startIndex == -1)
             {
                 // No Splitter found - rte toolbar isn't loaded
-            menu.InsertSplitter();
+                menu.InsertSplitter();
                 menuItem = menu.NewIcon();
-            } 
+            }
             else
             {
                 // Rte toolbar is loaded, inject after it's Splitter
                 menuItem = menu.NewIcon(startIndex + 1);
                 menu.InsertSplitter(startIndex + 2);
             }
-            
+
             menuItem.ImageURL = SystemDirectories.Umbraco + "/images/editor/vis.gif";
             // Fix for U4-682, if there's no template, disable the preview button
             if (_document.Template != -1)
             {
-                menuItem.AltText = ui.Text("buttons", "showPage", this.getUser());
+                menuItem.AltText = ui.Text("buttons", "showPage", UmbracoUser);
                 menuItem.OnClickCommand = "window.open('dialogs/preview.aspx?id=" + id + "','umbPreview')";
             }
             else
             {
-                string showPageDisabledText = ui.Text("buttons", "showPageDisabled", this.getUser());
+                string showPageDisabledText = ui.Text("buttons", "showPageDisabled", UmbracoUser);
                 if (showPageDisabledText.StartsWith("["))
                     showPageDisabledText = ui.GetText("buttons", "showPageDisabled", null, "en"); ;
 
                 menuItem.AltText = showPageDisabledText;
-                ((Image) menuItem).Attributes.Add("style", "opacity: 0.5");
+                ((Image)menuItem).Attributes.Add("style", "opacity: 0.5");
             }
         }
+
+        /// <summary>
+        /// JsInclude1 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::ClientDependency.Core.Controls.JsInclude JsInclude1;
+
+        /// <summary>
+        /// JsInclude2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::ClientDependency.Core.Controls.JsInclude JsInclude2;
+
+        /// <summary>
+        /// JsInclude3 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::ClientDependency.Core.Controls.JsInclude JsInclude3;
+
+        /// <summary>
+        /// plc control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.PlaceHolder plc;
+
+        /// <summary>
+        /// doSave control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.HtmlControls.HtmlInputHidden doSave;
+
+        /// <summary>
+        /// doPublish control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.HtmlControls.HtmlInputHidden doPublish;
 
     }
 }
