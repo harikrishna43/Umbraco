@@ -22,3 +22,4 @@ System.Security.VerificationException: Operation could destabilize the runtime.
    at Umbraco.Web.WebBootManager.Initialize() in \\psf\home\Documents\projects\Umbraco 7\src\Umbraco.Web\WebBootManager.cs:line 66
    at Umbraco.Core.UmbracoApplicationBase.StartApplication(Object sender, EventArgs e) in \\psf\home\Documents\projects\Umbraco 7\src\Umbraco.Core\UmbracoApplicationBase.cs:line 39
    at Umbraco.Core.UmbracoApplicationBase.Application_Start(Object sender, EventArgs e) in \\psf\home\Documents\projects\Umbraco 7\src\Umbraco.Core\UmbracoApplicationBase.cs:line 52
+2013-06-10 15:15:58,882 [106] INFO  umbraco.BusinessLogic.Log - [Thread 108] Log scrubbed.  Removed all items older than 2013-06-09 15:15:58
