@@ -1,0 +1,17 @@
+﻿[    
+    'angular',
+    'app',    
+    'jquery',
+    'jqueryCookie',
+    'umbracoExtensions',
+    'bootstrap',
+    'umbraco.resources',
+    'umbraco.directives',
+    'umbraco.filters',
+    'umbraco.services',
+    'umbraco.controllers',
+    'sample.propertyeditor.controller',
+    'sampletwo.propertyeditor.controller',
+    'routes',
+    'namespaceMgr'
+]
