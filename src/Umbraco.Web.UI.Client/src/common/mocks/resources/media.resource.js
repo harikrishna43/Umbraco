@@ -4,9 +4,10 @@ angular.module('umbraco.mocks.resources')
     return {
         rootMedia: function(){
           return [
-          {id: 1234, src: "/Media/boston.jpg", thumbnail: "/Media/boston.jpg" },
-          {src: "/Media/bird.jpg", thumbnail: "/Media/bird.jpg" },
-          {src: "/Media/frog.jpg", thumbnail: "/Media/frog.jpg" }
+            {src: "/media/boston.jpg", thumbnail: "/media/boston.jpg" },
+            {src: "/media/bird.jpg", thumbnail: "/media/bird.jpg" },
+            {src: "/media/frog.jpg", thumbnail: "/media/frog.jpg" },
+            {src: "/media/pete.png", thumbnail: "/media/pete.png" }
           ];
       }
   };
